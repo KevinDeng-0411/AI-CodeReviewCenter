@@ -1,0 +1,100 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ai-center
+
+  # ============================================================
+  # 默认 profile: dev (连接本地 Docker 服务)
+  # ============================================================
+  profiles:
+    active: dev
+
+  # ============================================================
+  # Jackson 配置
+  # ============================================================
+  jackson:
+    default-property-inclusion: non_null
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+  # ============================================================
+  # Redis 配置 (默认值，dev/docker profile 会覆盖)
+  # ============================================================
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# ============================================================
+# MyBatis-Plus 配置
+# ============================================================
+mybatis-plus:
+  type-aliases-package: com.aicenter.model.entity
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# ============================================================
+# Knife4j API 文档配置
+# ============================================================
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+# ============================================================
+# AI 配置
+# ============================================================
+ai:
+  # DeepSeek (OpenAI 兼容 API)
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:your-api-key-here}
+    base-url: https://api.deepseek.com/v1
+    model: deepseek-chat
+    temperature: 0.1
+    max-tokens: 4096
+
+  # Ollama (本地 Embedding)
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    embedding-model: bge-m3
+    chat-model: qwen2.5:7b
+
+  # 记忆配置
+  memory:
+    short-term:
+      window-size: 20           # 滑动窗口大小（最近 N 轮）
+      summary-threshold: 10     # 超过 N 轮触发摘要
+      redis-ttl-hours: 168      # 7 天过期
+    long-term:
+      top-k: 5                  # 语义召回 Top-K
+      similarity-threshold: 0.7 # 相似度阈值
+
+  # RAG
+  rag:
+    chunk-size: 500             # 分块大小（Token）
+    chunk-overlap: 50           # 分块重叠
+    hybrid-weight-bm25: 0.3     # BM25 权重
+    hybrid-weight-vector: 0.7   # 向量权重
+    rerank-top-k: 5             # 精排 Top-K
