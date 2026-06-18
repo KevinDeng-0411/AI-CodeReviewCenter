@@ -33,6 +33,12 @@
             <artifactId>langchain4j-open-ai</artifactId>
         </dependency>
 
+        <!-- LangChain4j — Ollama (本地 Embedding bge-m3) -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-ollama</artifactId>
+        </dependency>
+
         <!-- LangChain4j — Pinecone (云托管向量数据库) -->
         <dependency>
             <groupId>dev.langchain4j</groupId>

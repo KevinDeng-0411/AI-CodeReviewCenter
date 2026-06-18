@@ -3,8 +3,8 @@ package com.aicenter.ai.config;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
-import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
@@ -25,6 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AI 核心配置 — LangChain4j Bean 定义
+ * <p>
+ * LLM: DeepSeek V4 Flash (OpenAI 兼容 API)
+ * Embedding: Ollama bge-m3 (本地，1024 维)
+ * 向量存储: Pinecone (云托管) / InMemory (降级)
  *
  * @author aicenter
  */
@@ -32,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Configuration
 public class AIConfig {
 
-    // ======================== LLM Chat (DeepSeek) ========================
+    // ======================== LLM Chat (DeepSeek V4) ========================
 
     @Bean
     @ConfigurationProperties(prefix = "ai.llm")
@@ -66,29 +70,24 @@ public class AIConfig {
                 .build();
     }
 
-    // ======================== Embedding Model ========================
+    // ======================== Embedding Model (Ollama bge-m3) ========================
 
     @Bean
-    @ConfigurationProperties(prefix = "ai.embedding")
-    public EmbeddingProperties embeddingProperties() {
-        return new EmbeddingProperties();
+    @ConfigurationProperties(prefix = "ai.ollama")
+    public OllamaProperties ollamaProperties() {
+        return new OllamaProperties();
     }
 
     @Bean
-    public EmbeddingModel embeddingModel(EmbeddingProperties props) {
-        // 即使 API Key 无效也创建 Bean，调用层有 try-catch 容错
-        return OpenAiEmbeddingModel.builder()
-                .apiKey(props.getApiKey())
+    public EmbeddingModel embeddingModel(OllamaProperties props) {
+        return OllamaEmbeddingModel.builder()
                 .baseUrl(props.getBaseUrl())
-                .modelName(props.getModel())
-                .dimensions(props.getDimensions())
+                .modelName(props.getEmbeddingModel())
                 .timeout(Duration.ofSeconds(60))
-                .logRequests(true)
-                .logResponses(false)
                 .build();
     }
 
-    // ======================== Embedding Store ========================
+    // ======================== Embedding Store (Pinecone / InMemory) ========================
 
     @Bean
     @ConfigurationProperties(prefix = "ai.pinecone")
@@ -120,17 +119,15 @@ public class AIConfig {
     public static class LlmProperties {
         private String apiKey;
         private String baseUrl = "https://api.deepseek.com/v1";
-        private String model = "deepseek-chat";
+        private String model = "deepseek-v4-flash";
         private Double temperature = 0.1;
         private Integer maxTokens = 4096;
     }
 
     @Data
-    public static class EmbeddingProperties {
-        private String apiKey;
-        private String baseUrl = "https://api.openai.com/v1";
-        private String model = "text-embedding-3-large";
-        private Integer dimensions = 1024;
+    public static class OllamaProperties {
+        private String baseUrl = "http://localhost:11434";
+        private String embeddingModel = "bge-m3";
     }
 
     @Data
@@ -139,87 +136,39 @@ public class AIConfig {
         private String index = "ai-center";
     }
 
-    // ======================== Simple In-Memory Embedding Store ========================
+    // ======================== In-Memory Embedding Store (Pinecone 降级) ========================
 
-    /**
-     * 简易内存向量存储 — 用于 Pinecone 未配置时的降级
-     */
     static class SimpleInMemoryEmbeddingStore implements EmbeddingStore<TextSegment> {
 
         private final ConcurrentHashMap<String, EmbeddingEntry> store = new ConcurrentHashMap<>();
 
-        @Override
-        public String add(Embedding embedding) {
-            String id = java.util.UUID.randomUUID().toString();
-            store.put(id, new EmbeddingEntry(id, embedding, null));
-            return id;
-        }
+        @Override public String add(Embedding e) { String id = java.util.UUID.randomUUID().toString(); store.put(id, new EmbeddingEntry(id, e, null)); return id; }
+        @Override public void add(String id, Embedding e) { store.put(id, new EmbeddingEntry(id, e, null)); }
+        @Override public String add(Embedding e, TextSegment s) { String id = java.util.UUID.randomUUID().toString(); store.put(id, new EmbeddingEntry(id, e, s)); return id; }
+        @Override public List<String> addAll(List<Embedding> es) { List<String> ids = new ArrayList<>(); for (Embedding e : es) ids.add(add(e)); return ids; }
+        @Override public List<String> addAll(List<Embedding> es, List<TextSegment> ss) { List<String> ids = new ArrayList<>(); for (int i = 0; i < es.size(); i++) ids.add(add(es.get(i), i < ss.size() ? ss.get(i) : null)); return ids; }
+        @Override public void removeAll() { store.clear(); }
+        @Override public void remove(String id) { store.remove(id); }
+        @Override public void removeAll(java.util.Collection<String> ids) { ids.forEach(store::remove); }
 
         @Override
-        public void add(String id, Embedding embedding) {
-            store.put(id, new EmbeddingEntry(id, embedding, null));
-        }
-
-        @Override
-        public String add(Embedding embedding, TextSegment segment) {
-            String id = java.util.UUID.randomUUID().toString();
-            store.put(id, new EmbeddingEntry(id, embedding, segment));
-            return id;
-        }
-
-        @Override
-        public List<String> addAll(List<Embedding> embeddings) {
-            List<String> ids = new ArrayList<>();
-            for (Embedding e : embeddings) ids.add(add(e));
-            return ids;
-        }
-
-        @Override
-        public List<String> addAll(List<Embedding> embeddings, List<TextSegment> segments) {
-            List<String> ids = new ArrayList<>();
-            for (int i = 0; i < embeddings.size(); i++) {
-                TextSegment seg = i < segments.size() ? segments.get(i) : null;
-                ids.add(add(embeddings.get(i), seg));
-            }
-            return ids;
-        }
-
-        @Override
-        public void removeAll() { store.clear(); }
-
-        @Override
-        public void remove(String id) { store.remove(id); }
-
-        @Override
-        public void removeAll(java.util.Collection<String> ids) { ids.forEach(store::remove); }
-
-        @Override
-        public EmbeddingSearchResult<TextSegment> search(EmbeddingSearchRequest request) {
-            float[] queryVector = request.queryEmbedding().vector();
-            double minScore = request.minScore();
-            int maxResults = request.maxResults();
-
+        public EmbeddingSearchResult<TextSegment> search(EmbeddingSearchRequest req) {
+            float[] qv = req.queryEmbedding().vector();
+            double minS = req.minScore();
+            int maxR = req.maxResults();
             List<EmbeddingMatch<TextSegment>> matches = new ArrayList<>();
-            for (EmbeddingEntry entry : store.values()) {
-                double score = cosineSimilarity(queryVector, entry.embedding.vector());
-                if (score >= minScore) {
-                    matches.add(new EmbeddingMatch<>(score, entry.id, entry.embedding, entry.segment));
-                }
+            for (EmbeddingEntry e : store.values()) {
+                double s = cosine(e.embedding.vector(), qv);
+                if (s >= minS) matches.add(new EmbeddingMatch<>(s, e.id, e.embedding, e.segment));
             }
             matches.sort(Comparator.comparingDouble((EmbeddingMatch<TextSegment> m) -> m.score()).reversed());
-            int limit = Math.min(maxResults, matches.size());
-            return new EmbeddingSearchResult<>(new ArrayList<>(matches.subList(0, limit)));
+            return new EmbeddingSearchResult<>(new ArrayList<>(matches.subList(0, Math.min(maxR, matches.size()))));
         }
 
-        private double cosineSimilarity(float[] a, float[] b) {
-            if (a.length != b.length) return 0;
-            double dot = 0, normA = 0, normB = 0;
-            for (int i = 0; i < a.length; i++) {
-                dot += a[i] * b[i];
-                normA += a[i] * a[i];
-                normB += b[i] * b[i];
-            }
-            return (normA == 0 || normB == 0) ? 0 : dot / (Math.sqrt(normA) * Math.sqrt(normB));
+        private double cosine(float[] a, float[] b) {
+            double d = 0, nA = 0, nB = 0;
+            for (int i = 0; i < a.length; i++) { d += a[i] * b[i]; nA += a[i] * a[i]; nB += b[i] * b[i]; }
+            return (nA == 0 || nB == 0) ? 0 : d / (Math.sqrt(nA) * Math.sqrt(nB));
         }
 
         record EmbeddingEntry(String id, Embedding embedding, TextSegment segment) {}

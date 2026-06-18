@@ -77,7 +77,8 @@ public class LongTermMemoryManager {
 
             LongTermMemoryVO vo = new LongTermMemoryVO();
             vo.setId(pgId);
-            vo.setContent(memory != null ? memory.getContent() : match.embedded().text());
+            String embeddedText = match.embedded() != null ? match.embedded().text() : null;
+            vo.setContent(memory != null ? memory.getContent() : embeddedText);
             vo.setMemoryType(memory != null ? memory.getMemoryType() : "KNOWLEDGE");
             vo.setSimilarity(Math.round(match.score() * 10000.0) / 10000.0);
             vo.setCreatedAt(memory != null ? memory.getCreatedAt() : null);

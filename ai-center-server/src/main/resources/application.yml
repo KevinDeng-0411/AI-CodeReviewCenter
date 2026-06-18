@@ -62,20 +62,18 @@ springdoc:
 # AI 配置
 # ============================================================
 ai:
-  # LLM: DeepSeek (OpenAI 兼容 API)
+  # LLM: DeepSeek v4 (OpenAI 兼容 API)
   llm:
     api-key: ${AI_LLM_API_KEY:your-api-key-here}
     base-url: https://api.deepseek.com/v1
-    model: deepseek-chat
+    model: deepseek-v4-flash
     temperature: 0.1
     max-tokens: 4096
 
-  # Embedding: text-embedding-v3 (OpenAI 兼容 API)
-  embedding:
-    api-key: ${AI_EMBEDDING_API_KEY:your-embedding-api-key-here}
-    base-url: https://api.openai.com/v1
-    model: text-embedding-3-large
-    dimensions: 1024      # text-embedding-3-large: 256-3072
+  # Embedding: Ollama bge-m3 (本地，1024 维)
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    embedding-model: bge-m3
 
   # Pinecone 向量数据库
   pinecone:

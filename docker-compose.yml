@@ -37,6 +37,26 @@ services:
       timeout: 5s
       retries: 5
 
+  # ============================================================
+  # Ollama — 本地 Embedding 模型 (bge-m3)
+  # 首次启动后自动拉取: docker exec ai-center-ollama ollama pull bge-m3
+  # ============================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai-center-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollamadata:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
 volumes:
   mysqldata:
   redisdata:
+  ollamadata:
