@@ -73,7 +73,11 @@ public class HybridRetriever {
             double fusionScore = BM25_WEIGHT * bm25Score + VECTOR_WEIGHT * vectorScore;
 
             if (fusionScore > 0) {
-                scoredDocs.add(new ScoredDocument(doc, fusionScore, bm25Score, vectorScore));
+                String matchType;
+                if (bm25Score > 0 && vectorScore > 0) matchType = "both";
+                else if (vectorScore > 0) matchType = "vector";
+                else matchType = "keyword";
+                scoredDocs.add(new ScoredDocument(doc, fusionScore, bm25Score, vectorScore, matchType));
             }
         }
 
@@ -136,7 +140,8 @@ public class HybridRetriever {
             KnowledgeDocument document,
             double fusionScore,
             double bm25Score,
-            double vectorScore
+            double vectorScore,
+            String matchType    // "vector" / "keyword" / "both"
     ) {
     }
 }

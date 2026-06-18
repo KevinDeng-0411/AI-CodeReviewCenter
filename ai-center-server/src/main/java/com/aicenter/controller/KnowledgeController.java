@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -73,13 +75,44 @@ public class KnowledgeController {
     }
 
     @PostMapping("/search")
-    @Operation(summary = "RAG 检索", description = "查询重写 + BM25(MySQL)+向量(Pinecone) 混合检索")
-    public Result<List<HybridRetriever.ScoredDocument>> search(
+    @Operation(summary = "RAG 检索", description = "查询重写 + BM25(PostgreSQL)+向量(PGVector) 混合检索，含来源追溯")
+    public Result<Map<String, Object>> search(
             @RequestBody Map<String, Object> request) {
         String query = (String) request.get("query");
         int topK = request.containsKey("topK") ? (Integer) request.get("topK") : 5;
         List<HybridRetriever.ScoredDocument> results = ragService.search(query, topK);
-        return Result.success(results);
+
+        // 格式化结果，含来源信息
+        List<Map<String, Object>> formattedResults = new ArrayList<>();
+        Map<String, Integer> sourceStats = new HashMap<>();
+
+        for (var doc : results) {
+            String sourceType = doc.document().getSourceType();
+            sourceStats.merge(sourceType, 1, Integer::sum);
+
+            formattedResults.add(Map.of(
+                    "fusionScore", doc.fusionScore(),
+                    "bm25Score", doc.bm25Score(),
+                    "vectorScore", doc.vectorScore(),
+                    "matchType", doc.matchType(),
+                    "document", Map.of(
+                            "id", doc.document().getId(),
+                            "title", doc.document().getTitle(),
+                            "chunkIndex", doc.document().getChunkIndex(),
+                            "chunkContent", doc.document().getChunkContent(),
+                            "sourceType", sourceType,
+                            "projectName", doc.document().getProjectName() != null
+                                    ? doc.document().getProjectName() : ""
+                    )
+            ));
+        }
+
+        return Result.success(Map.of(
+                "query", query,
+                "totalResults", formattedResults.size(),
+                "results", formattedResults,
+                "sourceStats", sourceStats
+        ));
     }
 
     @DeleteMapping("/{id}")
