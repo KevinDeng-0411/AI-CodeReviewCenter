@@ -1,7 +1,7 @@
 # AI Center — 工作室 AI 中心
 
 > AI 驱动的研发效能平台，围绕「代码质量与团队知识管理」两大核心场景。
-> 基于 LangChain4j + DeepSeek V4 + Ollama bge-m3 + MySQL + Redis。
+> 基于 LangChain4j + DeepSeek V4 + Ollama bge-m3 + PostgreSQL pgvector + Redis。
 
 ## 技术栈
 
@@ -12,9 +12,9 @@
 | AI 框架 | LangChain4j 0.36.2 | Java 生态最成熟的 LLM 集成框架 |
 | LLM | DeepSeek V4 Flash | 免费/超低成本、中文优秀、OpenAI 兼容 API |
 | Embedding | Ollama + bge-m3 | 本地免费、1024 维、中文向量 SOTA |
-| 向量存储 | 内存 / Pinecone(可选) | 内存降级方案 + Pinecone 云托管双模式 |
+| 向量存储 | PostgreSQL pgvector | 原生 vector 类型 + IVFFlat ANN 索引，一库两用 |
 | 文档解析 | Apache Tika 3.1 | 支持 PDF/Word/HTML/Markdown 等多格式 |
-| 数据库 | MySQL 8.0 | 关系数据存储 |
+| 数据库 | PostgreSQL 16 + pgvector | 关系数据 + 向量数据合二为一 |
 | 缓存 | Redis 7 | 短期记忆、会话管理 |
 | ORM | MyBatis-Plus 3.5.5 | 简洁高效 |
 | API 文档 | Knife4j (Swagger 3) | 可视化接口调试 |
@@ -26,14 +26,14 @@
 |------|------|------|
 | LLM | DeepSeek V4 Flash | 免费/超低成本，中文优秀，OpenAI 兼容 API |
 | Embedding | Ollama bge-m3 | 本地免费无限制，1024-dim，中文向量 SOTA |
-| 向量存储 | 内存 (默认) / Pinecone | 零配置即可运行，Pinecone 作为生产方案可选 |
+| 向量存储 | pgvector (默认) / Pinecone (可选) | 本地 pgvector 零成本，Pinecone 云托管生产可用 |
 
 ## 项目结构
 
 ```
 ai-center/
 ├── pom.xml
-├── docker-compose.yml            # MySQL 8.0 + Redis 7 + Ollama
+├── docker-compose.yml            # PostgreSQL 16 + Redis 7 + Ollama
 ├── ai-center-common/             # 公共模块：Result、枚举、异常
 ├── ai-center-model/              # 模型模块：Entity、DTO、VO、Mapper
 ├── ai-center-ai/                 # AI 核心模块：LangChain4j + RAG + 记忆
@@ -55,7 +55,7 @@ ai-center/
 docker compose up -d
 ```
 
-启动 MySQL 8.0 + Redis 7 + Ollama。
+启动 PostgreSQL 16 (pgvector) + Redis 7 + Ollama。
 
 ### 2. 拉取 Embedding 模型（仅首次）
 
@@ -90,8 +90,9 @@ http://localhost:8080/doc.html
 
 ### 1. AI Code Review — 结构化代码评审
 
-**8 维度 + 3 级问题分类**：性能优化、安全性、代码质量、可维护性、异常处理、并发安全、资源管理、设计模式。
-问题等级：Critical（必须修复）、Warning（建议修复）、Info（优化建议）。
+**七层结构化 Prompt（v2）**：角色定位 + 6步评审流程SOP + 3级问题分级（含触发条件）+ 8维检查清单 + 特殊场景处理 + 职责边界 + JSON Schema 输出约束。
+8 个评审维度：代码质量、安全性、可维护性、架构设计、Java最佳实践、数据库、测试、性能。
+问题等级：Critical（安全漏洞/线程安全/空指针）、Warning（代码质量/性能隐患）、Info（风格改进/设计优化）。
 
 ```bash
 # 提交代码评审
@@ -278,7 +279,7 @@ curl -X DELETE "http://localhost:8080/api/knowledge/1"
 curl -X POST http://localhost:8080/api/memory/long-term \
   -H "Content-Type: application/json" \
   -d '{
-    "content": "团队使用 MyBatis-Plus 3.5.5 作为 ORM 框架，配合 MySQL 8.0",
+    "content": "团队使用 MyBatis-Plus 3.5.5 作为 ORM 框架，配合 PostgreSQL 16",
     "memoryType": "KNOWLEDGE",
     "sessionId": "a7f5239e...",
     "metadata": "{\"source\": \"team-wiki\"}"
@@ -300,7 +301,7 @@ curl --get "http://localhost:8080/api/memory/long-term/search" \
   "data": [
     {
       "id": 2,
-      "content": "团队使用 MyBatis-Plus 3.5.5 作为 ORM 框架，配合 MySQL 8.0",
+      "content": "团队使用 MyBatis-Plus 3.5.5 作为 ORM 框架，配合 PostgreSQL 16",
       "memoryType": "KNOWLEDGE",
       "similarity": 0.6349
     }
@@ -335,14 +336,14 @@ curl -X POST "http://localhost:8080/api/prompts/1/activate"
 ```
 用户消息 → Redis List (滑动窗口, 最近 20 轮)
          → 超过 10 轮触发 LLM 摘要 → Redis String
-         → 冷数据异步持久化到 MySQL
+         → 冷数据异步持久化到 PostgreSQL
 ```
 
 ### 长期记忆 (Long-Term Memory)
 
 ```
-手动录入/自动捕获 → Ollama bge-m3 向量化 → EmbeddingStore
-用户查询 → 向量化 → 余弦相似度 Top-K 召回 → 注入对话上下文
+手动录入/自动捕获 → Ollama bge-m3 向量化 → PGVector (pgvector)
+用户查询 → 向量化 → pgvector ANN 检索 → 注入对话上下文
 ```
 
 ### RAG 混合检索
@@ -350,7 +351,7 @@ curl -X POST "http://localhost:8080/api/prompts/1/activate"
 ```
 用户查询 → QueryRewriter (改写+生成变体)
          → HybridRetriever:
-              BM25: MySQL 关键词匹配 (权重 0.3)
+              BM25: PostgreSQL 关键词匹配 (权重 0.3)
               向量: EmbeddingStore 语义检索 (权重 0.7)
          → 融合排序 → Top-K 结果
 ```
@@ -358,7 +359,7 @@ curl -X POST "http://localhost:8080/api/prompts/1/activate"
 ### 向量存储双模式
 
 ```
-默认: SimpleInMemoryEmbeddingStore (零配置，内存存储)
+默认: pgvector (PostgreSQL 原生向量扩展，ANN 索引)
 生产: PineconeEmbeddingStore (配置 ai.pinecone.api-key 自动切换)
 ```
 
@@ -368,7 +369,7 @@ curl -X POST "http://localhost:8080/api/prompts/1/activate"
 
 | 服务 | 镜像 | 端口 | 说明 |
 |------|------|------|------|
-| mysql | `mysql:8.0` | 3307→3306 | 关系数据 |
+| postgres | `pgvector/pgvector:pg16` | 5433→5432 | 关系数据 + 向量存储 |
 | redis | `redis:7-alpine` | 6380→6379 | 缓存 + 短期记忆 |
 | ollama | `ollama/ollama:latest` | 11434→11434 | 本地 Embedding |
 
