@@ -118,17 +118,15 @@ public class HybridRetriever {
     }
 
     /**
-     * 从 Pinecone ID 提取 MySQL 文档 ID
+     * 从 PGVector UUID 查找 MySQL 文档 ID
      */
     private Long extractDocId(String embeddingId) {
-        if (embeddingId != null && embeddingId.startsWith("doc:")) {
-            try {
-                return Long.parseLong(embeddingId.substring("doc:".length()));
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
-        return null;
+        if (embeddingId == null) return null;
+        // UUID → 查询 knowledge_documents.embedding 列
+        var doc = documentMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<KnowledgeDocument>()
+                        .eq(KnowledgeDocument::getEmbedding, embeddingId));
+        return doc != null ? doc.getId() : null;
     }
 
     /**

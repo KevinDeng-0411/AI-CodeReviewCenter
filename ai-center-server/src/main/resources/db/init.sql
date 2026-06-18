@@ -1,22 +1,24 @@
 -- ============================================================
 -- AI Center 数据库初始化脚本
--- MySQL 8.0
--- 向量数据由 Pinecone 管理，此处仅存储关系数据
+-- PostgreSQL 16 + pgvector
+-- 向量存储由 PgVectorEmbeddingStore 管理
 -- ============================================================
+
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ============================================================
 -- 1. prompt_templates — AI Prompt 模板
 -- ============================================================
 CREATE TABLE IF NOT EXISTS prompt_templates (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id              BIGSERIAL PRIMARY KEY,
     name            VARCHAR(100)  NOT NULL,
     type            VARCHAR(30)   NOT NULL,
     role_setting    TEXT          NOT NULL,
-    review_dimensions TEXT,        -- 逗号分隔的评审维度
-    severity_levels  TEXT,         -- 逗号分隔的问题等级
+    review_dimensions TEXT,        -- 逗号分隔
+    severity_levels  TEXT,         -- 逗号分隔
     template_body   TEXT          NOT NULL,
     version         INT           NOT NULL DEFAULT 1,
-    is_active       TINYINT(1)    NOT NULL DEFAULT 1,
+    is_active       BOOLEAN       NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -24,7 +26,7 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
 -- 2. code_review_records — AI Code Review 记录
 -- ============================================================
 CREATE TABLE IF NOT EXISTS code_review_records (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                  BIGSERIAL PRIMARY KEY,
     project_name        VARCHAR(100)  NOT NULL,
     file_path           VARCHAR(500)  NOT NULL,
     source_code         TEXT          NOT NULL,
@@ -42,7 +44,7 @@ CREATE TABLE IF NOT EXISTS code_review_records (
 -- 3. unit_test_records — AI 单元测试生成记录
 -- ============================================================
 CREATE TABLE IF NOT EXISTS unit_test_records (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                  BIGSERIAL PRIMARY KEY,
     project_name        VARCHAR(100)  NOT NULL,
     file_path           VARCHAR(500)  NOT NULL,
     source_code         TEXT          NOT NULL,
@@ -57,72 +59,69 @@ CREATE TABLE IF NOT EXISTS unit_test_records (
 -- 4. chat_conversations — 会话
 -- ============================================================
 CREATE TABLE IF NOT EXISTS chat_conversations (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id          BIGSERIAL PRIMARY KEY,
     session_id  VARCHAR(64)   NOT NULL UNIQUE,
     title       VARCHAR(200),
-    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_session (session_id)
+    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_conv_session ON chat_conversations(session_id);
 
 -- ============================================================
 -- 5. chat_messages — 消息（短期记忆持久化）
 -- ============================================================
 CREATE TABLE IF NOT EXISTS chat_messages (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id          BIGSERIAL PRIMARY KEY,
     session_id  VARCHAR(64)   NOT NULL,
     role        VARCHAR(20)   NOT NULL,
     content     TEXT          NOT NULL,
     token_count INT           NOT NULL DEFAULT 0,
-    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_msg_session (session_id),
-    INDEX idx_msg_created (session_id, created_at)
+    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_msg_session ON chat_messages(session_id);
 
 -- ============================================================
--- 6. long_term_memories — 长期记忆
--- 向量数据已迁移至 Pinecone，embedding 列保留用于兼容
+-- 6. long_term_memories — 长期记忆（元数据）
+-- 向量由 PgVectorEmbeddingStore 管理，embedding 列存 UUID 反向索引
 -- ============================================================
 CREATE TABLE IF NOT EXISTS long_term_memories (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id          BIGSERIAL PRIMARY KEY,
     session_id  VARCHAR(64),
     content     TEXT          NOT NULL,
     memory_type VARCHAR(30)   NOT NULL,
-    embedding   TEXT,           -- 向量数据已迁至 Pinecone，此列保留
+    embedding   VARCHAR(64),   -- PGVector 嵌入的 UUID 反向索引
     metadata    TEXT,
-    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_memory_type (memory_type)
+    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================
--- 7. knowledge_documents — 知识文档
--- 向量数据已迁移至 Pinecone，embedding 列保留用于兼容
+-- 7. knowledge_documents — 知识文档（元数据）
+-- 向量由 PgVectorEmbeddingStore 管理，embedding 列存 UUID 反向索引
 -- ============================================================
 CREATE TABLE IF NOT EXISTS knowledge_documents (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id              BIGSERIAL PRIMARY KEY,
     title           VARCHAR(300)  NOT NULL,
     content         TEXT          NOT NULL,
     chunk_index     INT           NOT NULL DEFAULT 0,
     chunk_content   TEXT          NOT NULL,
-    embedding       TEXT,           -- 向量数据已迁至 Pinecone，此列保留
+    embedding       VARCHAR(64),   -- PGVector 嵌入的 UUID 反向索引
     source_type     VARCHAR(30)   NOT NULL,
     project_name    VARCHAR(100),
-    created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_knowledge_project (project_name),
-    INDEX idx_knowledge_source (source_type)
+    created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_kd_project ON knowledge_documents(project_name);
 
 -- ============================================================
 -- 8. ai_readme_documents — AIReadMe 文档
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ai_readme_documents (
-    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id            BIGSERIAL PRIMARY KEY,
     project_name  VARCHAR(100)  NOT NULL,
     section       VARCHAR(50)   NOT NULL,
     content       TEXT          NOT NULL,
     version       INT           NOT NULL DEFAULT 1,
-    created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_ai_readme_project (project_name)
+    created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_ar_project ON ai_readme_documents(project_name);
 
 -- ============================================================
 -- 预置 CR Prompt 模板

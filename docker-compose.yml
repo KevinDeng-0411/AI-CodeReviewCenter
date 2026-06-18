@@ -1,21 +1,22 @@
 services:
   # ============================================================
-  # MySQL 8.0 — 关系数据
+  # PostgreSQL 16 + pgvector — 关系数据 + 向量存储
   # ============================================================
-  mysql:
-    image: mysql:8.0
-    container_name: ai-center-mysql
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai-center-postgres
     restart: unless-stopped
     ports:
-      - "3307:3306"
+      - "5433:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: ai_center
+      POSTGRES_DB: ai_center
+      POSTGRES_USER: aicenter
+      POSTGRES_PASSWORD: aicenter123
     volumes:
-      - mysqldata:/var/lib/mysql
+      - pgdata:/var/lib/postgresql/data
       - ./ai-center-server/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "pg_isready -U aicenter -d ai_center"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -39,7 +40,6 @@ services:
 
   # ============================================================
   # Ollama — 本地 Embedding 模型 (bge-m3)
-  # 首次启动后自动拉取: docker exec ai-center-ollama ollama pull bge-m3
   # ============================================================
   ollama:
     image: ollama/ollama:latest
@@ -57,6 +57,6 @@ services:
       start_period: 30s
 
 volumes:
-  mysqldata:
+  pgdata:
   redisdata:
   ollamadata:

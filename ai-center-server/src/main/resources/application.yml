@@ -13,12 +13,12 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
 
-  # MySQL 数据源
+  # PostgreSQL + pgvector 数据源
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3307}/ai_center?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
-    username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD:root123}
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5433}/ai_center
+    username: ${PG_USER:aicenter}
+    password: ${PG_PASSWORD:aicenter123}
 
   # Redis
   data:

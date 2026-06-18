@@ -1,5 +1,6 @@
 package com.aicenter.ai.memory;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.aicenter.model.entity.LongTermMemory;
 import com.aicenter.model.mapper.LongTermMemoryMapper;
 import com.aicenter.model.vo.LongTermMemoryVO;
@@ -17,9 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 长期记忆管理器 — 基于 Pinecone 向量存储
+ * 长期记忆管理器 — PGVector 向量存储
  * <p>
- * 「主动录入 + 向量化存储(Pinecone) + 语义相似度召回」
+ * 「录入 → Ollama bge-m3 向量化 → PGVector → 语义召回」
  *
  * @author aicenter
  */
@@ -33,11 +34,11 @@ public class LongTermMemoryManager {
     private final EmbeddingStore<TextSegment> embeddingStore;
 
     /**
-     * 保存长期记忆（先写 MySQL 获取 ID，再向量化存入 Pinecone）
+     * 保存长期记忆（PG 元数据 + PGVector 向量）
      */
     public LongTermMemory saveMemory(String sessionId, String content, String memoryType,
                                       String metadata) {
-        // 1. 先插入 MySQL 获取自增 ID
+        // 插入 PG 元数据
         LongTermMemory memory = new LongTermMemory()
                 .setSessionId(sessionId)
                 .setContent(content)
@@ -45,22 +46,24 @@ public class LongTermMemoryManager {
                 .setMetadata(metadata != null ? metadata : "{}");
         memoryMapper.insert(memory);
 
-        // 2. 向量化并存入 Pinecone（内容从 MySQL 查找，这里只存 ID + 向量）
+        // 向量化 + 存入 PGVector（UUID 作为 key）
         Embedding embedding = embeddingModel.embed(content).content();
-        embeddingStore.add("memory:" + memory.getId(), embedding);
+        String uuid = java.util.UUID.randomUUID().toString();
+        embeddingStore.add(uuid, embedding);
+        // 反向索引写入 PG 记录
+        memory.setEmbedding(uuid);
+        memoryMapper.updateById(memory);
 
-        log.info("长期记忆已保存(Pinecone): id={}, type={}", memory.getId(), memoryType);
+        log.info("长期记忆已保存(PGVector): id={}, type={}", memory.getId(), memoryType);
         return memory;
     }
 
     /**
-     * 语义召回 Top-K 记忆（通过 Pinecone 向量检索）
+     * 语义召回（PGVector 向量检索）
      */
     public List<LongTermMemoryVO> recall(String query, double threshold, int topK) {
-        // 1. 查询向量化
         Embedding queryEmbedding = embeddingModel.embed(query).content();
 
-        // 2. Pinecone 向量检索
         var searchResult = embeddingStore.search(
                 EmbeddingSearchRequest.builder()
                         .queryEmbedding(queryEmbedding)
@@ -69,38 +72,33 @@ public class LongTermMemoryManager {
                         .build()
         );
 
-        // 3. 转换结果
         List<LongTermMemoryVO> results = new ArrayList<>();
         for (EmbeddingMatch<TextSegment> match : searchResult.matches()) {
-            Long pgId = extractPgId(match.embeddingId());
-            LongTermMemory memory = pgId != null ? memoryMapper.selectById(pgId) : null;
+            String uuid = match.embeddingId();
+            // 通过 UUID 查找 PG 记录
+            LongTermMemory memory = memoryMapper.selectOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<LongTermMemory>()
+                            .eq(LongTermMemory::getEmbedding, uuid));
 
             LongTermMemoryVO vo = new LongTermMemoryVO();
-            vo.setId(pgId);
-            String embeddedText = match.embedded() != null ? match.embedded().text() : null;
-            vo.setContent(memory != null ? memory.getContent() : embeddedText);
+            vo.setId(memory != null ? memory.getId() : null);
+            vo.setContent(memory != null ? memory.getContent() : "unknown");
             vo.setMemoryType(memory != null ? memory.getMemoryType() : "KNOWLEDGE");
             vo.setSimilarity(Math.round(match.score() * 10000.0) / 10000.0);
             vo.setCreatedAt(memory != null ? memory.getCreatedAt() : null);
             results.add(vo);
         }
 
-        log.info("长期记忆召回(Pinecone): query={}, matches={}", query, results.size());
+        log.info("长期记忆召回(PGVector): query={}, matches={}", query, results.size());
         return results;
     }
 
-    /**
-     * 删除长期记忆
-     */
     public void deleteMemory(Long id) {
+        var memory = memoryMapper.selectById(id);
+        if (memory != null && memory.getEmbedding() != null) {
+            embeddingStore.remove(memory.getEmbedding());
+        }
         memoryMapper.deleteById(id);
-        embeddingStore.remove("memory:" + id);
     }
 
-    private Long extractPgId(String embeddingId) {
-        if (embeddingId != null && embeddingId.startsWith("memory:")) {
-            return Long.parseLong(embeddingId.substring("memory:".length()));
-        }
-        return null;
-    }
 }
