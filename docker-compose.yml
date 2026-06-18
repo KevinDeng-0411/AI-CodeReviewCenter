@@ -1,24 +1,21 @@
-version: "3.8"
-
 services:
   # ============================================================
-  # PostgreSQL 16 + pgvector — 关系数据 + 向量存储
+  # MySQL 8.0 — 关系数据
   # ============================================================
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: ai-center-postgres
+  mysql:
+    image: mysql:8.0
+    container_name: ai-center-mysql
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - "3307:3306"
     environment:
-      POSTGRES_DB: ai_center
-      POSTGRES_USER: aicenter
-      POSTGRES_PASSWORD: aicenter123
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: ai_center
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - mysqldata:/var/lib/mysql
       - ./ai-center-server/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aicenter -d ai_center"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -40,26 +37,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ============================================================
-  # Ollama — 本地 Embedding 模型 (bge-m3)
-  # 首次启动后需手动执行: docker exec ai-center-ollama ollama pull bge-m3
-  # ============================================================
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ai-center-ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollamadata:/root/.ollama
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list || exit 1"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
-
 volumes:
-  pgdata:
+  mysqldata:
   redisdata:
-  ollamadata:

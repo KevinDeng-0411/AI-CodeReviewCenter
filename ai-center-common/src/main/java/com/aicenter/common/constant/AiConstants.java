@@ -29,10 +29,10 @@ public class AiConstants {
     /** 分块重叠大小 (Token) */
     public static final int DEFAULT_CHUNK_OVERLAP = 50;
 
-    /** BM25 检索权重 */
+    /** BM25 检索权重（MySQL 全文匹配 + Pinecone 向量混合） */
     public static final double BM25_WEIGHT = 0.3;
 
-    /** 向量检索权重 */
+    /** 向量检索权重（Pinecone 语义相似度） */
     public static final double VECTOR_WEIGHT = 0.7;
 
     /** 精排 Top-K */
@@ -40,11 +40,11 @@ public class AiConstants {
 
     // ======================== Embedding ========================
 
-    /** bge-m3 向量维度 */
-    public static final int BGE_M3_DIMENSION = 1024;
+    /** text-embedding-3-large 默认向量维度 */
+    public static final int EMBEDDING_DIMENSION = 1024;
 
-    /** Ollama Embedding 模型名 */
-    public static final String OLLAMA_EMBEDDING_MODEL = "bge-m3";
+    /** Embedding 模型名 */
+    public static final String EMBEDDING_MODEL = "text-embedding-3-large";
 
     // ======================== AIReadMe 章节 ========================
 

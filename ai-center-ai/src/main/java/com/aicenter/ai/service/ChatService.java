@@ -63,7 +63,7 @@ public class ChatService {
                             .map(m -> "- " + m.getContent() + " (相似度: " + m.getSimilarity() + ")")
                             .collect(Collectors.joining("\n"));
         } catch (Exception e) {
-            log.warn("长期记忆召回失败（Ollama 可能未启动）: {}", e.getMessage());
+            log.warn("长期记忆召回失败（Embedding 服务暂不可用）: {}", e.getMessage());
         }
 
         // 3. RAG 检索（Ollama 未启动时降级跳过）
@@ -72,7 +72,7 @@ public class ChatService {
             List<HybridRetriever.ScoredDocument> docs = ragService.search(message, 5);
             ragContext = docs.isEmpty() ? "" : ragService.formatContext(docs);
         } catch (Exception e) {
-            log.warn("RAG 检索失败（Ollama 可能未启动）: {}", e.getMessage());
+            log.warn("RAG 检索失败（Embedding 服务暂不可用）: {}", e.getMessage());
         }
 
         // 4. 短期记忆上下文

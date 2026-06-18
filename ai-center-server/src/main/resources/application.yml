@@ -5,23 +5,22 @@ spring:
   application:
     name: ai-center
 
-  # ============================================================
-  # 默认 profile: dev (连接本地 Docker 服务)
-  # ============================================================
   profiles:
     active: dev
 
-  # ============================================================
-  # Jackson 配置
-  # ============================================================
   jackson:
     default-property-inclusion: non_null
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
 
-  # ============================================================
-  # Redis 配置 (默认值，dev/docker profile 会覆盖)
-  # ============================================================
+  # MySQL 数据源
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3307}/ai_center?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root123}
+
+  # Redis
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -33,9 +32,7 @@ spring:
           max-idle: 8
           min-idle: 0
 
-# ============================================================
-# MyBatis-Plus 配置
-# ============================================================
+# MyBatis-Plus
 mybatis-plus:
   type-aliases-package: com.aicenter.model.entity
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -49,9 +46,7 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 
-# ============================================================
-# Knife4j API 文档配置
-# ============================================================
+# Knife4j
 knife4j:
   enable: true
   setting:
@@ -67,34 +62,42 @@ springdoc:
 # AI 配置
 # ============================================================
 ai:
-  # DeepSeek (OpenAI 兼容 API)
-  deepseek:
-    api-key: ${DEEPSEEK_API_KEY:your-api-key-here}
+  # LLM: DeepSeek (OpenAI 兼容 API)
+  llm:
+    api-key: ${AI_LLM_API_KEY:your-api-key-here}
     base-url: https://api.deepseek.com/v1
     model: deepseek-chat
     temperature: 0.1
     max-tokens: 4096
 
-  # Ollama (本地 Embedding)
-  ollama:
-    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    embedding-model: bge-m3
-    chat-model: qwen2.5:7b
+  # Embedding: text-embedding-v3 (OpenAI 兼容 API)
+  embedding:
+    api-key: ${AI_EMBEDDING_API_KEY:your-embedding-api-key-here}
+    base-url: https://api.openai.com/v1
+    model: text-embedding-3-large
+    dimensions: 1024      # text-embedding-3-large: 256-3072
+
+  # Pinecone 向量数据库
+  pinecone:
+    api-key: ${PINECONE_API_KEY:your-pinecone-api-key}
+    environment: ${PINECONE_ENVIRONMENT:gcp-starter}
+    project-id: ${PINECONE_PROJECT_ID:your-project-id}
+    index: ${PINECONE_INDEX:ai-center}
 
   # 记忆配置
   memory:
     short-term:
-      window-size: 20           # 滑动窗口大小（最近 N 轮）
-      summary-threshold: 10     # 超过 N 轮触发摘要
-      redis-ttl-hours: 168      # 7 天过期
+      window-size: 20
+      summary-threshold: 10
+      redis-ttl-hours: 168
     long-term:
-      top-k: 5                  # 语义召回 Top-K
-      similarity-threshold: 0.7 # 相似度阈值
+      top-k: 5
+      similarity-threshold: 0.7
 
   # RAG
   rag:
-    chunk-size: 500             # 分块大小（Token）
-    chunk-overlap: 50           # 分块重叠
-    hybrid-weight-bm25: 0.3     # BM25 权重
-    hybrid-weight-vector: 0.7   # 向量权重
-    rerank-top-k: 5             # 精排 Top-K
+    chunk-size: 500
+    chunk-overlap: 50
+    hybrid-weight-bm25: 0.3
+    hybrid-weight-vector: 0.7
+    rerank-top-k: 5

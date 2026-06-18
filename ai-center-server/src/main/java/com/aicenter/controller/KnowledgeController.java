@@ -1,6 +1,7 @@
 package com.aicenter.controller;
 
 import com.aicenter.ai.rag.HybridRetriever;
+import com.aicenter.ai.service.DocumentParserService;
 import com.aicenter.ai.service.RagService;
 import com.aicenter.common.result.Result;
 import com.aicenter.model.dto.KnowledgeUploadRequest;
@@ -8,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -24,9 +26,10 @@ import java.util.Map;
 public class KnowledgeController {
 
     private final RagService ragService;
+    private final DocumentParserService documentParserService;
 
     @PostMapping("/upload")
-    @Operation(summary = "上传知识文档", description = "上传文档，自动语义分块并向量化入库")
+    @Operation(summary = "上传知识文档（文本）", description = "上传文本内容，自动语义分块并向量化入库(Pinecone)")
     public Result<Map<String, Object>> upload(@RequestBody KnowledgeUploadRequest request) {
         int chunkCount = ragService.uploadDocument(
                 request.getTitle(),
@@ -37,12 +40,40 @@ public class KnowledgeController {
         return Result.success(Map.of(
                 "title", request.getTitle(),
                 "chunks", chunkCount,
-                "message", "文档已成功分块并入库"
+                "message", "文档已成功分块并存入 Pinecone"
         ));
     }
 
+    @PostMapping("/upload-file")
+    @Operation(summary = "上传文档文件", description = "上传 PDF/Word/HTML 等文件，Apache Tika 自动提取文本后分块向量化")
+    public Result<Map<String, Object>> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) String projectName,
+            @RequestParam(defaultValue = "MANUAL") String sourceType) {
+        try {
+            DocumentParserService.ParseResult parseResult =
+                    documentParserService.parseWithMetadata(file);
+            String title = parseResult.getTitle();
+            if (title == null || title.isBlank()) {
+                title = file.getOriginalFilename();
+            }
+            int chunkCount = ragService.uploadDocument(
+                    title, parseResult.text(), sourceType, projectName);
+
+            return Result.success(Map.of(
+                    "fileName", file.getOriginalFilename(),
+                    "title", title,
+                    "contentLength", parseResult.text().length(),
+                    "chunks", chunkCount,
+                    "message", "文件已成功解析、分块并存入 Pinecone"
+            ));
+        } catch (Exception e) {
+            return Result.error("文件解析失败: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/search")
-    @Operation(summary = "RAG 检索", description = "通过查询重写 + BM25+向量混合检索，返回相关知识文档")
+    @Operation(summary = "RAG 检索", description = "查询重写 + BM25(MySQL)+向量(Pinecone) 混合检索")
     public Result<List<HybridRetriever.ScoredDocument>> search(
             @RequestBody Map<String, Object> request) {
         String query = (String) request.get("query");
@@ -52,7 +83,7 @@ public class KnowledgeController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除知识文档", description = "删除指定知识文档")
+    @Operation(summary = "删除知识文档", description = "删除指定知识文档（MySQL + Pinecone）")
     public Result<Void> delete(@PathVariable Long id) {
         ragService.deleteDocument(id);
         return Result.success();

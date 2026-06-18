@@ -4,7 +4,11 @@ import com.aicenter.common.constant.AiConstants;
 import com.aicenter.model.entity.KnowledgeDocument;
 import com.aicenter.model.mapper.KnowledgeDocumentMapper;
 import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import dev.langchain4j.store.embedding.EmbeddingMatch;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -13,10 +17,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 混合检索器 (BM25 + 向量检索)
+ * 混合检索器 — Pinecone 向量检索 + MySQL BM25 全文匹配
  * <p>
- * BM25（基于关键词的全文匹配）+ 向量检索（语义相似度）的加权融合。
- * 默认权重：BM25=0.3, Vector=0.7
+ * 默认权重：BM25=0.3, Pinecone Vector=0.7
  *
  * @author aicenter
  */
@@ -27,33 +30,46 @@ public class HybridRetriever {
 
     private final KnowledgeDocumentMapper documentMapper;
     private final EmbeddingModel embeddingModel;
+    private final EmbeddingStore<TextSegment> embeddingStore;
 
     private static final double BM25_WEIGHT = AiConstants.BM25_WEIGHT;
     private static final double VECTOR_WEIGHT = AiConstants.VECTOR_WEIGHT;
 
     /**
-     * 混合检索
+     * 混合检索：BM25 (MySQL) + 向量 (Pinecone)
      *
-     * @param query 查询文本（已重写）
+     * @param query 查询文本
      * @param topK  返回 Top-K
      * @return 按融合分数排序的文档列表
      */
     public List<ScoredDocument> search(String query, int topK) {
-        // 1. 向量检索
-        float[] queryVector = embed(query);
+        // 1. 向量检索 via Pinecone
+        Embedding queryEmbedding = embeddingModel.embed(query).content();
+        var searchResult = embeddingStore.search(
+                EmbeddingSearchRequest.builder()
+                        .queryEmbedding(queryEmbedding)
+                        .maxResults(topK * 3)   // oversample for fusion
+                        .minScore(0.2)
+                        .build()
+        );
 
-        // 2. BM25 关键字检索（从所有文档中匹配）
+        // 2. 收集 Pinecone 返回的文档 ID 和分数
+        Map<Long, Double> pineconeScores = new HashMap<>();
+        for (EmbeddingMatch<TextSegment> match : searchResult.matches()) {
+            Long docId = extractDocId(match.embeddingId());
+            if (docId != null) {
+                pineconeScores.merge(docId, match.score(), Math::max);
+            }
+        }
+
+        // 3. BM25 关键字检索 (MySQL)
         List<KnowledgeDocument> allDocs = documentMapper.selectList(null);
 
-        // 3. 计算每个文档的融合分数
+        // 4. 融合分数
         List<ScoredDocument> scoredDocs = new ArrayList<>();
         for (KnowledgeDocument doc : allDocs) {
-            // BM25 分数
             double bm25Score = computeBM25(query, doc.getChunkContent());
-            // 向量相似度
-            double vectorScore = computeVectorSimilarity(queryVector, doc.getEmbedding());
-
-            // 归一化融合
+            double vectorScore = pineconeScores.getOrDefault(doc.getId(), 0.0);
             double fusionScore = BM25_WEIGHT * bm25Score + VECTOR_WEIGHT * vectorScore;
 
             if (fusionScore > 0) {
@@ -61,36 +77,34 @@ public class HybridRetriever {
             }
         }
 
-        // 4. 按融合分数降序排列
+        // 5. 按融合分数降序
         scoredDocs.sort(Comparator.comparingDouble(ScoredDocument::fusionScore).reversed());
         return scoredDocs.stream().limit(topK).collect(Collectors.toList());
     }
 
     /**
-     * 简化 BM25 计算（TF-IDF 变体）
+     * 简化的 BM25 计算（TF-IDF 变体）
      */
     private double computeBM25(String query, String content) {
         if (content == null || content.isEmpty()) return 0;
 
         String contentLower = content.toLowerCase();
         double k1 = 1.5, b = 0.75;
-        double avgDocLength = 500; // 平均文档长度（可动态计算）
+        double avgDocLength = 500;
         double docLength = content.length();
         double score = 0;
 
-        // 对查询中的每个词计算匹配分数
         String[] queryTerms = query.toLowerCase().split("\\s+");
         for (String term : queryTerms) {
             int tf = countOccurrences(contentLower, term);
             if (tf > 0) {
-                // 简化 IDF
                 double idf = 1.0;
                 double numerator = tf * (k1 + 1);
                 double denominator = tf + k1 * (1 - b + b * docLength / avgDocLength);
                 score += idf * numerator / denominator;
             }
         }
-        return Math.min(score, 1.0); // 归一化到 [0, 1]
+        return Math.min(score, 1.0);
     }
 
     private int countOccurrences(String text, String term) {
@@ -104,40 +118,17 @@ public class HybridRetriever {
     }
 
     /**
-     * 余弦相似度
+     * 从 Pinecone ID 提取 MySQL 文档 ID
      */
-    private double computeVectorSimilarity(float[] queryVector, String docEmbeddingStr) {
-        if (docEmbeddingStr == null || docEmbeddingStr.isEmpty()) return 0;
-        try {
-            float[] docVector = stringToVector(docEmbeddingStr);
-            if (docVector == null || docVector.length != queryVector.length) return 0;
-
-            double dotProduct = 0, normQ = 0, normD = 0;
-            for (int i = 0; i < docVector.length; i++) {
-                dotProduct += queryVector[i] * docVector[i];
-                normQ += queryVector[i] * queryVector[i];
-                normD += docVector[i] * docVector[i];
+    private Long extractDocId(String embeddingId) {
+        if (embeddingId != null && embeddingId.startsWith("doc:")) {
+            try {
+                return Long.parseLong(embeddingId.substring("doc:".length()));
+            } catch (NumberFormatException e) {
+                return null;
             }
-            if (normQ == 0 || normD == 0) return 0;
-            return dotProduct / (Math.sqrt(normQ) * Math.sqrt(normD));
-        } catch (Exception e) {
-            return 0;
         }
-    }
-
-    private float[] embed(String text) {
-        return embeddingModel.embed(text).content().vector();
-    }
-
-    private float[] stringToVector(String str) {
-        if (str == null || str.isEmpty()) return null;
-        // 简单逗号分隔解析
-        String[] parts = str.replace("[", "").replace("]", "").split(",");
-        float[] vector = new float[parts.length];
-        for (int i = 0; i < parts.length; i++) {
-            vector[i] = Float.parseFloat(parts[i].trim());
-        }
-        return vector;
+        return null;
     }
 
     /**
