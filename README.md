@@ -175,15 +175,33 @@ curl -X POST http://localhost:8080/api/ai-readme/generate \
 curl "http://localhost:8080/api/ai-readme/ai-center"
 ```
 
-### 4. 智能问答 — 多轮对话
+### 4. 智能问答 — 多轮对话（同步 + SSE 流式双模式）
 
-整合短期记忆（Redis 滑动窗口 + LLM 摘要）+ 长期记忆（Ollama 向量语义召回）+ RAG 知识库检索。
+整合短期记忆（Redis 滑动窗口 + LLM 摘要）+ 长期记忆（Ollama 向量语义召回）+ RAG 知识库检索。支持同步一次性返回和 SSE 逐 token 流式推送。
 
 ```bash
-# 发送消息（首次无 sessionId，自动创建）
+# 同步模式 — 一次性返回完整回复
 curl -X POST http://localhost:8080/api/chat/send \
   -H "Content-Type: application/json" \
   -d '{"message": "什么是Spring Boot的自动配置原理？"}'
+```
+
+```bash
+# SSE 流式模式 — 逐 token 实时推送（类似 ChatGPT 打字效果）
+curl -N -X POST http://localhost:8080/api/chat/send/stream \
+  -H "Content-Type: application/json" \
+  -d '{"message": "用一句话介绍RAG检索增强生成"}'
+
+# 输出示例：
+# data:Spring
+# data: Boot
+# data: 是一个
+# data:基于
+# data: Spring
+# data: 的快速
+# data:开发脚手架
+# event:done
+# data:sessionId
 ```
 
 返回示例：
@@ -387,7 +405,8 @@ curl -X POST "http://localhost:8080/api/prompts/1/activate"
 | GET | `/api/unit-test/records/{id}` | 生成详情 |
 | POST | `/api/ai-readme/generate` | 生成 AIReadMe |
 | GET | `/api/ai-readme/{projectName}` | 获取文档 |
-| POST | `/api/chat/send` | 发送消息（多轮对话） |
+| POST | `/api/chat/send` | 发送消息（同步） |
+| POST | `/api/chat/send/stream` | 发送消息（SSE 流式，逐 token） |
 | GET | `/api/chat/conversations` | 会话列表 |
 | GET | `/api/chat/conversations/{sessionId}` | 会话消息历史 |
 | DELETE | `/api/chat/conversations/{sessionId}` | 删除会话 |
