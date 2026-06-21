@@ -37,13 +37,24 @@ public class ChatController {
     }
 
     @PostMapping(value = "/send/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "发送消息（SSE 流式）", description = "逐 token 推送 AI 回复，类似 ChatGPT 打字效果")
+    @Operation(summary = "发送消息（SSE 流式 POST）", description = "逐 token 推送，POST 方式")
     public SseEmitter sendStream(@RequestBody ChatRequest request) {
-        SseEmitter emitter = new SseEmitter(120000L); // 2 分钟超时
+        return doStream(request.getSessionId(), request.getMessage());
+    }
+
+    @GetMapping(value = "/send/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "发送消息（SSE 流式 GET）", description = "逐 token 推送，GET 方式（浏览器 EventSource）")
+    public SseEmitter sendStreamGet(
+            @RequestParam String message,
+            @RequestParam(required = false) String sessionId) {
+        return doStream(sessionId, message);
+    }
+
+    private SseEmitter doStream(String sessionId, String message) {
+        SseEmitter emitter = new SseEmitter(0L); // 无超时
 
         chatService.chatStream(
-                request.getSessionId(),
-                request.getMessage(),
+                sessionId, message,
                 token -> {
                     try { emitter.send(SseEmitter.event().data(token)); }
                     catch (Exception e) { emitter.completeWithError(e); }

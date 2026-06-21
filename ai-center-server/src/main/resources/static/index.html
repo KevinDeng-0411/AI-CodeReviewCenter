@@ -137,44 +137,34 @@ createApp({
                 conversations.value=conversations.value.filter(x=>x.sessionId!==c.sessionId)
                 if(c.sessionId===currentSession.value)newChat()}catch(e){}
         }
-        async function send(){
+        function send(){
             const text=inputText.value.trim();if(!text||sending.value)return
             inputText.value='';sending.value=true
             messages.value.push({role:'USER',content:text})
-            // 流式 SSE
-            try{
-                const sid=currentSession.value||''
-                const resp=await fetch('/api/chat/send/stream',{
-                    method:'POST',headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({sessionId:sid,message:text})
-                })
-                const reader=resp.body.getReader();const decoder=new TextDecoder()
-                const aiMsg={role:'ASSISTANT',content:'',streaming:true}
-                messages.value.push(aiMsg)
-                while(true){
-                    const{value,done}=await reader.read();if(done)break
-                    const chunk=decoder.decode(value,{stream:true})
-                    const lines=chunk.split('\n')
-                    for(const line of lines){
-                        if(line.startsWith('data:')){
-                            const token=line.substring(5).trim()
-                            if(token){aiMsg.content+=token;scrollBottom()}
-                        }
-                        if(line.startsWith('event:done')){
-                            aiMsg.streaming=false
-                            const dataLine=lines.find(l=>l.startsWith('data:'))
-                            if(dataLine&&dataLine.substring(5).trim()){
-                                if(!currentSession.value){
-                                    currentSession.value=dataLine.substring(5).trim()
-                                    loadConvs()
-                                }
-                            }
-                        }
-                    }
-                }
+            const sid=currentSession.value||''
+            const aiMsg={role:'ASSISTANT',content:'',streaming:true}
+            messages.value.push(aiMsg)
+
+            // EventSource = 浏览器原生 SSE, 逐 token 到达立即显示
+            const params=new URLSearchParams({message:text})
+            if(sid)params.append('sessionId',sid)
+            const es=new EventSource('/api/chat/send/stream?'+params.toString())
+
+            es.addEventListener('message',e=>{
+                if(e.data){aiMsg.content+=e.data;scrollBottom()}
+            })
+            es.addEventListener('done',e=>{
                 aiMsg.streaming=false
-            }catch(e){messages.value.push({role:'ASSISTANT',content:'抱歉，请求失败：'+e.message})}
-            sending.value=false;scrollBottom()
+                if(e.data&&!currentSession.value){
+                    currentSession.value=e.data;loadConvs()
+                }
+                es.close();sending.value=false
+            })
+            es.onerror=()=>{
+                es.close();sending.value=false
+                if(!aiMsg.content)aiMsg.content='请求失败，请重试'
+                aiMsg.streaming=false
+            }
         }
         function scrollBottom(){nextTick(()=>{if(msgContainer.value)msgContainer.value.scrollTop=msgContainer.value.scrollHeight})}
         onMounted(loadConvs)
