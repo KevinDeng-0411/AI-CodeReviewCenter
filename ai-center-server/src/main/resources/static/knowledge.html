@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeAware - 知识库管理</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:"Helvetica Neue",Helvetica,"PingFang SC","Microsoft YaHei",sans-serif;background:#f2f3f5;min-height:100vh}
+        .header{background:#fff;padding:0 24px;height:56px;border-bottom:1px solid #e5e6eb;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+        .header h2{font-size:18px;display:flex;align-items:center;gap:8px}
+        .header h2 span{background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .header .nav a{color:#6366f1;text-decoration:none;font-size:13px}
+        .container{max-width:1200px;margin:0 auto;padding:24px}
+        .stats{display:flex;gap:16px;margin-bottom:24px}
+        .stat-card{flex:1;background:#fff;border-radius:12px;padding:20px;text-align:center}
+        .stat-card .num{font-size:32px;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .stat-card .label{font-size:13px;color:#86909c;margin-top:4px}
+        .toolbar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+        .el-table{font-size:14px}
+        .chunk-preview{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="header">
+        <h2><span>CodeAware</span> 知识库管理</h2>
+        <span class="nav"><a href="/">💬 AI 助手</a>&nbsp;&nbsp;<a href="/doc.html">📖 API 文档</a></span>
+    </div>
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats">
+            <div class="stat-card"><div class="num">{{ stats.total }}</div><div class="label">文档总数</div></div>
+            <div class="stat-card"><div class="num">{{ stats.manual }}</div><div class="label">手动上传</div></div>
+            <div class="stat-card"><div class="num">{{ stats.aiReadme }}</div><div class="label">AI_README</div></div>
+            <div class="stat-card"><div class="num">{{ stats.other }}</div><div class="label">其他来源</div></div>
+        </div>
+        <!-- 操作栏 -->
+        <div class="toolbar">
+            <el-button type="primary" @click="showUpload=true"><el-icon><Upload/></el-icon> 上传文档</el-button>
+            <el-input v-model="searchQuery" placeholder="搜索知识库..." style="width:320px" clearable @keyup.enter="doSearch">
+                <template #prefix><el-icon><Search/></el-icon></template>
+            </el-input>
+            <el-button @click="doSearch" type="primary" plain>RAG 检索</el-button>
+            <el-button @click="loadList" plain>刷新列表</el-button>
+        </div>
+        <!-- 文档表格 -->
+        <el-table :data="list" stripe style="width:100%;border-radius:12px;overflow:hidden" v-loading="loading">
+            <el-table-column prop="id" label="ID" width="70"/>
+            <el-table-column prop="title" label="标题" min-width="160"/>
+            <el-table-column prop="chunkIndex" label="分块" width="70"/>
+            <el-table-column label="内容预览" min-width="280">
+                <template #default="{row}"><span class="chunk-preview">{{ row.chunkContent }}</span></template>
+            </el-table-column>
+            <el-table-column prop="sourceType" label="来源" width="110">
+                <template #default="{row}"><el-tag :type="row.sourceType==='MANUAL'?'':'success'" size="small">{{ row.sourceType }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="projectName" label="项目" width="120"/>
+            <el-table-column label="操作" width="80" fixed="right">
+                <template #default="{row}">
+                    <el-button type="danger" link size="small" @click="delDoc(row.id)">删除</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:center;margin-top:16px">
+            <el-pagination :current-page="page" :page-size="size" :total="total" layout="prev,pager,next" @current-change="p=>{page=p;loadList()}" small/>
+        </div>
+        <!-- 检索结果 -->
+        <el-dialog v-model="showResults" title="RAG 检索结果" width="700px">
+            <div v-if="searchResults.length===0" style="text-align:center;color:#c0c4cc;padding:40px">无匹配结果</div>
+            <div v-for="(r,i) in searchResults" :key="i" style="padding:12px;margin-bottom:8px;background:#f7f8fa;border-radius:8px">
+                <div style="margin-bottom:6px;display:flex;gap:8px;align-items:center">
+                    <el-tag :type="r.matchType==='vector'?'':'warning'" size="small">{{ r.matchType }}</el-tag>
+                    <span style="font-weight:600">{{ r.document.title }}</span>
+                    <span style="color:#86909c;font-size:12px">chunk#{{ r.document.chunkIndex }}</span>
+                    <span style="color:#86909c;font-size:12px">融合:{{ r.fusionScore.toFixed(3) }}</span>
+                </div>
+                <div style="font-size:13px;color:#4e5969">{{ r.document.chunkContent }}</div>
+            </div>
+        </el-dialog>
+        <!-- 上传弹窗 -->
+        <el-dialog v-model="showUpload" title="上传知识文档" width="550px">
+            <el-form label-position="top">
+                <el-form-item label="文档标题"><el-input v-model="form.title" placeholder="如：Redis 缓存最佳实践"/></el-form-item>
+                <el-form-item label="来源类型">
+                    <el-select v-model="form.sourceType" style="width:100%">
+                        <el-option label="手动上传 (MANUAL)" value="MANUAL"/>
+                        <el-option label="AI 生成 (AI_README)" value="AI_README"/>
+                        <el-option label="代码文件 (CODE)" value="CODE"/>
+                        <el-option label="文档文件 (DOC)" value="DOC"/>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="所属项目"><el-input v-model="form.projectName" placeholder="如：ai-center"/></el-form-item>
+                <el-form-item label="文档内容">
+                    <el-input v-model="form.content" type="textarea" :rows="8" placeholder="粘贴 Markdown 或文本内容..."/>
+                </el-form-item>
+                <el-form-item label="或上传文件（PDF/Word/HTML）">
+                    <el-upload :auto-upload="false" :on-change="onFileChange" :limit="1" drag>
+                        <el-icon><UploadFilled/></el-icon>
+                        <div>拖拽文件到此处或点击上传</div>
+                    </el-upload>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showUpload=false">取消</el-button>
+                <el-button type="primary" @click="doUpload" :loading="uploading">上传并向量化</el-button>
+            </template>
+        </el-dialog>
+    </div>
+</div>
+<script>
+const {createApp,ref,reactive,onMounted}=Vue
+createApp({
+    setup(){
+        const list=ref([]);const loading=ref(false);const total=ref(0);const page=ref(1);const size=ref(10)
+        const stats=reactive({total:0,manual:0,aiReadme:0,other:0})
+        const showUpload=ref(false);const uploading=ref(false)
+        const form=reactive({title:'',sourceType:'MANUAL',projectName:'ai-center',content:''})
+        const searchQuery=ref('');const searchResults=ref([]);const showResults=ref(false)
+        const file=ref(null)
+
+        async function loadList(){
+            loading.value=true
+            try{const r=await fetch(`/api/knowledge/list?page=${page.value}&size=${size.value}`);const d=await r.json()
+                if(d.code===1){list.value=d.data.records;total.value=d.data.total;calcStats()}}catch(e){}
+            loading.value=false
+        }
+        function calcStats(){
+            stats.total=total.value
+            stats.manual=list.value.filter(x=>x.sourceType==='MANUAL').length
+            stats.aiReadme=list.value.filter(x=>x.sourceType==='AI_README').length
+            stats.other=stats.total-stats.manual-stats.aiReadme
+        }
+        async function doUpload(){
+            uploading.value=true
+            try{
+                if(file.value){
+                    const fd=new FormData();fd.append('file',file.value);fd.append('projectName',form.projectName);fd.append('sourceType',form.sourceType)
+                    await fetch('/api/knowledge/upload-file',{method:'POST',body:fd})
+                }else{
+                    await fetch('/api/knowledge/upload',{method:'POST',headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify(form)})
+                }
+                ElMessage.success('上传成功')
+                showUpload.value=false;file.value=null;form.content='';form.title='';loadList()
+            }catch(e){ElMessage.error('上传失败')}
+            uploading.value=false
+        }
+        async function doSearch(){
+            if(!searchQuery.value.trim())return
+            try{const r=await fetch('/api/knowledge/search',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({query:searchQuery.value,topK:5})});const d=await r.json()
+                if(d.code===1){searchResults.value=d.data.results;showResults.value=true}}catch(e){}
+        }
+        async function delDoc(id){
+            try{await ElMessageBox.confirm('确定删除？','提示',{confirmButtonText:'确定',cancelButtonText:'取消',type:'warning'})
+                await fetch(`/api/knowledge/${id}`,{method:'DELETE'});ElMessage.success('已删除');loadList()}catch(e){}
+        }
+        function onFileChange(f){file.value=f.raw;form.title=f.name}
+        onMounted(loadList)
+        return{list,loading,total,page,size,stats,showUpload,uploading,form,searchQuery,searchResults,showResults,
+                loadList,doUpload,doSearch,delDoc,onFileChange}
+    }
+}).use(ElementPlus).mount('#app')
+</script>
+</body>
+</html>

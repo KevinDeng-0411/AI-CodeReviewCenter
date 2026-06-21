@@ -29,6 +29,7 @@ public class KnowledgeController {
 
     private final RagService ragService;
     private final DocumentParserService documentParserService;
+    private final com.aicenter.model.mapper.KnowledgeDocumentMapper knowledgeDocumentMapper;
 
     @PostMapping("/upload")
     @Operation(summary = "上传知识文档（文本）", description = "上传文本内容，自动语义分块并向量化入库(Pinecone)")
@@ -112,6 +113,24 @@ public class KnowledgeController {
                 "totalResults", formattedResults.size(),
                 "results", formattedResults,
                 "sourceStats", sourceStats
+        ));
+    }
+
+    @GetMapping("/list")
+    @Operation(summary = "知识库列表", description = "分页列出所有知识文档")
+    public Result<Object> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String projectName) {
+        var wrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aicenter.model.entity.KnowledgeDocument>()
+                .eq(projectName != null, com.aicenter.model.entity.KnowledgeDocument::getProjectName, projectName)
+                .orderByDesc(com.aicenter.model.entity.KnowledgeDocument::getCreatedAt);
+        var pageResult = knowledgeDocumentMapper.selectPage(
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size), wrapper);
+        return Result.success(Map.of(
+                "total", pageResult.getTotal(),
+                "page", page,
+                "records", pageResult.getRecords()
         ));
     }
 
