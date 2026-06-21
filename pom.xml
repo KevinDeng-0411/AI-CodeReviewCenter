@@ -8,8 +8,8 @@
     <artifactId>ai-center</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>AI Center</name>
-    <description>工作室 AI 中心 — AI 驱动的研发效能平台</description>
+    <name>CodeAware</name>
+    <description>CodeAware — AI 驱动的代码质量与团队知识管理平台</description>
 
     <modules>
         <module>ai-center-common</module>

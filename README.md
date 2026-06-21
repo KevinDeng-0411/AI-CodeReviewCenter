@@ -1,7 +1,7 @@
-# AI Center — 工作室 AI 中心
+# CodeAware — AI 研发效能中台
 
-> AI 驱动的研发效能平台，围绕「代码质量与团队知识管理」两大核心场景。
-> 基于 LangChain4j + DeepSeek V4 + Ollama bge-m3 + PostgreSQL pgvector + Redis。
+> AI 驱动的代码质量与团队知识管理平台。
+> 让 AI 理解你的代码，守护每一行质量。
 
 ## 技术栈
 
