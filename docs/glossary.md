@@ -18,4 +18,4 @@
 | Prompt Template | 领域实体。逻辑身份=type,每行=版本,编辑=新增版本,每 type 恰一激活,可回滚。CHAT 纳入模板。 | 🟢 settled | [ADR-0005](adr/0005-prompttemplate-versioning-activation-chat.md) |
 | AI Operation Record | 审计日志(append-only 事件流水),非实体。CR/UT 合并为 `ai_operation_records`(type 鉴别+result+metadata JSON)。 | 🟢 settled | [ADR-0006](adr/0006-records-audit-log-merge.md) |
 
-> 全部术语已 🟢。遗留子决策:ADR-0003 的 LLM 摘要持久化(PG 列 vs miss 重算)待定。
+> 全部术语已 🟢。ADR-0003 摘要子决策已定:PG `conversations.summary` 真相 + Redis 缓存,miss 读 PG 不重算,写入异步双写。无未决遗留。

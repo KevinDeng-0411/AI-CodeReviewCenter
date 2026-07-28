@@ -19,10 +19,11 @@ Java 版 Short-term Memory 号称"热数据 Redis、冷数据持久化 PG",但�
 1. **PG(`chat_messages`)是对话消息的 source of truth**;Redis 是热缓存(滑窗 + 摘要),仅用于快速拼上下文。
 2. **补 fallback 读**:Redis miss 时,从 `chat_messages` 回查最近 N 条重建窗口,再回填 Redis。对话历史不再随 TTL 蒸发。
 3. `persistMessage` 不再是死代码;它是真相写入,Redis 是其加速缓存。
+4. **LLM 摘要持久化**(resolved):摘要存 PG `conversations.summary` 列(真相)+ Redis `summary:{cid}`(缓存)。**Redis 缓存优先,miss 时读 PG summary 列,不从消息重算**(重算是下策,避免)。写入时命中阈值即由异步任务(`BackgroundTasks`)生成/更新摘要并**双写**(Redis + PG)。
 
 ## 结果
 
 - 对话历史跨 Redis 过期存活,API 永远能返回。
 - Redis 仍是上下文拼装的热路径(性能不变)。
-- **遗留子决策**:LLM 摘要当前 Redis-only(`REDIS_SESSION_SUMMARY`),Redis miss 时摘要也丢。需定:摘要持久化到 PG(如 `chat_conversations.summary` 列)还是 miss 时从消息重算。**待 grilling**。
+- LLM 摘要跨 Redis 过期存活(存 PG `conversations.summary`),miss 读 PG 不重算;与消息同为"PG 真相 + Redis 缓存"模式。
 - 此决定**强化** Q8 的"统一记忆叙事":短期记忆现在真正持久化(不再 7 天蒸发),才配得上"记忆"二字。

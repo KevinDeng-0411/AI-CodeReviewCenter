@@ -41,5 +41,5 @@
 
 ## 遗留(跨 ADR)
 
-- ADR-0003 子决策:LLM 摘要 Redis-only,miss 时**持久化到 PG 还是重算**仍未定。
+- ~~ADR-0003 子决策:LLM 摘要持久化~~ **已解决**(见 ADR-0003 决策点 4:PG `conversations.summary` 真相 + Redis 缓存,miss 读 PG 不重算,写入异步双写)。
 - ADR-0005:`review_dimensions`/`severity_levels` 仅 CODE_REVIEW 有意义,余 type 为空(可接受)。

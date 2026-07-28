@@ -100,9 +100,11 @@ uv run pytest                                 # 测试
 uv run pytest --cov=app                       # 覆盖率
 ```
 
-## 遗留待定
+## 摘要持久化（ADR-0003 已定）
 
-- ADR-0003 子决策：LLM 摘要 Redis-only，miss 时持久化到 PG（`conversations.summary`）还是从消息重算？实现时定。
+- LLM 摘要存 PG `conversations.summary`（真相）+ Redis `summary:{cid}`（缓存）
+- 读：Redis 优先，miss 读 PG `conversations.summary`，**不从消息重算**（下策，避免）
+- 写：命中阈值由 `BackgroundTasks` 异步生成/更新摘要，双写 Redis + PG
 
 ## 参考
 

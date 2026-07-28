@@ -234,7 +234,7 @@ ai-center-py/
 | P1 | `test_models` / `test_migration` / `test_crud` / `test_pgvector_column` | 8 表对齐 ADR（父子表/合并表/内联向量）；alembic up/down 往返；`Vector` 列读写 + `<=>` 距离查询 |
 | P2 | `test_llm_connect` / `test_embedding_dim` / `test_vector_recall` | LLM 调通（mock）；embedding 1024 维；VectorRecallService 存取+cosine 检索 |
 | P3-1 | `test_code_review` / `test_prompt_manager` | 结构化输出解析；critical/warning/info 计数；持久化；`{{source_code}}` 渲染；**版本化激活/回滚**(ADR-0005) |
-| P3-2 | `test_short_term` / `test_long_term` | 滑窗裁剪；摘要触发；**Redis miss 回查 PG 重建**(ADR-0003)；内联向量召回 + threshold |
+| P3-2 | `test_short_term` / `test_long_term` | 滑窗裁剪；摘要触发+异步双写(Redis+PG)；消息 miss 回查 PG 重建；摘要 miss 读 PG 不重算(ADR-0003)；内联向量召回 + threshold |
 | P3-3 | `test_chunker` / `test_query_rewriter` / `test_hybrid` | Markdown 分块 + overlap；重写变体（mock）；pg_trgm+pgvector 融合、`matchType`、去重 |
 | P3-4 | `test_chat` | 三级上下文拼接；SSE token + `[DONE]`；会话增删查；**CHAT prompt 走模板**(ADR-0005) |
 | P3-5 | `test_unit_test` / `test_ai_readme` / `test_document_parser` / `test_prompt_api` | 各服务核心流程；unstructured 多格式解析 |
@@ -303,7 +303,7 @@ async def get_db():  # FastAPI Depends
 
 1. `prompt_templates`（版本化，ADR-0005）：`(id, type, version, name[标签], role_setting, template_body, review_dimensions, severity_levels, is_active, created_at)`；部分唯一索引 `(type) WHERE is_active=true`。
 2. `ai_operation_records`（合并 CR/UT，ADR-0006）：`(id, type[CODE_REVIEW/UNIT_TEST], project_name, file_path, source_code, result[TEXT/JSON], prompt_template_id, ai_model, metadata[JSON], created_at)`。
-3. `conversations`（ADR-0004）：`(id, conversation_id[unique], title, created_at)`。
+3. `conversations`（ADR-0004）：`(id, conversation_id[unique], title, summary[TEXT, ADR-0003 摘要持久化], created_at)`。
 4. `messages`（ADR-0004）：`(id, conversation_id, role, content, token_count, created_at)`。
 5. `long_term_memories`（ADR-0001）：`(id, conversation_id, content, memory_type, embedding[Vector(1024)], metadata, created_at)`。
 6. `documents`（父，ADR-0002）：`(id, title, source_type, project_name, content[全文一次], created_at)`。
@@ -473,7 +473,7 @@ async def get_messages(r, db, cid):
             await _refill_redis(r, cid, entries)
     return _parse(entries)
 ```
-> **遗留子决策（ADR-0003）**：LLM 摘要当前 Redis-only，miss 时**持久化到 PG(`conversations.summary` 列)还是从消息重算**仍未定，实现时定。
+> **LLM 摘要持久化（ADR-0003 已定）**：摘要存 PG `conversations.summary`(真相)+ Redis `summary:{cid}`(缓存)。读:Redis 优先,miss 读 PG,**不从消息重算**;写:命中阈值由 `BackgroundTasks` 异步生成/更新并双写。
 
 ### 7.7 LongTermMemoryManager（P3-2，改进①）
 对照 `LongTermMemoryManager.java:39`，去掉 UUID 间接层，调 `VectorRecallService`：
@@ -626,7 +626,7 @@ async def save_and_activate(type_, body, role_setting, name_label, **meta) -> Pr
 - [ ] **P3-1** PromptTemplateManager(版本化+激活,ADR-0005) + CodeReviewService（结构化输出）
   - [ ] 测试：`test_code_review`(解析/计数/持久化) / `test_prompt_manager`(渲染/激活/回滚)
 - [ ] **P3-2** ShortTermMemory(PG fallback,ADR-0003) + LongTermMemory（内联 pgvector,ADR-0001）
-  - [ ] 测试：`test_short_term`(滑窗/摘要触发/miss 回查) / `test_long_term`(召回+threshold)
+  - [ ] 测试：`test_short_term`(滑窗/摘要触发+双写/miss 回查) / `test_long_term`(召回+threshold)
 - [ ] **P3-3** SemanticChunker + QueryRewriter + HybridRetriever（pg_trgm，作用 knowledge_chunks）
   - [ ] 测试：`test_chunker`(分块+overlap) / `test_query_rewriter`(变体) / `test_hybrid`(融合+matchType+去重)
 - [ ] **P3-4** RagService(父子表,ADR-0002) + ChatService（SSE + CHAT 模板,ADR-0005 + conversation_id）
