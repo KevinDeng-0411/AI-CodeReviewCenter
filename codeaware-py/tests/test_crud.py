@@ -16,7 +16,7 @@ def repo(db_session):
 
 
 async def test_document_chunk_cascade_delete(db_session):
-    doc = Document(title="Redis 最佳实践", source_type="MANUAL", project_name="ai-center", content="全文...")
+    doc = Document(title="Redis 最佳实践", source_type="MANUAL", project_name="codeaware", content="全文...")
     db_session.add(doc)
     await db_session.flush()
     for i in range(3):

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-center"
+name = "codeaware"
 version = "0.1.0"
-description = "AI Center - AI 驱动的研发效能平台 (Java -> Python 重构)"
+description = "CodeAware - AI 驱动的研发效能平台 (Java -> Python 重构)"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "fastapi>=0.115",

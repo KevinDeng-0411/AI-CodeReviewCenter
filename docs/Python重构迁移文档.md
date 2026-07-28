@@ -1,4 +1,4 @@
-# AI Center - Java -> Python 重构迁移文档
+# CodeAware - Java -> Python 重构迁移文档
 
 > **文档先行**：本文件是后续按优先级逐步实现迁移的**唯一蓝图**。每个阶段自洽，可逐阶段交付、逐阶段验证。
 >
@@ -124,7 +124,7 @@ FastAPI + asyncpg + async redis，LLM I/O 密集场景并发优势明显；`Chat
 ## 4. 目录结构设计
 
 ```
-ai-center-py/
+codeaware-py/
 ├── pyproject.toml              # uv 依赖
 ├── docker-compose.yml          # 复用（PG/Redis/Ollama 不变）
 ├── .env.example
@@ -255,7 +255,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_nested_delimiter="__")
     # Web
-    app_name: str = "ai-center"
+    app_name: str = "codeaware"
     # DB (对应 application.yml:17-21)
     pg_host: str = "localhost"; pg_port: int = 5433
     pg_user: str = "aicenter"; pg_password: str = "aicenter123"
@@ -585,7 +585,7 @@ async def save_and_activate(type_, body, role_setting, name_label, **meta) -> Pr
 
 > 30 秒电梯演讲（技术栈表述更新 + 重构升级层）：
 
-> 「我先用 Spring Boot 3 + LangChain4j 独立开发了 AI 研发效能中台 AI Center，22 个 API 覆盖 AI Code Review、单测生成、AIReadMe、智能问答（多轮+两级记忆+RAG），**核心域是智能问答 Chat**。随后用 Python 主流栈（FastAPI + LangChain + SQLAlchemy + pgvector）重构，先做了一轮领域建模 grilling 产出 7 份 ADR，并在迁移中修正了多个设计问题：① 向量内联 pgvector 消除 UUID 反查；② 关键词检索下沉 PG 的 pg_trgm 替代内存伪 BM25；③ LLM 结构化输出 + 全异步 SSE 替代手写 JSON 解析与同步回调；④ Knowledge 拆父子表修全文冗余、消息改 PG 真相源修只写不读、Prompt 模板版本化修激活非确定性。」
+> 「我先用 Spring Boot 3 + LangChain4j 独立开发了 AI 研发效能中台 CodeAware，22 个 API 覆盖 AI Code Review、单测生成、AIReadMe、智能问答（多轮+两级记忆+RAG），**核心域是智能问答 Chat**。随后用 Python 主流栈（FastAPI + LangChain + SQLAlchemy + pgvector）重构，先做了一轮领域建模 grilling 产出 7 份 ADR，并在迁移中修正了多个设计问题：① 向量内联 pgvector 消除 UUID 反查；② 关键词检索下沉 PG 的 pg_trgm 替代内存伪 BM25；③ LLM 结构化输出 + 全异步 SSE 替代手写 JSON 解析与同步回调；④ Knowledge 拆父子表修全文冗余、消息改 PG 真相源修只写不读、Prompt 模板版本化修激活非确定性。」
 
 **追问弹药**：
 - 为什么不用 SonarQube？（保留原话术：规则引擎 vs 语义理解）

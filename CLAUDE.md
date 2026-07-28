@@ -1,11 +1,11 @@
-# CLAUDE.md - AI Center 编码参考
+# CLAUDE.md - CodeAware 编码参考
 
 > 本文件供 AI 编码助手参考。本项目正在从 Java 迁移到 Python，**本文档针对 Python 目标实现**；Java 源码（`ai-center-*` 模块）仅作遗留参考。
 > 权威设计决策见 `docs/adr/0001~0007` + `docs/glossary.md` + `docs/Python重构迁移文档.md`。冲突时以 ADR 为准。
 
 ## 项目是什么
 
-**AI Center** - AI 驱动的研发效能平台。**核心域 = Chat（智能问答）**：多轮对话 + 两级记忆 + RAG 在此收敛。支撑子域 = AI 编排基建（Prompt / Memory / VectorRecall）。次要上下文 = Code Review / Unit Test / AIReadMe（复用基建的薄工具）。详见 [ADR-0007](docs/adr/0007-core-domain-and-bounded-contexts.md)。
+**CodeAware** - AI 驱动的研发效能平台。**核心域 = Chat（智能问答）**：多轮对话 + 两级记忆 + RAG 在此收敛。支撑子域 = AI 编排基建（Prompt / Memory / VectorRecall）。次要上下文 = Code Review / Unit Test / AIReadMe（复用基建的薄工具）。详见 [ADR-0007](docs/adr/0007-core-domain-and-bounded-contexts.md)。
 
 22 个 API，4 大功能：AI Code Review（七层结构化 Prompt）、单测生成、AIReadMe 生成、智能问答。
 

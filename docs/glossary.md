@@ -1,4 +1,4 @@
-# AI Center - 领域术语表 (Glossary)
+# CodeAware - 领域术语表 (Glossary)
 
 > 本表由 `/grill-with-docs` grilling 会话维护。每条术语标注状态：
 > - 🔴 **contested** - 定义有歧义/冲突，待 grilling 敲定

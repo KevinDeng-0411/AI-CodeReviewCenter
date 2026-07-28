@@ -11,7 +11,7 @@ from app.core.response import Result
 
 app = FastAPI(
     title=settings.app_name,
-    description="AI Center - AI 驱动的研发效能平台 (Python 重构)",
+    description="CodeAware - AI 驱动的研发效能平台 (Python 重构)",
     version="0.1.0",
 )
 

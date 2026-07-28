@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_nested_delimiter="__", extra="ignore")
 
     # Web
-    app_name: str = "ai-center"
+    app_name: str = "codeaware"
 
     # PostgreSQL + pgvector（Python 版默认独立库 ai_center_py，与 Java ai_center 共存）
     pg_host: str = "localhost"
