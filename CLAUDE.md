@@ -109,9 +109,9 @@ uv run pytest --cov=app                       # 覆盖率
 
 ## DeepSeek 集成约定
 
-- thinking 模型（deepseek-v4-flash）：结构化输出用 `with_structured_output(Schema, method="json_mode")` + `ainvoke` 回退；**勿用** `json_schema`/`function_calling`（thinking 拒强制 tool_choice / response_format）。
-- agentic 多轮工具调用：每轮须完整回传 `reasoning_content`、不强制 `tool_choice`、带 `extra_body={"thinking":{"type":"enabled"}}`，否则 400。
-- 非思考模式（`thinking: disabled`）为速度/严格 schema 备选，暂未启用。
+- thinking 模型（deepseek-v4-flash）：结构化输出用 `with_structured_output(Schema, method="json_mode")` + `ainvoke` 回退；**勿用** `function_calling`（thinking 拒强制 tool_choice）与 `json_schema`（DeepSeek 通用限制，两模式均不可用）。
+- agentic 多轮工具调用（thinking）：每轮须完整回传 `reasoning_content`、不强制 `tool_choice`、带 `extra_body={"thinking":{"type":"enabled"}}`，否则 400。
+- 非思考模式（`thinking: disabled`）：解除强制 tool_choice -> `function_calling` 可用（已实测，比 json_mode schema 更严）；无 reasoning_content 回传。暂未启用。
 - 详见 [docs/deepseek-notes.md](docs/deepseek-notes.md)。
 
 ## 参考
