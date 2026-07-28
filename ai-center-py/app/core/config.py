@@ -13,12 +13,12 @@ class Settings(BaseSettings):
     # Web
     app_name: str = "ai-center"
 
-    # PostgreSQL + pgvector（对应 application.yml:17-21）
+    # PostgreSQL + pgvector（Python 版默认独立库 ai_center_py，与 Java ai_center 共存）
     pg_host: str = "localhost"
     pg_port: int = 5433
     pg_user: str = "aicenter"
     pg_password: str = "aicenter123"
-    pg_db: str = "ai_center"
+    pg_db: str = "ai_center_py"
 
     # Redis（对应 application.yml:24-33）
     redis_host: str = "localhost"
