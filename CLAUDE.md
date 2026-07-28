@@ -107,6 +107,13 @@ uv run pytest --cov=app                       # 覆盖率
 - 读：Redis 优先，miss 读 PG `conversations.summary`，**不从消息重算**（下策，避免）
 - 写：命中阈值由 `BackgroundTasks` 异步生成/更新摘要，双写 Redis + PG
 
+## DeepSeek 集成约定
+
+- thinking 模型（deepseek-v4-flash）：结构化输出用 `with_structured_output(Schema, method="json_mode")` + `ainvoke` 回退；**勿用** `json_schema`/`function_calling`（thinking 拒强制 tool_choice / response_format）。
+- agentic 多轮工具调用：每轮须完整回传 `reasoning_content`、不强制 `tool_choice`、带 `extra_body={"thinking":{"type":"enabled"}}`，否则 400。
+- 非思考模式（`thinking: disabled`）为速度/严格 schema 备选，暂未启用。
+- 详见 [docs/deepseek-notes.md](docs/deepseek-notes.md)。
+
 ## 参考
 
 - 迁移蓝图：[docs/Python重构迁移文档.md](docs/Python重构迁移文档.md)
