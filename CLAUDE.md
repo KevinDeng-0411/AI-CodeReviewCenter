@@ -86,7 +86,8 @@ app/
 - 测试库隔离：独立 PG db（`ai_center_test`）+ Redis db=15；事务回滚或清表
 - 核心 fixtures：`db_session`（回滚）、`redis_client`、`mock_llm`、`mock_embedder`（固定 1024 维）
 - 每阶段代码与测试同步交付，测试不过不进下一阶段
-- 核心模块（rag/memory/code_review）覆盖率 ≥80%
+- **覆盖率方针**：核心模块（rag/memory/code_review）≥80% 是**下限，不是目标**；重逻辑模块（检索融合/记忆窗口+fallback/结构化解析）深测、自然到 90%+；**不追求全局 90%**——测对的地方，不测所有地方。薄 API 层/getter/LLM 调用本身（已 mock）不强求覆盖
+- 断言验证**行为**而非"不崩"；关键路径配集成测试；LLM mock 覆盖边界用例（空返回/格式错/超时）
 
 ## 常用命令
 

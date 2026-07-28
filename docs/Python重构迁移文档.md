@@ -224,7 +224,7 @@ codeaware-py/
 - **测试库隔离**：独立 PG database（如 `ai_center_test`）+ 专属 Redis db（如 db=15）；每个测试函数事务回滚或 fixture 清表，互不污染。
 - **核心 fixtures**：`db_session`（带回滚）、`redis_client`、`mock_llm`（固定文本/JSON 返回）、`mock_embedder`（返回固定 1024 维向量，确定性可断言）。
 - **依赖**：pytest、pytest-asyncio、httpx（`AsyncClient` 测 FastAPI + SSE）、testcontainers-python（可选，真实 PG）、respx（mock 外部 HTTP，可选）。
-- **覆盖率**：`pytest --cov=app`，核心模块（`rag` / `memory` / `code_review`）目标 ≥80%，P5 统一验收。
+- **覆盖率方针**：`pytest --cov=app`。核心模块（`rag` / `memory` / `code_review`）≥80% 为**下限**，重逻辑模块（检索融合/记忆窗口+fallback/结构化解析）深测到 90%+，**不追求全局 90%**——测对的地方，不测所有地方；薄层/LLM 调用（已 mock）不强求。P5 统一验收。
 
 ### 6.3 各阶段测试交付清单
 
@@ -574,7 +574,7 @@ async def save_and_activate(type_, body, role_setting, name_label, **meta) -> Pr
 
 1. **双端契约对齐**：用 `README.md` 的 22 个 curl 示例对 Java/Python 双端逐接口比对，响应结构（`code/data`）一致（注意 `conversation_id` 重命名）。
 2. **e2e 冒烟脚本**：`tests/e2e_smoke.py` 串起全链路：上传知识库 -> RAG 检索 -> 多轮对话 -> Code Review。
-3. **覆盖率验收**：`pytest --cov=app`，核心模块（`rag`/`memory`/`code_review`）≥80%。
+3. **覆盖率验收**：`pytest --cov=app`。核心模块（`rag`/`memory`/`code_review`）≥80%（下限），重逻辑模块 90%+，不追求全局 90%。
 4. **数据迁移**：复用同一 PG 实例，迁移期两套代码可共存验证；正式切换前 dump/restore + §7.2.3 归并。
 
 ---
@@ -636,4 +636,4 @@ async def save_and_activate(type_, body, role_setting, name_label, **meta) -> Pr
 - [ ] **P4** 7 router + Depends + SSE，22 API 对齐（conversation_id）
   - [ ] 测试：`test_api_*`（22 端点契约对照 README curl）
 - [ ] **P5** 双端 e2e 对比 / 覆盖率 / README+话术更新
-  - [ ] 测试：`e2e_smoke` 全链路 / 覆盖率 ≥80%
+  - [ ] 测试：`e2e_smoke` 全链路 / 核心模块覆盖率 ≥80%（下限，不追求全局 90%）
