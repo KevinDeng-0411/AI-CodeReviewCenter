@@ -6,7 +6,7 @@
 
 ## 背景
 
-- **定性**:`code_review_records` / `unit_test_records` 均 append-only--[CodeReviewService.review](../ai-center-ai/src/main/java/com/aicenter/ai/service/CodeReviewService.java#L85) insert 后永不更新,只有 `listRecords`/`getRecordDetail` 读;无"重新评审/标记已解决/状态流转"任何生命周期行为。→ **审计日志(AI 操作事件流水),非领域实体**。
+- **定性**:`code_review_records` / `unit_test_records` 均 append-only--[CodeReviewService.review](../../../ai-center-ai/src/main/java/com/aicenter/ai/service/CodeReviewService.java#L85) insert 后永不更新,只有 `listRecords`/`getRecordDetail` 读;无"重新评审/标记已解决/状态流转"任何生命周期行为。→ **审计日志(AI 操作事件流水),非领域实体**。
 - **合并依据**:两表**无结构/基数差异**--均原子一行、公共列完全相同(id, project_name, file_path, source_code, prompt_template_id, ai_model, created_at),仅 `result` 负载不同(且都已是 TEXT:review_result 是 JSON、test_code 是代码串)。
 - 套用 [ADR-0001](0001-memory-vs-knowledge-two-tables-shared-recall.md) 原则:**结构差异才撑得起分表;负载/内容差异只是字段级。** 此处无结构差异 → 合并。
 

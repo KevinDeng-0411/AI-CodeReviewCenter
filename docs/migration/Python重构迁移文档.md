@@ -4,7 +4,7 @@
 >
 > 中间件保持不变：PostgreSQL 16 + pgvector / Redis 7 / Ollama bge-m3 / DeepSeek API / `docker-compose.yml` 原样复用，**只重写应用层**。
 >
-> 本文档已与 `docs/adr/` 的 7 份架构决策记录对齐（见 §0.1 索引）。ADR 是权威，本文档为可执行蓝图；二者冲突以 ADR 为准。
+> 本文档已与 `docs/decisions/adr/` 的 7 份架构决策记录对齐（见 §0.1 索引）。ADR 是权威，本文档为可执行蓝图；二者冲突以 ADR 为准。
 
 ---
 
@@ -22,13 +22,13 @@
 
 | ADR | 决策 | 影响章节 |
 |-----|------|---------|
-| [0001](adr/0001-memory-vs-knowledge-two-tables-shared-recall.md) | Memory/Knowledge 分表（结构差异）+ **共享 VectorRecallService** | §3 §7.3 §7.5 §7.7 |
-| [0002](adr/0002-knowledge-document-parent-child.md) | Knowledge 拆 `documents`+`knowledge_chunks` 父子表 | §3.5 §7.2.2 |
-| [0003](adr/0003-message-store-pg-source-of-truth.md) | 消息 **PG 真相源 + Redis 缓存 + fallback 读** | §3.5 §7.6 |
-| [0004](adr/0004-memory-concept-and-conversation-naming.md) | Memory 紧定义 + 统一 **`conversation_id`**（清除 session） | §7.4 §7.6 §7.7 §7.8 |
-| [0005](adr/0005-prompttemplate-versioning-activation-chat.md) | PromptTemplate **版本化 + 每 type 恰一激活 + CHAT 纳入模板** | §3.5 §7.4 §7.11(新) |
-| [0006](adr/0006-records-audit-log-merge.md) | Record=审计日志 + CR/UT **合并 `ai_operation_records`** | §3.5 §7.2.2 |
-| [0007](adr/0007-core-domain-and-bounded-contexts.md) | **核心域=Chat**，基建为支撑子域，工具为次要上下文 | §9 |
+| [0001](../decisions/adr/0001-memory-vs-knowledge-two-tables-shared-recall.md) | Memory/Knowledge 分表（结构差异）+ **共享 VectorRecallService** | §3 §7.3 §7.5 §7.7 |
+| [0002](../decisions/adr/0002-knowledge-document-parent-child.md) | Knowledge 拆 `documents`+`knowledge_chunks` 父子表 | §3.5 §7.2.2 |
+| [0003](../decisions/adr/0003-message-store-pg-source-of-truth.md) | 消息 **PG 真相源 + Redis 缓存 + fallback 读** | §3.5 §7.6 |
+| [0004](../decisions/adr/0004-memory-concept-and-conversation-naming.md) | Memory 紧定义 + 统一 **`conversation_id`**（清除 session） | §7.4 §7.6 §7.7 §7.8 |
+| [0005](../decisions/adr/0005-prompttemplate-versioning-activation-chat.md) | PromptTemplate **版本化 + 每 type 恰一激活 + CHAT 纳入模板** | §3.5 §7.4 §7.11(新) |
+| [0006](../decisions/adr/0006-records-audit-log-merge.md) | Record=审计日志 + CR/UT **合并 `ai_operation_records`** | §3.5 §7.2.2 |
+| [0007](../decisions/adr/0007-core-domain-and-bounded-contexts.md) | **核心域=Chat**，基建为支撑子域，工具为次要上下文 | §9 |
 
 ---
 

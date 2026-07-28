@@ -32,7 +32,7 @@
 self.chat_model.with_structured_output(Schema, method="json_mode")
 ```
 
-配 `ainvoke` + Pydantic `model_validate` 回退（见 `codeaware-py/app/ai/services/code_review.py:_invoke_structured`、`_extract_json`）。
+配 `ainvoke` + Pydantic `model_validate` 回退（见 `../../codeaware-py/app/ai/services/code_review.py:_invoke_structured`、`_extract_json`）。
 
 ---
 

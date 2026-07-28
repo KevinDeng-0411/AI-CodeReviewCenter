@@ -8,9 +8,9 @@
 
 Java 版 Short-term Memory 号称"热数据 Redis、冷数据持久化 PG",但读路径只读 Redis:
 
-- `getContextWindow`([ShortTermMemoryManager.java:68](../ai-center-ai/src/main/java/com/aicenter/ai/memory/ShortTermMemoryManager.java#L68))、`getMessages`([:99](../ai-center-ai/src/main/java/com/aicenter/ai/memory/ShortTermMemoryManager.java#L99)):摘要 + 消息均**只读 Redis**。
-- `persistMessage`([:160](../ai-center-ai/src/main/java/com/aicenter/ai/memory/ShortTermMemoryManager.java#L160)):写 `chat_messages`(PG)。
-- Redis TTL 7 天([:48](../ai-center-ai/src/main/java/com/aicenter/ai/memory/ShortTermMemoryManager.java#L48))。
+- `getContextWindow`([ShortTermMemoryManager.java:68](../../../ai-center-ai/src/main/java/com/aicenter/ai/memory/ShortTermMemoryManager.java#L68))、`getMessages`([:99](../../../ai-center-ai/src/main/java/com/aicenter/ai/memory/ShortTermMemoryManager.java#L99)):摘要 + 消息均**只读 Redis**。
+- `persistMessage`([:160](../../../ai-center-ai/src/main/java/com/aicenter/ai/memory/ShortTermMemoryManager.java#L160)):写 `chat_messages`(PG)。
+- Redis TTL 7 天([:48](../../../ai-center-ai/src/main/java/com/aicenter/ai/memory/ShortTermMemoryManager.java#L48))。
 
 后果:Redis TTL 一到,`/api/chat/conversations/{sessionId}` 返回空,尽管 PG `chat_messages` 全在。**PG 持久化只写不读,是死代码**。
 

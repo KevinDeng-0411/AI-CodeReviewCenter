@@ -14,7 +14,7 @@ Java 版 `LongTermMemoryManager` 与 `RagService` 各自维护一套"文本 -> b
 
 1. **保留两张表**。本质区别是**聚合结构不同**:Long-term Memory 是**原子事实**(1 content = 1 行,无分块);Knowledge Document 是**文档-分块父子结构**(1 文档 -> N chunk)。此结构差异足以支撑分表;作用域 / 检索方式 / 录入形态均为字段或策略级差异,不构成分表理由。
 
-2. **共享向量召回基建**:Python 版抽取一个 `VectorRecallService`(embed + 内联 pgvector 存储 + cosine 检索),Memory 与 Knowledge 各自为薄表并调用它。检索策略(纯向量 / 混合 BM25+向量)作为该服务的**参数/策略**,而非各自复制一套 embed+store+recall。Java 版两处复制此逻辑(见 [LongTermMemoryManager.java:50](../ai-center-ai/src/main/java/com/aicenter/ai/memory/LongTermMemoryManager.java#L50) / [RagService.java:57](../ai-center-ai/src/main/java/com/aicenter/ai/service/RagService.java#L57)),Python 版不再复制。
+2. **共享向量召回基建**:Python 版抽取一个 `VectorRecallService`(embed + 内联 pgvector 存储 + cosine 检索),Memory 与 Knowledge 各自为薄表并调用它。检索策略(纯向量 / 混合 BM25+向量)作为该服务的**参数/策略**,而非各自复制一套 embed+store+recall。Java 版两处复制此逻辑(见 [LongTermMemoryManager.java:50](../../../ai-center-ai/src/main/java/com/aicenter/ai/memory/LongTermMemoryManager.java#L50) / [RagService.java:57](../../../ai-center-ai/src/main/java/com/aicenter/ai/service/RagService.java#L57)),Python 版不再复制。
 
 3. **两表均内联 pgvector `Vector(1024)`**,消除 Java 版 UUID 反向索引(关联 ADR-0002)。
 

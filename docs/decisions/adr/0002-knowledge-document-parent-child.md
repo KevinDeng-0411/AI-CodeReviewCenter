@@ -9,8 +9,8 @@
 
 ADR-0001 用"文档->分块父子聚合结构"作为 Knowledge 与 Memory 分表的本质理由。但 Java 版 `knowledge_documents` 是**扁平 chunk 表**,无父实体,且由此产生三个功能缺陷:
 
-1. **全文冗余**:[RagService.java:49](../ai-center-ai/src/main/java/com/aicenter/ai/service/RagService.java#L49) 每个 chunk 行都 `.setContent(content)` 存完整正文,一篇文档切 N 块就存 N 份全文。
-2. **删除粒度错位**:[RagService.java:99](../ai-center-ai/src/main/java/com/aicenter/ai/service/RagService.java#L99) `deleteDocument(id)` 实为删一行 chunk,`DELETE /api/knowledge/{id}` 删不掉整篇文档。
+1. **全文冗余**:[RagService.java:49](../../../ai-center-ai/src/main/java/com/aicenter/ai/service/RagService.java#L49) 每个 chunk 行都 `.setContent(content)` 存完整正文,一篇文档切 N 块就存 N 份全文。
+2. **删除粒度错位**:[RagService.java:99](../../../ai-center-ai/src/main/java/com/aicenter/ai/service/RagService.java#L99) `deleteDocument(id)` 实为删一行 chunk,`DELETE /api/knowledge/{id}` 删不掉整篇文档。
 3. **无文档身份**:重复上传直接再插 N 行,无去重/覆盖语义。
 
 结论:"父子结构"在论断里有、在 schema 里没有,自相矛盾。

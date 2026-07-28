@@ -7,9 +7,9 @@
 ## 背景
 
 - **Q10**:PromptTemplate 是领域实体(产品 IP,有生命周期),非配置。
-- **Q11 激活模型坏了**:[PromptTemplateManager.java:43](../ai-center-ai/src/main/java/com/aicenter/ai/prompt/PromptTemplateManager.java#L43) `refreshCache` 对同 type 多激活模板 `put(type,t)` 后者覆盖前者,查询无 `ORDER BY` -> **非确定性**;`init.sql` 无 `(type) WHERE is_active` 部分唯一索引;[CodeReviewService.java:57](../ai-center-ai/src/main/java/com/aicenter/ai/service/CodeReviewService.java#L57) `getActiveTemplateByName(type, null)` -> `name = null` 永不命中 -> **死分支**。
-- **Q12**:`version` 列([entity:46](../ai-center-model/src/main/java/com/aicenter/model/entity/PromptTemplate.java#L46))被存但全代码无任何读取/比较/回滚 -> **幽灵列**。决定真做版本化(Prompt 是迭代资产,区别于 Document 一次性资料,见 ADR-0002)。
-- **Q13**:CHAT 类型枚举存在但 [ChatService.buildContextPrompt](../ai-center-ai/src/main/java/com/aicenter/ai/service/ChatService.java#L136) 系统 prompt 硬编码,CHAT 模板是空壳。
+- **Q11 激活模型坏了**:[PromptTemplateManager.java:43](../../../ai-center-ai/src/main/java/com/aicenter/ai/prompt/PromptTemplateManager.java#L43) `refreshCache` 对同 type 多激活模板 `put(type,t)` 后者覆盖前者,查询无 `ORDER BY` -> **非确定性**;`init.sql` 无 `(type) WHERE is_active` 部分唯一索引;[CodeReviewService.java:57](../../../ai-center-ai/src/main/java/com/aicenter/ai/service/CodeReviewService.java#L57) `getActiveTemplateByName(type, null)` -> `name = null` 永不命中 -> **死分支**。
+- **Q12**:`version` 列([entity:46](../../../ai-center-model/src/main/java/com/aicenter/model/entity/PromptTemplate.java#L46))被存但全代码无任何读取/比较/回滚 -> **幽灵列**。决定真做版本化(Prompt 是迭代资产,区别于 Document 一次性资料,见 ADR-0002)。
+- **Q13**:CHAT 类型枚举存在但 [ChatService.buildContextPrompt](../../../ai-center-ai/src/main/java/com/aicenter/ai/service/ChatService.java#L136) 系统 prompt 硬编码,CHAT 模板是空壳。
 
 ## 决策
 

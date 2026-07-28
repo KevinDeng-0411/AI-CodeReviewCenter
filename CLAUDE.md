@@ -1,11 +1,11 @@
 # CLAUDE.md - CodeAware 编码参考
 
 > 本文件供 AI 编码助手参考。本项目正在从 Java 迁移到 Python，**本文档针对 Python 目标实现**；Java 源码（`ai-center-*` 模块）仅作遗留参考。
-> 权威设计决策见 `docs/adr/0001~0007` + `docs/glossary.md` + `docs/Python重构迁移文档.md`。冲突时以 ADR 为准。
+> 权威设计决策见 `docs/decisions/adr/0001~0007` + `docs/decisions/glossary.md` + `docs/migration/Python重构迁移文档.md`。冲突时以 ADR 为准。**编码前先查 [docs/INDEX.md](docs/INDEX.md) 定位相关文档。**
 
 ## 项目是什么
 
-**CodeAware** - AI 驱动的研发效能平台。**核心域 = Chat（智能问答）**：多轮对话 + 两级记忆 + RAG 在此收敛。支撑子域 = AI 编排基建（Prompt / Memory / VectorRecall）。次要上下文 = Code Review / Unit Test / AIReadMe（复用基建的薄工具）。详见 [ADR-0007](docs/adr/0007-core-domain-and-bounded-contexts.md)。
+**CodeAware** - AI 驱动的研发效能平台。**核心域 = Chat（智能问答）**：多轮对话 + 两级记忆 + RAG 在此收敛。支撑子域 = AI 编排基建（Prompt / Memory / VectorRecall）。次要上下文 = Code Review / Unit Test / AIReadMe（复用基建的薄工具）。详见 [ADR-0007](docs/decisions/adr/0007-core-domain-and-bounded-contexts.md)。
 
 22 个 API，4 大功能：AI Code Review（七层结构化 Prompt）、单测生成、AIReadMe 生成、智能问答。
 
@@ -112,12 +112,14 @@ uv run pytest --cov=app                       # 覆盖率
 - thinking 模型（deepseek-v4-flash）：结构化输出用 `with_structured_output(Schema, method="json_mode")` + `ainvoke` 回退；**勿用** `function_calling`（thinking 拒强制 tool_choice）与 `json_schema`（DeepSeek 通用限制，两模式均不可用）。
 - agentic 多轮工具调用（thinking）：每轮须完整回传 `reasoning_content`、不强制 `tool_choice`、带 `extra_body={"thinking":{"type":"enabled"}}`，否则 400。
 - 非思考模式（`thinking: disabled`）：解除强制 tool_choice -> `function_calling` 可用（已实测，比 json_mode schema 更严）；无 reasoning_content 回传。暂未启用。
-- 详见 [docs/deepseek-notes.md](docs/deepseek-notes.md)。
+- 详见 [docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)。
 
 ## 参考
 
-- 迁移蓝图：[docs/Python重构迁移文档.md](docs/Python重构迁移文档.md)
-- 决策记录：[docs/adr/](docs/adr/)（0001~0007）
-- 术语表：[docs/glossary.md](docs/glossary.md)
-- 面试话术：[docs/面试准备指南.md](docs/面试准备指南.md)
+- 文档索引（编码先查）：[docs/INDEX.md](docs/INDEX.md)
+- 迁移蓝图：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
+- 决策记录：[docs/decisions/adr/](docs/decisions/adr/)（0001~0007）
+- 术语表：[docs/decisions/glossary.md](docs/decisions/glossary.md)
+- DeepSeek 集成：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
+- 面试话术：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
 - Java 遗留源码：`ai-center-common` / `ai-center-model` / `ai-center-ai` / `ai-center-server`
