@@ -13,7 +13,7 @@
 | 维度 | 决策 |
 |------|------|
 | ORM | **SQLAlchemy 2.0 async**（asyncpg 驱动） |
-| AI 框架 | **统一 LangChain (Python)**，后续 ChatService 可演进到 LangGraph |
+| AI 框架 | **统一 LangChain (Python)**；LangGraph 编排为预留演进，本次迁移不实现 |
 | Web | FastAPI |
 | 向量存储 | pgvector SQLAlchemy 类型，**内联同表** |
 | 包管理 | uv + `pyproject.toml` |
@@ -213,9 +213,11 @@ codeaware-py/
 2. `ShortTermMemoryManager`（PG fallback，ADR-0003）-> `LongTermMemoryManager`（内联 pgvector，ADR-0001）
 3. `SemanticChunker` + `QueryRewriter` + `HybridRetriever`（改进②）
 4. `RagService`（父子表，ADR-0002）-> `ChatService`（三级整合 + SSE + CHAT 模板，改进④）
-5. `UnitTestService` / `AiReadmeService` / `DocumentParserService`(unstructured) / `PromptService`
+5. `UnitTestService` / `AiReadmeService` / `DocumentParserService`(unstructured) / `PromptService`（薄壳，复制 CR 模式，低优先）
 
 > 总计约 2–3 周（业余时间）。
+>
+> **本次迁移范围**:P0–P5 交付功能基线(Chat 功能基线 + 薄工具);LangGraph/Agent 编排等 Chat 工程深度加深为**预留,不在本次迁移**(见 [ADR-0007](../decisions/adr/0007-core-domain-and-bounded-contexts.md) 决策点 4)。
 
 ### 6.2 测试策略与分层
 
@@ -581,7 +583,7 @@ async def save_and_activate(type_, body, role_setting, name_label, **meta) -> Pr
 
 ## 9. 面试叙事升级
 
-> 核心域定位（ADR-0007）：**核心域 = Chat（智能问答）**，两级记忆+RAG+prompt 编排在此收敛；共享 AI 基建（Prompt/Memory/VectorRecall）为支撑子域；CR/单测/AIReadMe 是复用基建的次要工具上下文。不再说含糊的"研发效能中台"。
+> 核心域定位（ADR-0007）：**核心域 = Chat（智能问答）**，两级记忆+RAG+prompt 编排在此收敛；共享 AI 基建（Prompt/Memory/VectorRecall）为支撑子域；CR/单测/AIReadMe 是复用基建的次要工具上下文。**价值类型**：Chat=架构纵深，CR=提示词工程展示（七层 Prompt），UT/AIReadMe=薄壳复用。不再说含糊的"研发效能中台"。
 
 > 30 秒电梯演讲（技术栈表述更新 + 重构升级层）：
 
@@ -592,11 +594,11 @@ async def save_and_activate(type_, body, role_setting, name_label, **meta) -> Pr
 - BM25 vs pg_trgm vs tsvector 取舍？（中文分词、扩展性、零依赖）
 - 为什么内联向量而非独立向量表？（同表增删查 + 来源追溯；Java 版受 LangChain4j EmbeddingStore 限制）
 - 为什么全异步？（LLM I/O 密集，async 提升并发）
-- LangChain vs LlamaIndex？（对称迁移叙事 + LangGraph 演进）
+- LangChain vs LlamaIndex？（对称迁移叙事；LangGraph 编排为预留，本次迁移不实现）
 - 核心域是什么？为什么是 Chat 而非 CR？（业务价值收敛处；CR 是薄工具，IP 在 prompt/记忆/召回基建）
 - Memory 和 Knowledge 都用向量，为何分表？（聚合结构差异：原子 vs 文档-分块父子；起源差异：对话内生 vs 外部策展）
 
-**可选演进**：`ChatService` 的"召回->检索->生成->持久化"升级为 **LangGraph** 状态图编排，顺势展示 Agent/Graph 能力，契合 2026 AI 应用岗趋势。
+**预留演进（本次迁移不实现）**：`ChatService` 的"召回->检索->生成->持久化"升级为 **LangGraph** 状态图编排，展示 Agent/Graph 能力。本次迁移只交付 Chat 功能基线，工程深度加深留作后续（见 ADR-0007 决策点 4）。
 
 ---
 

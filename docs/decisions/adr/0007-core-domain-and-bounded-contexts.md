@@ -14,6 +14,7 @@
 1. **核心域 = Chat(智能问答)**:多轮对话 + 两级记忆(ADR-0001/3/4)+ RAG(ADR-0001/2)+ prompt 编排(ADR-0005)在此收敛。这是业务价值集中的旗舰能力。
 2. **支撑子域 = AI 编排基础设施**:PromptTemplate / Memory(短/长)/ VectorRecallService。它是为服务 Chat(并被工具复用)而存在的硬技术 IP,但本身不是核心业务能力。Embedding(内联 pgvector `Vector(1024)`)与 Hybrid Retrieval(pg_trgm+pgvector)均为 VectorRecallService 的**基础设施实现细节**,不立独立 ADR。
 3. **次要/通用上下文 = Code Review / Unit Test / AIReadMe**:复用基建的薄工具上下文(load prompt + LLM + log operation)。刻意保持薄,不过度设计。
+4. **本次迁移范围**:交付 Chat 功能基线(短期记忆+长期记忆+RAG 混合检索+SSE,迁移文档 P3-2/3-3/3-4)+ 薄工具(CR/UT/AIReadMe)。**LangGraph 状态图编排等工程深度加深为预留项,本次迁移不实现**。
 
 ## 上下文图
 
@@ -37,6 +38,7 @@
 
 - 面试表述:"核心域是智能问答 Chat--两级记忆+RAG+prompt 编排在此收敛;共享 AI 基建是支撑子域;CR/单测/AIReadMe 是复用基建的次要工具上下文。" 不再说含糊的"研发效能中台"。
 - 建模精力优先给 Chat(核心);基建为服务 Chat 而设计;3 个工具刻意薄。
+- **价值类型区分**:Chat=架构纵深(记忆/RAG/SSE/上下文编排);CR=提示词工程展示(七层结构化 Prompt);UT/AIReadMe=薄壳复用。面试分层叙事:主线 Chat 架构,辅线 CR 提示词,UT/AIReadMe 广度;勿把薄工具包装成深度工程。
 - 闭合 Q1:这是**共享基建平台 + 核心域 Chat + 次要工具上下文**,不是一个均质领域,也不是松散特性堆砌。
 
 ## 遗留(跨 ADR)
