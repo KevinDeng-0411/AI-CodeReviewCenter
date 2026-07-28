@@ -38,8 +38,7 @@ class CodeReviewService:
         system_prompt = self.prompt_manager.render_system_prompt(
             template, {"source_code": source_code}
         )
-        structured = self.chat_model.with_structured_output(CodeReviewResult)
-        result: CodeReviewResult = await structured.ainvoke(system_prompt)
+        result = await self._invoke_structured(system_prompt)
 
         vo = self._to_vo(result, project_name, file_path)
 
@@ -64,6 +63,19 @@ class CodeReviewService:
         vo.id = record.id
         return vo
 
+    async def _invoke_structured(self, system_prompt: str) -> CodeReviewResult:
+        """结构化输出（改进③）。
+
+        DeepSeek(deepseek-v4-flash thinking 模型)用 json_mode（不支持 json_schema/function_calling）；
+        失败回退 ainvoke + Pydantic 解析（迁移文档 §10 风险缓解）。
+        """
+        try:
+            structured = self.chat_model.with_structured_output(CodeReviewResult, method="json_mode")
+            return await structured.ainvoke(system_prompt)
+        except Exception:
+            raw = await self.chat_model.ainvoke(system_prompt)
+            return CodeReviewResult.model_validate_json(_extract_json(raw.content))
+
     @staticmethod
     def _to_vo(result: CodeReviewResult, project_name: str, file_path: str) -> CodeReviewVO:
         issues = result.issues
@@ -83,3 +95,16 @@ class CodeReviewService:
             warning_count=count("warning"),
             info_count=count("info"),
         )
+
+
+def _extract_json(text: str) -> str:
+    """从 LLM 文本中提取 JSON（兼容 ```json 代码块 / 裸 JSON）。"""
+    if "```json" in text:
+        return text.split("```json", 1)[1].split("```", 1)[0].strip()
+    if "```" in text:
+        return text.split("```", 1)[1].split("```", 1)[0].strip()
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start : end + 1]
+    return text.strip()

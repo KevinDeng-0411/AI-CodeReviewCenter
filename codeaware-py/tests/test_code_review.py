@@ -11,21 +11,34 @@ from app.schemas.code_review import CodeReviewResult, ReviewIssue
 
 
 class _FakeStructured:
-    def __init__(self, result):
+    def __init__(self, result, fails=False):
         self.result = result
+        self.fails = fails
 
     async def ainvoke(self, prompt, **kw):
+        if self.fails:
+            raise RuntimeError("structured unavailable")
         return self.result
 
 
 class FakeChatModel:
-    """模拟 with_structured_output(schema).ainvoke(prompt) -> 固定 CodeReviewResult。"""
+    """模拟 with_structured_output(schema, method=...).ainvoke -> CodeReviewResult。
 
-    def __init__(self, result):
+    structured_fails=True 时强制走 ainvoke 回退路径（返回 JSON 字符串）。
+    """
+
+    def __init__(self, result, *, structured_fails=False):
         self.result = result
+        self.structured_fails = structured_fails
 
-    def with_structured_output(self, schema):
-        return _FakeStructured(self.result)
+    def with_structured_output(self, schema, **kw):
+        return _FakeStructured(self.result, fails=self.structured_fails)
+
+    async def ainvoke(self, prompt, **kw):
+        class _R:
+            content = self.result.model_dump_json()
+
+        return _R()
 
 
 @pytest.fixture
@@ -104,3 +117,15 @@ async def test_review_empty_issues_zero_counts(db_session, cr_template):
     assert vo.critical_count == 0
     assert vo.warning_count == 0
     assert vo.info_count == 0
+
+
+async def test_review_fallback_ainvoke_when_structured_fails(db_session, cr_template):
+    """with_structured_output 失败 -> 回退 ainvoke + Pydantic 解析（§10）。"""
+    result = _sample_result()
+    svc = CodeReviewService(
+        db_session, FakeChatModel(result, structured_fails=True), PromptTemplateManager(db_session)
+    )
+    vo = await svc.review("proj", "f", "code")
+    assert vo.issues_count == 3
+    assert vo.critical_count == 1
+    assert vo.id is not None  # 回退路径也持久化
