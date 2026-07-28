@@ -5,6 +5,7 @@ PG_DB=ai_center_test 必须在导入 app.* 之前设置，使 settings 指向测
 在 ai_center_migtest 上验证 alembic up/down。
 """
 
+import hashlib
 import os
 
 os.environ.setdefault("PG_DB", "ai_center_test")
@@ -16,9 +17,27 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.models  # noqa: F401  # 注册模型
+from app.ai.infra.vector_recall import VectorRecallService
 from app.db.base import Base
 from app.db.session import AsyncSessionLocal, engine
 from app.main import app
+
+
+class FakeEmbedder:
+    """确定性 1024 维 embedder：同文本同向量（sim≈1），不同文本近正交（sim≈0）。"""
+
+    async def aembed_query(self, text: str) -> list[float]:
+        h = hashlib.sha256(text.encode()).digest()
+        # 全正向分量 -> 任意两向量 cosine 相似度 ∈ [0,1]，避免被默认 threshold 0.0 误过滤
+        return [h[i % 32] / 255.0 + 0.01 for i in range(1024)]
+
+
+class FakeLLM:
+    async def ainvoke(self, prompt, **kw):
+        class _R:
+            content = "pong"
+
+        return _R()
 
 
 @pytest.fixture(scope="session")
@@ -40,6 +59,22 @@ async def db_session(setup_db) -> AsyncSession:
     async with AsyncSessionLocal() as session:
         yield session
         await session.rollback()
+
+
+@pytest.fixture
+def mock_embedder() -> FakeEmbedder:
+    return FakeEmbedder()
+
+
+@pytest.fixture
+def mock_llm() -> FakeLLM:
+    return FakeLLM()
+
+
+@pytest.fixture
+def vector_recall(mock_embedder) -> VectorRecallService:
+    """注入 FakeEmbedder 的 VectorRecallService（CI 友好，不打真实 Ollama）。"""
+    return VectorRecallService(mock_embedder)
 
 
 @pytest.fixture

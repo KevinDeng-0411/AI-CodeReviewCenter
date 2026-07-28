@@ -5,6 +5,7 @@ P0：/health 健康检查 + 全局异常注册。后续阶段挂载 api/v1 路�
 
 from fastapi import FastAPI
 
+from app.api.v1.ai_health import router as ai_health_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.response import Result
@@ -16,6 +17,7 @@ app = FastAPI(
 )
 
 register_exception_handlers(app)
+app.include_router(ai_health_router)
 
 
 @app.get("/health", tags=["系统"])
