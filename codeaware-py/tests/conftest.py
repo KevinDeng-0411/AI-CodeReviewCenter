@@ -115,6 +115,27 @@ async def hybrid_retriever(db_session, vector_recall):
 
 
 @pytest.fixture
+async def rag_service(db_session, chunker, vector_recall, mock_llm):
+    from app.ai.rag.query_rewriter import QueryRewriter
+    from app.ai.rag.hybrid_retriever import HybridRetriever
+    from app.ai.services.rag import RagService
+    return RagService(
+        db_session, chunker, vector_recall,
+        QueryRewriter(mock_llm), HybridRetriever(db_session, vector_recall),
+    )
+
+
+@pytest.fixture
+async def chat_service(db_session, mock_llm, short_term, long_term, rag_service):
+    from app.ai.prompt.template_manager import PromptTemplateManager
+    from app.ai.services.chat import ChatService
+    return ChatService(
+        db_session, mock_llm, short_term, long_term,
+        rag_service, PromptTemplateManager(db_session),
+    )
+
+
+@pytest.fixture
 async def client():
     """ASGI 测试客户端，不打真实端口。"""
     async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
