@@ -73,3 +73,20 @@ async def delete(doc_id: int, db: AsyncSession = Depends(get_db)):
         await db.delete(doc)
         await db.commit()
     return Result.ok()
+
+
+@router.post("/upload-file")
+async def upload_file(
+    file,
+    project_name: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    llm=Depends(get_chat_model),
+    vr: VectorRecallService = Depends(get_vector_recall_service),
+):
+    """上传文件（PDF/Word/HTML/Markdown），unstructured 解析后入库。"""
+    content = await file.read()
+    from app.ai.services.document_parser import DocumentParserService
+    text = await DocumentParserService().parse(content, file.filename)
+    rag = _rag_service(db, llm, vr)
+    doc = await rag.upload_document(file.filename, text, source_type="DOC", project_name=project_name)
+    return Result.ok({"id": doc.id, "title": doc.title})

@@ -10,7 +10,7 @@ from app.ai.prompt.template_manager import PromptTemplateManager
 from app.core.enums import PromptType
 from app.core.exceptions import BusinessException
 from app.models import AiOperationRecord
-from app.schemas.code_review import CodeReviewResult, CodeReviewVO
+from app.schemas.code_review import CodeReviewResult, CodeReviewVO, _extract_json
 
 
 class CodeReviewService:
@@ -95,16 +95,3 @@ class CodeReviewService:
             warning_count=count("warning"),
             info_count=count("info"),
         )
-
-
-def _extract_json(text: str) -> str:
-    """从 LLM 文本中提取 JSON（兼容 ```json 代码块 / 裸 JSON）。"""
-    if "```json" in text:
-        return text.split("```json", 1)[1].split("```", 1)[0].strip()
-    if "```" in text:
-        return text.split("```", 1)[1].split("```", 1)[0].strip()
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        return text[start : end + 1]
-    return text.strip()

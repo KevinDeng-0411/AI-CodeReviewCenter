@@ -41,3 +41,16 @@ class CodeReviewVO(BaseModel):
     warning_count: int = 0
     info_count: int = 0
     ai_model: str = "deepseek-v4-flash"
+
+
+def _extract_json(text: str) -> str:
+    """从 LLM 文本中提取 JSON（兼容 ```json 代码块 / 裸 JSON）。"""
+    if "```json" in text:
+        return text.split("```json", 1)[1].split("```", 1)[0].strip()
+    if "```" in text:
+        return text.split("```", 1)[1].split("```", 1)[0].strip()
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start : end + 1]
+    return text.strip()
