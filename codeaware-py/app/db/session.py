@@ -19,6 +19,15 @@ AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_co
 
 
 async def get_db():
-    """FastAPI 依赖：每请求一个 async session。"""
+    """FastAPI 依赖：每请求一个 async session。
+
+    成功时 commit（service 层只 flush 不 commit，统一在此落盘）；
+    异常时 rollback。测试通过 dependency_overrides 注入带回滚的 db_session，不受影响。
+    """
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

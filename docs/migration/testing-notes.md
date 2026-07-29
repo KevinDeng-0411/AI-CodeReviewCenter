@@ -45,3 +45,28 @@
 - **波及**：所有"返回裸 ORM"的端点--`/api/chat/conversations`、`/api/chat/conversations/{id}`、`/api/code-review/records`、`/api/code-review/records/{id}`、`/api/unit-test/records*`。此前零测试覆盖，故未暴露。
 - **解法**：router 层投影成 dict（与 knowledge/memory/prompt 端点既有模式一致）。`AiOperationRecord` 抽共享 `record_to_dict`（`app/schemas/entities.py`），ORM 属性 `meta` -> 对外字段 `metadata`（规避 `DeclarativeBase.metadata` 冲突）。
 - **规律**：FastAPI + Pydantic v2 下，端点不要直接 `Result.ok(orm_obj)`；统一在 router 层投影成 dict 或 `Schema.model_validate(orm)`（注意 ORM 属性名与 schema 字段名映射，如 `meta`/`metadata`）。e2e 全链路是发现此类契约 bug 的有效手段。
+
+## 6. get_db 不 commit -> 所有写端点不落盘（p0 级阻塞）
+
+- **症状**：真实跑应用时，知识库上传返回 doc_id、CR 返回结果、Chat 返回回复，但**重启/另开会话查不到任何数据**；RAG 检索永远命中 0 条（chunks 被回滚）。
+- **根因**：`get_db` 只 `yield session` 不 commit；service 层（CR/knowledge/memory/chat）只 `flush` 不 `commit`。请求结束 `async with` 关闭 session -> 事务回滚 -> 数据丢失。测试没抓到：测试用 `dependency_overrides[get_db] = lambda: db_session`，db_session 是共享事务、uncommitted 也可见，回滚仅用于隔离。
+- **解法**：`get_db` 成功时 `commit`、异常时 `rollback`：
+  ```python
+  async def get_db():
+      async with AsyncSessionLocal() as session:
+          try:
+              yield session
+              await session.commit()
+          except Exception:
+              await session.rollback()
+              raise
+  ```
+  测试 override 不受影响（用各自的 db_session）。SSE 端点也 OK：FastAPI/Starlette 在 StreamingResponse body 流结束后才清理依赖，generator 内 flush 的 ASSISTANT 消息会被 commit。
+- **规律**：FastAPI async DB 依赖必须在 yield 后 commit（service 只 flush）；纯单元测试因 override 依赖容易漏掉持久化层，需 e2e/真实启动验证。
+
+## 7. 0001 仅 seed CODE_REVIEW -> UNIT_TEST/AI_README 抛「未找到模板」
+
+- **症状**：`/api/unit-test/generate`、`/api/ai-readme/generate` 返回 `code=0 未找到 UNIT_TEST/AI_README Prompt 模板`；CHAT 退化为硬编码 fallback。
+- **根因**：迁移文档 §7.2.3 本应 seed 4 类（CODE_REVIEW/CHAT/UNIT_TEST/AI_README），但 0001 只 seed 了 CODE_REVIEW 七层 Prompt。
+- **解法**：补 0002 迁移 seed CHAT/UNIT_TEST/AI_README active v1（模板 body 含各自占位符 + json_mode 输出契约）。
+- **规律**：迁移 seed 完整性需对照设计文档逐 type 核对；`get_active(type)` 返回 None 时服务抛 BusinessException 是兜底，但正常使用前应确保 4 类模板齐全。

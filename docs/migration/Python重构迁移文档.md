@@ -347,7 +347,7 @@ class KnowledgeChunk(Base):
 `long_term_memories.embedding` 同样用 `Vector(1024)` 内联。所有 `created_at` 用 `server_default=func.now()` 替代 MyBatis-Plus 自动填充。
 
 #### 7.2.3 Alembic 迁移
-从 `init.sql` 转首个迁移：`CREATE EXTENSION vector;` + `CREATE EXTENSION pg_trgm;` + 8 建表（按 §7.2.2 新结构）+ 预置 Prompt 模板（`init.sql:129-137` 的七层 CR Prompt 成为 CODE_REVIEW 的 active v1，另 seed CHAT/UNIT_TEST/AI_README v1）。**数据迁移需做归并**：旧 `knowledge_documents` 按 title 聚合 chunk 行 -> 提取父 `documents`；旧 `code_review_records`/`unit_test_records` -> 带 type 灌入 `ai_operation_records`；旧 `embedding` UUID 列 -> 重新 embed 或按映射回填 `Vector`。
+从 `init.sql` 转首个迁移：`CREATE EXTENSION vector;` + `CREATE EXTENSION pg_trgm;` + 8 建表（按 §7.2.2 新结构）+ 预置 Prompt 模板（`init.sql:129-137` 的七层 CR Prompt 成为 CODE_REVIEW 的 active v1）。**CHAT/UNIT_TEST/AI_README v1 由 0002 迁移补 seed**（0001 仅 seed CODE_REVIEW；4 类模板齐全方可正常使用，见 [testing-notes §7](testing-notes.md)）。**数据迁移需做归并**：旧 `knowledge_documents` 按 title 聚合 chunk 行 -> 提取父 `documents`；旧 `code_review_records`/`unit_test_records` -> 带 type 灌入 `ai_operation_records`；旧 `embedding` UUID 列 -> 重新 embed 或按映射回填 `Vector`。
 
 #### 7.2.4 Pydantic schemas
 DTO/VO 一一对应 `model/dto` `model/vo`。例如 `CodeReviewVO` + `ReviewIssueVO`：
