@@ -36,7 +36,7 @@
 |------|------|
 | [migration/Python重构迁移文档.md](migration/Python重构迁移文档.md) | Java->Python 迁移蓝图（唯一，含 ADR 索引 §0.1） |
 | [migration/testing-notes.md](migration/testing-notes.md) | 测试与集成踩坑留痕（langchain 导入 hang / test_migration 性能 / 异步客户端 loop） |
-| [migration/后续升级计划.md](migration/后续升级计划.md) | 计划内缺口（摘要接入·首要）+ 可升级预留项（LangGraph/语义切分/tsvector/Pinecone/数据归并） |
+| [migration/后续升级计划.md](migration/后续升级计划.md) | 计划内缺口（摘要接入·首要）+ 可升级预留项（后端分层重构·U1前置 / LangGraph / 语义切分 / tsvector / Pinecone / 数据归并） |
 | [decisions/adr/](decisions/adr/) | 7 份架构决策记录 0001~0007 |
 | [decisions/glossary.md](decisions/glossary.md) | 领域术语表（10 术语全 settled） |
 | [integration/deepseek-notes.md](integration/deepseek-notes.md) | DeepSeek thinking/非思考模式集成约定 |
