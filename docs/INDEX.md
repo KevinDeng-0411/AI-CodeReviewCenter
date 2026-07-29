@@ -9,7 +9,7 @@
 2. ADR 负责长期语义；`current-release/` 负责当前 C1–C3 实施；`migration/` 只作迁移历史与背景。
 3. 当前先按[升级总入口](roadmap/README.md)完成 C1–C3；只有[机器可校验证据](roadmap/证据清单与解锁规则.md)可以改变阶段状态。
 4. Chat → Agent 是锁定的未来方向；C3 后仍需用户逐阶段另行授权，才按[未来路线](roadmap/chat-to-agent/README.md)实施。
-5. 编码铁律、技术栈、目录结构见根目录 `CLAUDE.md`。
+5. 所有 coding agent 共用的编码铁律、技术栈、目录结构见根目录 `AGENTS.md`。
 
 ## 功能 -> 文档映射
 
@@ -35,7 +35,7 @@
 | Records（审计日志合并） | [0006](decisions/adr/0006-records-audit-log-merge.md) | §7.2.2 | - |
 | 单测生成 / AIReadMe | - | §7.4（流程同 CR） | - |
 | DeepSeek / LLM 集成 | - | - | [deepseek-notes](integration/deepseek-notes.md) |
-| 测试策略 / 覆盖率方针 | - | §6.2 · §6.3 | `CLAUDE.md` 测试规则 · [testing-notes](migration/testing-notes.md) |
+| 测试策略 / 覆盖率方针 | - | §6.2 · §6.3 | `AGENTS.md` 测试规则 · [testing-notes](migration/testing-notes.md) |
 | 面试话术 | - | §9 | [面试准备指南](interview/面试准备指南.md) |
 
 ## 文档清单

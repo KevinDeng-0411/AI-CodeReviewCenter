@@ -48,6 +48,7 @@ docker exec ai-center-ollama ollama pull bge-m3
 
 ### 文档
 
+- 所有 coding agent 通用规则：[AGENTS.md](AGENTS.md)
 - 历史 Java → Python 迁移记录（不再直接执行）：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
 - 7 份 ADR：[docs/decisions/adr/](docs/decisions/adr/)
 - DeepSeek 集成约定：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)

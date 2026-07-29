@@ -1,6 +1,8 @@
-# CLAUDE.md - CodeAware 编码参考
+# AGENTS.md - CodeAware 通用开发与编码代理指南
 
-> 本文件供 AI 编码助手参考。本项目正在从 Java 迁移到 Python，**本文档针对 Python 目标实现**；Java 源码（`ai-center-*` 模块）仅作遗留参考。
+> 本文件是仓库根级、工具中立的开发指令，适用于所有人工开发者和 coding agent。除非子目录存在更近的 `AGENTS.md`，本文件约束整个仓库；任何工具专用配置都不得覆盖这里的安全门禁、文档权威边界和阶段顺序。
+>
+> 本项目正在从 Java 迁移到 Python，**本文档针对 Python 目标实现**；Java 源码（`ai-center-*` 模块）仅作遗留参考。
 > 长期领域语义以 `docs/decisions/adr/0001~0007` 和 `docs/decisions/glossary.md` 为权威；`docs/migration/Python重构迁移文档.md` 仅是历史迁移记录。当前实现以 `docs/roadmap/current-release/` 为执行权威。**编码前先查 [docs/INDEX.md](docs/INDEX.md) 定位相关文档。**
 >
 > 当前优先级以[升级总入口](docs/roadmap/README.md)为准：先完成[当前版本 C1–C3 收尾](docs/roadmap/current-release/README.md)。Chat → Agent 是锁定的未来方向；没有 C1–C3 evidence 和用户在其后的另行授权，不得开始 Agent 代码改造。

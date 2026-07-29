@@ -59,7 +59,7 @@
   - 五张项目级表与双项目隔离证据；
   - C1 冻结的 typed Chat SSE、completed 前持久化和 post-turn 契约仍通过的回归结果。
 - 完整阅读：
-  - `CLAUDE.md`
+  - 根目录 `AGENTS.md`
   - current-release C1/C2/C3 文档与 evidence
   - 路线 README、公共契约、S1 阶段文档与 evidence
   - ADR-0001、0002、0003、0004、0005、0007

@@ -2,7 +2,7 @@
 
 Java -> Python 重构版。当前阶段：**P0 骨架**。
 
-> 权威设计见上级目录 `docs/adr/` + `docs/glossary.md` + `docs/Python重构迁移文档.md` + `CLAUDE.md`。
+> 通用编码规则见上级目录 [AGENTS.md](../AGENTS.md)；权威设计见 [ADR](../docs/decisions/adr/)、[术语表](../docs/decisions/glossary.md)，当前实施入口见[升级总入口](../docs/roadmap/README.md)。
 
 ## 运行
 
