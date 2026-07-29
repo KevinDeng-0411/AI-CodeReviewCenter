@@ -103,6 +103,18 @@ async def long_term(db_session, vector_recall):
 
 
 @pytest.fixture
+def chunker():
+    from app.ai.rag.semantic_chunker import SemanticChunker
+    return SemanticChunker()
+
+
+@pytest.fixture
+async def hybrid_retriever(db_session, vector_recall):
+    from app.ai.rag.hybrid_retriever import HybridRetriever
+    return HybridRetriever(db_session, vector_recall)
+
+
+@pytest.fixture
 async def client():
     """ASGI 测试客户端，不打真实端口。"""
     async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:

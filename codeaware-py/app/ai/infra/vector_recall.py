@@ -38,8 +38,12 @@ class VectorRecallService:
         threshold: float = 0.0,
         hybrid: bool = False,
         text_column: str = "content",
-    ) -> list[tuple[ModelT, float]]:
-        """语义召回。hybrid=False 纯向量；hybrid=True 关键词(pg_trgm)+向量 RRF 融合。"""
+    ) -> list[tuple[ModelT, float, str]]:
+        """语义召回，返回 (entity, score, matchType)。
+
+        hybrid=False 纯向量(matchType='vector')；hybrid=True 关键词(pg_trgm)+向量 RRF 融合
+        (matchType='vector'/'keyword'/'both')。
+        """
         qvec = await self.embed(query_text)
         emb_col = getattr(model, "embedding")
         vec_stmt = (
@@ -51,7 +55,9 @@ class VectorRecallService:
 
         if not hybrid:
             return [
-                (r[0], round(float(r[1]), 4)) for r in vec_rows if float(r[1]) >= threshold
+                (r[0], round(float(r[1]), 4), "vector")
+                for r in vec_rows
+                if float(r[1]) >= threshold
             ][:top_k]
 
         # 混合：pg_trgm 关键词腿 + RRF 融合（ADR-0001 改进②）
@@ -69,13 +75,20 @@ class VectorRecallService:
     def _rrf_fuse(
         vec_rows: list, kw_rows: list, *, top_k: int, threshold: float, k: int = 60
     ) -> list[tuple]:
-        """Reciprocal Rank Fusion：按各腿排名融合，不依赖原始分数量纲。"""
-        scores: dict[int, list] = {}
+        """Reciprocal Rank Fusion：按各腿排名融合，记录 matchType（来源追溯）。"""
+        seen: dict[int, list] = {}  # id -> [entity, score, set(legs)]
         for rank, row in enumerate(vec_rows):
-            entity = row[0]
-            scores.setdefault(entity.id, [entity, 0.0])[1] += 1.0 / (k + rank + 1)
+            e = row[0]
+            seen.setdefault(e.id, [e, 0.0, set()])[1] += 1.0 / (k + rank + 1)
+            seen[e.id][2].add("vector")
         for rank, row in enumerate(kw_rows):
-            entity = row[0]
-            scores.setdefault(entity.id, [entity, 0.0])[1] += 1.0 / (k + rank + 1)
-        fused = sorted(scores.values(), key=lambda x: x[1], reverse=True)
-        return [(e, round(s, 4)) for e, s in fused if s > threshold][:top_k]
+            e = row[0]
+            seen.setdefault(e.id, [e, 0.0, set()])[1] += 1.0 / (k + rank + 1)
+            seen[e.id][2].add("keyword")
+        fused = sorted(seen.values(), key=lambda x: x[1], reverse=True)
+        out = []
+        for e, s, legs in fused:
+            if s > threshold:
+                mt = "both" if len(legs) > 1 else next(iter(legs))
+                out.append((e, round(s, 4), mt))
+        return out[:top_k]

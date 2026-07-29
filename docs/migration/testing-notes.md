@@ -2,18 +2,20 @@
 
 > 迁移过程中遇到的测试/集成坑，记录症状/根因/解法，避免重复踩。
 
-## 1. langchain 1.x 导入 hang（LangSmith / 遥测网络请求）
+## 1. langchain 1.x / unstructured 导入与调用 hang（库遥测网络请求）
 
-- **症状**：`from langchain_openai import ChatOpenAI` 卡死——pytest 无输出、app 启动无响应。
-- **根因**：langchain 1.x 导入 `langchain_openai` 时发起 LangSmith tracing / 匿名遥测网络请求；网络不通则 hang（P3-1 时网络通未暴露，P3-2 时触发）。
-- **定位**：`LANGCHAIN_TRACING_V2=false ANONYMIZED_TELEMETRY=false` 后导入秒过。
-- **解法**：`app/__init__.py`（在 langchain 导入前执行）
+- **症状**：`from langchain_openai import ChatOpenAI` 卡死；`unstructured.partition.md.partition_md` 调用卡死--pytest 无输出、app 启动无响应。
+- **根因**：langchain 1.x 导入时发起 LangSmith tracing / 匿名遥测网络请求；unstructured 的 partition 调用发起匿名遥测（`run_halo`）。网络不通则 hang（P3-1 时网络通未暴露，P3-2/P3-3 时触发）。
+- **定位**：`LANGCHAIN_TRACING_V2=false ANONYMIZED_TELEMETRY=false`（langchain）/ `UNSTRUCTURED_TELEMETRY_DISABLE=1`（unstructured）后秒过。
+- **解法**：`app/__init__.py`（库导入/调用前执行）
   ```python
   os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
   os.environ.setdefault("ANONYMIZED_TELEMETRY", "false")
+  os.environ.setdefault("UNSTRUCTURED_TELEMETRY_DISABLE", "1")
   ```
   `setdefault` 不覆盖显式启用。
-- **注意**：本项不用 LangSmith；若未来启用 tracing，移除该 setdefault 或显式设 env。
+- **注意**：本项不用 LangSmith/unstructured 遥测；若未来启用，移除相应 setdefault 或显式设 env。
+- **规律**：AI/解析类库常带匿名遥测，网络受限环境会 hang 导入/调用；引入新库先查遥测开关。
 
 ## 2. test_migration 子进程慢（uv run alembic ×5，全量 84s）
 
