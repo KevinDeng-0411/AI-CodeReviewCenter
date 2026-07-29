@@ -1,6 +1,8 @@
 # 测试与集成踩坑留痕
 
 > 迁移过程中遇到的测试/集成坑，记录症状/根因/解法，避免重复踩。
+>
+> **当前安全覆盖规则**：本文件记录的是历史做法，不是可直接复制的测试命令。C1 完成前禁止裸跑 pytest、固定库 migration roundtrip 或 Redis flush；现有 fixture 的 `setdefault` 可能保留调用者导出的开发库配置。先执行[当前版本 C1 的 fail-closed 安全测试入口](../roadmap/current-release/01-当前缺口修复.md)，最终以[统一证据规则](../roadmap/证据清单与解锁规则.md)为准。
 
 ## 1. langchain 1.x / unstructured 导入与调用 hang（库遥测网络请求）
 
@@ -48,6 +50,8 @@
 
 ## 6. get_db 不 commit -> 所有写端点不落盘（p0 级阻塞）
 
+> **历史修复记录，当前 Chat/SSE 不得复制。** “等待 StreamingResponse teardown 后统一 commit”无法满足 C1 的 `chat.started/completed` 真实时序；当前同步/流式路径必须由 TurnCoordinator 显式拥有短事务，PG commit 后才刷新 Redis。见[当前版本 C1](../roadmap/current-release/01-当前缺口修复.md)。
+
 - **症状**：真实跑应用时，知识库上传返回 doc_id、CR 返回结果、Chat 返回回复，但**重启/另开会话查不到任何数据**；RAG 检索永远命中 0 条（chunks 被回滚）。
 - **根因**：`get_db` 只 `yield session` 不 commit；service 层（CR/knowledge/memory/chat）只 `flush` 不 `commit`。请求结束 `async with` 关闭 session -> 事务回滚 -> 数据丢失。测试没抓到：测试用 `dependency_overrides[get_db] = lambda: db_session`，db_session 是共享事务、uncommitted 也可见，回滚仅用于隔离。
 - **解法**：`get_db` 成功时 `commit`、异常时 `rollback`：
@@ -61,8 +65,8 @@
               await session.rollback()
               raise
   ```
-  测试 override 不受影响（用各自的 db_session）。SSE 端点也 OK：FastAPI/Starlette 在 StreamingResponse body 流结束后才清理依赖，generator 内 flush 的 ASSISTANT 消息会被 commit。
-- **规律**：FastAPI async DB 依赖必须在 yield 后 commit（service 只 flush）；纯单元测试因 override 依赖容易漏掉持久化层，需 e2e/真实启动验证。
+  这段只解释当时如何修复普通请求的“完全不提交”；它不是当前 SSE 事务方案。
+- **当前规律**：普通请求可以使用 dependency commit；流式 Chat 必须显式拥有并提交短事务，不能依赖响应结束后的 teardown。纯单元测试仍容易漏掉持久化层，需隔离 e2e/真实启动验证。
 
 ## 7. 0001 仅 seed CODE_REVIEW -> UNIT_TEST/AI_README 抛「未找到模板」
 

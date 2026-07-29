@@ -1,10 +1,12 @@
 # CodeAware - Java -> Python 重构迁移文档
 
-> **文档先行**：本文件是后续按优先级逐步实现迁移的**唯一蓝图**。每个阶段自洽，可逐阶段交付、逐阶段验证。
+> **文档定位更新（2026-07-29）**：本文件是 Java → Python 迁移过程的历史蓝图，不再是当前实施入口。迁移后的真实缺口、启动/测试安全和发布验收只按[当前版本 C1–C3](../roadmap/current-release/README.md)执行；未来 Agent 只按[锁定路线](../roadmap/chat-to-agent/README.md)逐阶段授权。
+>
+> **安全覆盖规则**：下文固定 `ai_center_test`、fixture 清表、裸 `pytest`、直接 Alembic downgrade 和旧 quick-start 命令均为历史记录，不能复制执行。C1 完成前禁止裸跑后端测试；C1 后统一经 `codeaware-py/scripts/run_tests_safe.py` 使用带唯一 identity 的一次性 PG/Redis，并按[证据规则](../roadmap/证据清单与解锁规则.md)验收。
 >
 > 中间件保持不变：PostgreSQL 16 + pgvector / Redis 7 / Ollama bge-m3 / DeepSeek API / `docker-compose.yml` 原样复用，**只重写应用层**。
 >
-> 本文档已与 `docs/decisions/adr/` 的 7 份架构决策记录对齐（见 §0.1 索引）。ADR 是权威，本文档为可执行蓝图；二者冲突以 ADR 为准。
+> 本文档已与 `docs/decisions/adr/` 的 7 份架构决策记录对齐（见 §0.1 索引）。ADR 继续负责长期语义；当前执行细节以 current-release 阶段卡为准。
 
 ---
 
@@ -227,7 +229,7 @@ codeaware-py/
 
 - **三层测试**：unit（mock LLM/DB）-> integration（真实 PG/Redis）-> e2e（双端 curl 对比）。
 - **LLM 必须 mock**：CI 不调真实 DeepSeek/Ollama。用 monkeypatch / fake response 固定 LLM 输出，验证**解析与流程逻辑**（这才是迁移要保证的）；真实连通性测试标 `@pytest.mark.integration`，本地按需跑。
-- **测试库隔离**：独立 PG database（如 `ai_center_test`）+ 专属 Redis db（如 db=15）；每个测试函数事务回滚或 fixture 清表，互不污染。
+- **历史测试设想（已被 C1 取代）**：固定 `ai_center_test` + Redis db=15 不足以 fail closed；现有 fixture 还可能保留调用者导出的开发目标。当前必须由 safe runner 创建并验证本次唯一的一次性数据库、迁移库和 Redis 实例。
 - **核心 fixtures**：`db_session`（带回滚）、`redis_client`、`mock_llm`（固定文本/JSON 返回）、`mock_embedder`（返回固定 1024 维向量，确定性可断言）。
 - **依赖**：pytest、pytest-asyncio、httpx（`AsyncClient` 测 FastAPI + SSE）、testcontainers-python（可选，真实 PG）、respx（mock 外部 HTTP，可选）。
 - **覆盖率方针**：`pytest --cov=app`。核心模块（`rag` / `memory` / `code_review`）≥80% 为**下限**，重逻辑模块（检索融合/记忆窗口+fallback/结构化解析）深测到 90%+，**不追求全局 90%**——测对的地方，不测所有地方；薄层/LLM 调用（已 mock）不强求。P5 统一验收。
@@ -455,6 +457,9 @@ async def search(db, query_vec: list[float], query_text: str, top_k: int):
 > **保留来源追溯**：`matchType`(vector/keyword/both) + `sourceStats` 沿用 Java 版 RAG 返回结构（`c518ff5` 提交）。
 
 ### 7.6 ShortTermMemoryManager（P3-2，ADR-0003）
+
+> **历史实现，禁止照此编码。** 下面的 Redis-first、`BackgroundTasks`、请求 teardown commit 和 PG 后写顺序已被 [C1 TurnCoordinator/PG-first 契约](../roadmap/current-release/01-当前缺口修复.md)取代；本段只保留迁移思路的时间切片。
+
 对照 `ShortTermMemoryManager.java:43`，redis async + 真异步摘要 + **PG fallback 读**（修只写不读死代码）：
 
 ```python
@@ -479,7 +484,7 @@ async def get_messages(r, db, cid):
             await _refill_redis(r, cid, entries)
     return _parse(entries)
 ```
-> **LLM 摘要持久化（ADR-0003 已定）**：摘要存 PG `conversations.summary`(真相)+ Redis `summary:{cid}`(缓存)。读:Redis 优先,miss 读 PG,**不从消息重算**;写:命中阈值由 `BackgroundTasks` 异步生成/更新并双写。
+> **仍有效的长期语义只有**：摘要存 PG `conversations.summary`（真相），Redis 只是可重建缓存；具体触发、事务、watermark、warning 和完成时序只按 C1。
 
 ### 7.7 LongTermMemoryManager（P3-2，改进①）
 对照 `LongTermMemoryManager.java:39`，去掉 UUID 间接层，调 `VectorRecallService`：
@@ -498,6 +503,9 @@ async def recall(db, query, threshold, top_k):
 ```
 
 ### 7.8 ChatService（P3-4，改进④ + ADR-0004/0005）
+
+> **历史实现，禁止照此编码。** 下面的裸 token/`[DONE]`、重复同步/流式编排和依赖 teardown 提交已被 [C1 typed SSE 与统一 TurnCoordinator](../roadmap/current-release/01-当前缺口修复.md)取代。
+
 对照 `ChatService.java:51/83`，三级整合 + SSE + `conversation_id` + **CHAT prompt 走模板**：
 
 ```python

@@ -7,7 +7,9 @@
 
 ## Python 重构版（codeaware-py）
 
-**迁移状态**：P0–P5 全阶段完成 ✅。`uv run pytest`：**73 passed**（1 integration 真实 Ollama 默认跳过），核心模块覆盖率 ≥80% 下限达标（核心域 Chat 88%，全局 92%）。
+**当前状态**：Java → Python 的 P0–P5 结构迁移已完成，但 Python Chat 版本尚未完成发布闭环。已知基线为 **74 passed, 1 deselected**、前端 lint/build 可通过；typed SSE、摘要真实触发、multipart、空环境库名、AIReadMe 真实仓库快照及七域契约仍须按 [C1–C3 当前版本收尾](docs/roadmap/current-release/README.md)实施和验收。Agent 只是一条[锁定的未来路线](docs/roadmap/chat-to-agent/README.md)。
+
+> 安全提示：C1 完成前不要直接运行 pytest。现有 fixture 可能对调用者预先导出的数据库执行 `drop_all`、对 Redis 执行 `flushdb`；先按 [C1 安全测试入口](docs/roadmap/current-release/01-当前缺口修复.md)完成 fail-closed 隔离。
 
 | 层级 | 技术 |
 |------|------|
@@ -28,14 +30,15 @@
 
 ### 快速启动（Python）
 
+> **当前不是可验收的 fresh-start 指南。** 根 Compose 目前只创建 `ai_center`，Python 默认连接 `ai_center_py`，因此全新 volume 直接执行 Alembic 会失败。不要删除已有 volume 或自行猜库名；先实施 C1 的数据库初始化与 `verify_fresh_bootstrap.sh`。以下命令是 C1 完成后的目标入口，本次规划不表示它们已经可用。
+
 ```bash
-cd codeaware-py
-docker compose up -d                       # 复用根目录 compose（PG:5433 / Redis:6380 / Ollama）
+docker compose up -d                       # 在仓库根启动 PG:5433 / Redis:6380 / Ollama
 docker exec ai-center-ollama ollama pull bge-m3
-cp .env.example .env                       # 填 DEEPSEEK_API_KEY
-uv sync
-uv run alembic upgrade head                # 建表 + 预置 4 类 Prompt 模板
-uv run uvicorn app.main:app --reload --port 8000
+(cd codeaware-py && cp .env.example .env)  # 填 DEEPSEEK_API_KEY
+(cd codeaware-py && uv sync)
+(cd codeaware-py && uv run alembic upgrade head)
+(cd codeaware-py && uv run uvicorn app.main:app --reload --port 8000)
 # API 文档：http://localhost:8000/docs
 ```
 
@@ -45,13 +48,15 @@ uv run uvicorn app.main:app --reload --port 8000
 
 ### 文档
 
-- 迁移蓝图 + 验收：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
+- 历史 Java → Python 迁移记录（不再直接执行）：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
 - 7 份 ADR：[docs/decisions/adr/](docs/decisions/adr/)
 - DeepSeek 集成约定：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
 - 面试话术：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
 - 文档索引（编码先查）：[docs/INDEX.md](docs/INDEX.md)
+- 当前版本 C1–C3：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
+- 后续 Chat → Agent 路线：[docs/roadmap/chat-to-agent/README.md](docs/roadmap/chat-to-agent/README.md)
 
-> **API 契约**：Python 版 22 端点与下文 Java 版 curl 示例对齐，唯一破坏性变更为 `session_id` -> `conversation_id`（ADR-0004）。端口 Java 8080 / Python 8000。
+> **API 契约状态**：目标仍是 Python 版 22 端点与下文示例及 OpenAPI 对齐；当前已知差异由 C1/C2 收口，不能再用“只有 `session_id` → `conversation_id` 一项差异”作为验收结论。端口 Java 8080 / Python 8000。
 
 ---
 
