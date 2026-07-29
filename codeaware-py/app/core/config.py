@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # Redis（对应 application.yml:24-33）
     redis_host: str = "localhost"
     redis_port: int = 6380
+    redis_db: int = 0
 
     # LLM: DeepSeek（OpenAI 兼容，对应 application.yml:64-71）
     llm_api_key: str = ""
@@ -54,7 +55,7 @@ class Settings(BaseSettings):
 
     @property
     def redis_url(self) -> str:
-        return f"redis://{self.redis_host}:{self.redis_port}/0"
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
 
 settings = Settings()

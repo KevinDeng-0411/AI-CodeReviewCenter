@@ -9,6 +9,7 @@ import hashlib
 import os
 
 os.environ.setdefault("PG_DB", "ai_center_test")
+os.environ.setdefault("REDIS_DB", "15")
 
 import httpx
 import pytest
@@ -19,8 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import app.models  # noqa: F401  # 注册模型
 from app.ai.infra.vector_recall import VectorRecallService
 from app.db.base import Base
+from app.core.config import settings
 from app.db.session import AsyncSessionLocal, engine
 from app.main import app
+import redis.asyncio as aioredis
 
 
 class FakeEmbedder:
@@ -75,6 +78,28 @@ def mock_llm() -> FakeLLM:
 def vector_recall(mock_embedder) -> VectorRecallService:
     """注入 FakeEmbedder 的 VectorRecallService（CI 友好，不打真实 Ollama）。"""
     return VectorRecallService(mock_embedder)
+
+
+@pytest.fixture
+async def redis_client():
+    """测试用 Redis（db=15）。fixture 内创建以绑定 session loop，每测试 flush 隔离。"""
+    client = aioredis.from_url(settings.redis_url, decode_responses=True)
+    await client.flushdb()
+    yield client
+    await client.flushdb()
+    await client.aclose()
+
+
+@pytest.fixture
+async def short_term(redis_client, db_session, mock_llm):
+    from app.ai.memory.short_term import ShortTermMemoryManager
+    return ShortTermMemoryManager(redis_client, db_session, mock_llm)
+
+
+@pytest.fixture
+async def long_term(db_session, vector_recall):
+    from app.ai.memory.long_term import LongTermMemoryManager
+    return LongTermMemoryManager(db_session, vector_recall)
 
 
 @pytest.fixture
