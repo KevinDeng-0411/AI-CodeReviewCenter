@@ -10,6 +10,8 @@ import os
 
 os.environ.setdefault("PG_DB", "ai_center_test")
 os.environ.setdefault("REDIS_DB", "15")
+# 测试态标记：main.py 据此跳过前端静态挂载（避免 Mount("/") 拦截运行时加的测试路由）
+os.environ.setdefault("CODEAWARE_TESTING", "1")
 
 import httpx
 import pytest
