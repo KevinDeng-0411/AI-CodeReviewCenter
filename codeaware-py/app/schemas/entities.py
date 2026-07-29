@@ -41,6 +41,26 @@ class AiOperationRecordRead(ORMBase):
     created_at: datetime
 
 
+def record_to_dict(rec) -> dict:
+    """AiOperationRecord ORM -> 可序列化 dict。
+
+    ORM 属性 ``meta`` 映射为对外字段 ``metadata``（规避 SQLAlchemy DeclarativeBase.metadata 冲突）。
+    供 code_review / unit_test 的 records 端点复用，避免裸 ORM 经 Result(Pydantic) 序列化报错。
+    """
+    return {
+        "id": rec.id,
+        "type": rec.type,
+        "project_name": rec.project_name,
+        "file_path": rec.file_path,
+        "source_code": rec.source_code,
+        "result": rec.result,
+        "prompt_template_id": rec.prompt_template_id,
+        "ai_model": rec.ai_model,
+        "metadata": rec.meta,
+        "created_at": rec.created_at,
+    }
+
+
 # ---------- Conversation ----------
 class ConversationCreate(BaseModel):
     conversation_id: str

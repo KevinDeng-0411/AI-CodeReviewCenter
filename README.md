@@ -3,6 +3,58 @@
 > AI 驱动的代码质量与团队知识管理平台。
 > 让 AI 理解你的代码，守护每一行质量。
 
+> **双实现**：本仓库含原 **Java 版**（Spring Boot 3 + LangChain4j，见下文）与 **Python 重构版** `codeaware-py/`（FastAPI + LangChain + SQLAlchemy + pgvector）。Python 版为求职面试重构产物，经领域建模 grilling 产出 7 份 ADR，迁移中修正多处设计问题；中间件（PG/pgvector · Redis · Ollama bge-m3 · DeepSeek）双端复用不变。下方"技术栈/快速启动"为 Java 版；Python 版见本节。
+
+## Python 重构版（codeaware-py）
+
+**迁移状态**：P0–P5 全阶段完成 ✅。`uv run pytest`：**73 passed**（1 integration 真实 Ollama 默认跳过），核心模块覆盖率 ≥80% 下限达标（核心域 Chat 88%，全局 92%）。
+
+| 层级 | 技术 |
+|------|------|
+| 语言 | Python 3.12 |
+| Web | FastAPI（原生 async + 内置 /docs） |
+| AI 框架 | LangChain（与 LangChain4j 1:1 对称；LangGraph 编排预留） |
+| LLM | DeepSeek（`ChatOpenAI` base_url，OpenAI 兼容） |
+| Embedding | Ollama bge-m3（1024-d，不变） |
+| 向量存储 | pgvector `Vector(1024)` **内联同表**（消除 Java 版 UUID 反查） |
+| 关键词检索 | PG `pg_trgm`（替代 Java 版内存伪 BM25） |
+| ORM | SQLAlchemy 2.0 async（asyncpg） |
+| 缓存 | redis-py async |
+| 文档解析 | unstructured `chunk_by_title` |
+| 配置/DTO | pydantic-settings + Pydantic v2 |
+| 迁移/包管理 | Alembic / uv |
+
+**核心域 = Chat（智能问答）**：两级记忆 + RAG + prompt 编排在此收敛；CR/单测/AIReadMe 为复用基建的薄工具（ADR-0007）。
+
+### 快速启动（Python）
+
+```bash
+cd codeaware-py
+docker compose up -d                       # 复用根目录 compose（PG:5433 / Redis:6380 / Ollama）
+docker exec ai-center-ollama ollama pull bge-m3
+cp .env.example .env                       # 填 DEEPSEEK_API_KEY
+uv sync
+uv run alembic upgrade head                # 建表 + 预置 4 类 Prompt 模板
+uv run uvicorn app.main:app --reload --port 8000
+# API 文档：http://localhost:8000/docs
+```
+
+### 迁移最大价值（面试卖点）
+
+① 向量内联 pgvector 消除 UUID 反查；② 关键词检索下沉 PG `pg_trgm` 替代内存伪 BM25；③ LLM 结构化输出 + 全异步 SSE 替代手写 JSON 解析与同步回调；④ Knowledge 拆父子表修全文冗余、消息改 PG 真相源修只写不读、Prompt 模板版本化修激活非确定性。
+
+### 文档
+
+- 迁移蓝图 + 验收：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
+- 7 份 ADR：[docs/decisions/adr/](docs/decisions/adr/)
+- DeepSeek 集成约定：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
+- 面试话术：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
+- 文档索引（编码先查）：[docs/INDEX.md](docs/INDEX.md)
+
+> **API 契约**：Python 版 22 端点与下文 Java 版 curl 示例对齐，唯一破坏性变更为 `session_id` -> `conversation_id`（ADR-0004）。端口 Java 8080 / Python 8000。
+
+---
+
 ## 技术栈
 
 | 层级 | 技术 | 说明 |

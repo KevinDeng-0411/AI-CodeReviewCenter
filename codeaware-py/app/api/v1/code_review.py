@@ -11,6 +11,7 @@ from app.api.v1.deps import get_chat_model, get_db
 from app.core.exceptions import BusinessException
 from app.core.response import Result
 from app.models import AiOperationRecord
+from app.schemas.entities import record_to_dict
 
 router = APIRouter(prefix="/api/code-review", tags=["Code Review"])
 
@@ -46,7 +47,9 @@ async def list_records(
         .select_from(AiOperationRecord)
         .where(AiOperationRecord.type == "CODE_REVIEW")
     )
-    return Result.ok({"total": total or 0, "page": page, "size": size, "records": records})
+    return Result.ok(
+        {"total": total or 0, "page": page, "size": size, "records": [record_to_dict(r) for r in records]}
+    )
 
 
 @router.get("/records/{record_id}")
@@ -54,4 +57,4 @@ async def get_record(record_id: int, db: AsyncSession = Depends(get_db)):
     rec = await db.get(AiOperationRecord, record_id)
     if not rec:
         raise BusinessException("评审记录不存在")
-    return Result.ok(rec)
+    return Result.ok(record_to_dict(rec))

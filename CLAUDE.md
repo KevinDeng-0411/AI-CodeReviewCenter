@@ -72,6 +72,7 @@ app/
 - ✅ LLM 结构化输出用 `with_structured_output(Pydantic schema)`，不手写 JSON 正则提取（改进③）
 - ✅ 全异步：async 路由 + async SQLAlchemy + async redis；SSE 用 `ChatOpenAI.astream()` + `StreamingResponse`（改进④）
 - ✅ `created_at` 用 `server_default=func.now()`，不用应用层自动填充
+- ✅ **端点绝不返回裸 ORM**：`Result.ok(orm_obj)` 经 Pydantic v2 序列化会抛 `PydanticSerializationError`；router 层投影成 dict（或 `Schema.model_validate(orm)`）。`AiOperationRecord` 用共享 `record_to_dict`（ORM `meta` -> 对外 `metadata`，规避 `DeclarativeBase.metadata` 冲突）。见 [testing-notes §5](docs/migration/testing-notes.md)
 
 ## 概念区分（ubiquitous language，见 glossary）
 

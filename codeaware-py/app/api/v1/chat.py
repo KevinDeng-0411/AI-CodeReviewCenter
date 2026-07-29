@@ -24,12 +24,19 @@ async def send_stream(req: ChatRequest, svc=Depends(get_chat_service)):
 
 @router.get("/conversations")
 async def list_conversations(svc=Depends(get_chat_service)):
-    return Result.ok(await svc.list_conversations())
+    convs = await svc.list_conversations()
+    return Result.ok(
+        [
+            {"id": c.id, "conversation_id": c.conversation_id, "title": c.title, "summary": c.summary}
+            for c in convs
+        ]
+    )
 
 
 @router.get("/conversations/{conversation_id}")
 async def get_conversation(conversation_id: str, svc=Depends(get_chat_service)):
-    return Result.ok(await svc.get_messages(conversation_id))
+    msgs = await svc.get_messages(conversation_id)
+    return Result.ok([{"role": m.role, "content": m.content} for m in msgs])
 
 
 @router.delete("/conversations/{conversation_id}")
