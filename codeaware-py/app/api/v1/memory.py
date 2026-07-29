@@ -41,7 +41,14 @@ async def search_long_term(
     results = await mgr.recall(query, top_k=top_k, threshold=threshold)
     return Result.ok(
         [
-            {"id": r[0].id, "content": r[0].content, "memory_type": r[0].memory_type, "similarity": r[1]}
+            {
+                "id": r[0].id,
+                "content": r[0].content,
+                "memory_type": r[0].memory_type,
+                "conversation_id": r[0].conversation_id,
+                "source": (r[0].meta or {}).get("source", "manual"),
+                "similarity": r[1],
+            }
             for r in results
         ]
     )

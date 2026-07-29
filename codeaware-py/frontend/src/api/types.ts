@@ -81,6 +81,8 @@ export interface MemoryHit {
   id: number;
   content: string;
   memory_type: string;
+  conversation_id?: string | null;
+  source?: string; // "conversation"（对话内生）| "manual"（手动录入）
   similarity: number;
 }
 

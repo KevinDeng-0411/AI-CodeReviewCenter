@@ -6,7 +6,7 @@ conversation_id 命名（ADR-0004）；CHAT prompt 走模板（ADR-0005）。
 
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.memory.long_term import LongTermMemoryManager
@@ -14,8 +14,12 @@ from app.ai.memory.short_term import ShortTermMemoryManager
 from app.ai.prompt.template_manager import PromptTemplateManager
 from app.ai.services.rag import RagService
 from app.core.enums import PromptType
-from app.models import Conversation, Message
+from app.models import Conversation, LongTermMemory, Message
 from app.schemas.chat import ChatResponseVO
+
+# 对话内生记忆抽取：达 2 轮（4 条消息）后触发一次抽取（ADR-0001 对话内生）。
+# inline 执行（复用请求 session，get_db 统一 commit）；SSE 中在 [DONE] 之后抽取，延迟对用户隐藏。
+MEMORY_EXTRACT_THRESHOLD = 4
 
 
 class ChatService:
@@ -42,6 +46,7 @@ class ChatService:
         reply = await self.chat_model.ainvoke(prompt)
         text = reply.content if hasattr(reply, "content") else str(reply)
         await self.short_term.save_message(cid, "ASSISTANT", text)
+        await self._maybe_extract(cid)
         return ChatResponseVO(conversation_id=cid, reply=text)
 
     async def chat_stream(self, conversation_id: str | None, message: str):
@@ -58,6 +63,8 @@ class ChatService:
                 yield f"data: {content}\n\n"
             await self.short_term.save_message(cid, "ASSISTANT", "".join(full))
             yield "data: [DONE]\n\n"
+            # [DONE] 之后再抽取记忆：客户端已解锁输入，抽取延迟对用户隐藏
+            await self._maybe_extract(cid)
 
         return gen()
 
@@ -128,3 +135,23 @@ class ChatService:
         await self.session.execute(delete(Conversation).where(Conversation.conversation_id == cid))
         await self.session.execute(delete(Message).where(Message.conversation_id == cid))
         await self.session.flush()
+
+    # ---------- 对话内生记忆抽取（ADR-0001）----------
+
+    async def _maybe_extract(self, cid: str) -> None:
+        """达阈值且该会话尚无记忆 -> 抽取一次原子事实写入长期记忆（inline，复用请求 session）。"""
+        msgs = await self.short_term.get_messages(cid)
+        if len(msgs) >= MEMORY_EXTRACT_THRESHOLD and not await self._has_memories(cid):
+            try:
+                await self.long_term.extract_from_conversation(cid, self.chat_model)
+            except Exception:
+                # 抽取失败不影响主流程（记忆是增益，非关键路径）
+                pass
+
+    async def _has_memories(self, cid: str) -> bool:
+        cnt = await self.session.scalar(
+            select(func.count())
+            .select_from(LongTermMemory)
+            .where(LongTermMemory.conversation_id == cid)
+        )
+        return (cnt or 0) > 0

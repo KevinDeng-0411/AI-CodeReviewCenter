@@ -84,7 +84,8 @@ export default function MemoryPage() {
             <Save className="w-4 h-4" /> 录入记忆
           </Button>
           <div className="pt-2 border-t border-line text-2xs text-mute font-mono leading-relaxed">
-            长期记忆是原子事实（vs 知识库文档-分块），1024 维向量内联 pgvector，按 cosine 相似度召回。
+            对话内生：Chat 达 2 轮后自动抽取原子事实落库（FACT，带 conversation_id）。
+            vs 知识库 Knowledge = 外部上传文档-分块。同为向量召回，起源与结构不同（ADR-0001）。
           </div>
         </div>
       </div>
@@ -131,7 +132,19 @@ export default function MemoryPage() {
               {hits.map((h) => (
                 <div key={h.id} className="bg-panel border border-line rounded p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="tag">{h.memory_type}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="tag">{h.memory_type}</span>
+                      {h.source === "conversation" ? (
+                        <span
+                          className="font-mono text-2xs tracking-techy px-1.5 py-0.5 rounded border border-amber/30 text-amber bg-amber/10"
+                          title={h.conversation_id || ""}
+                        >
+                          对话内生 · {(h.conversation_id || "").slice(0, 8)}…
+                        </span>
+                      ) : (
+                        <span className="tag">手动录入</span>
+                      )}
+                    </div>
                     <button
                       onClick={() => remove(h.id)}
                       className="text-mute hover:text-oxblood"

@@ -32,3 +32,47 @@ async def test_delete(long_term):
     await long_term.delete(mem.id)
     results = await long_term.recall("to delete", top_k=5)
     assert all(r[0].id != mem.id for r in results)
+
+
+async def test_extract_from_conversation_saves_facts(long_term, db_session):
+    """对话内生记忆抽取（ADR-0001）：从对话消息抽取原子事实 -> 落库 FACT + conversation_id。"""
+    from sqlalchemy import select
+
+    from app.models import Conversation, LongTermMemory, Message
+    from app.schemas.memory import ExtractedFacts
+
+    cid = "conv-extract-test"
+    db_session.add(Conversation(conversation_id=cid, title="抽取测试"))
+    db_session.add_all(
+        [
+            Message(conversation_id=cid, role="USER", content="我们项目用 FastAPI + SQLAlchemy 2.0"),
+            Message(conversation_id=cid, role="ASSISTANT", content="了解，不错的异步栈"),
+            Message(conversation_id=cid, role="USER", content="部署在 Kubernetes 上"),
+            Message(conversation_id=cid, role="ASSISTANT", content="好的"),
+        ]
+    )
+    await db_session.flush()
+
+    class _FakeExtract:
+        def with_structured_output(self, schema, **kw):
+            class _S:
+                async def ainvoke(self, prompt, **kw):
+                    return ExtractedFacts(
+                        facts=["项目使用 FastAPI + SQLAlchemy 2.0 作为后端栈", "项目部署在 Kubernetes 上"]
+                    )
+
+            return _S()
+
+    count = await long_term.extract_from_conversation(cid, _FakeExtract())
+    assert count == 2
+
+    mems = (
+        (await db_session.execute(select(LongTermMemory).where(LongTermMemory.conversation_id == cid)))
+        .scalars()
+        .all()
+    )
+    assert len(mems) == 2
+    assert all(m.memory_type == "FACT" for m in mems)
+    assert all((m.meta or {}).get("source") == "conversation" for m in mems)
+    assert all(m.embedding is not None and len(m.embedding) == 1024 for m in mems)
+

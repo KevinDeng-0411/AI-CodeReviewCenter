@@ -2,6 +2,7 @@
 
 - **状态**: Accepted
 - **日期**: 2026-07-28
+- **更新**: 2026-07-29 — 「起源差异」（对话内生 vs 外部策展）落地实现：Chat 达 2 轮后自动从对话抽取原子事实写入 `long_term_memories`（`memory_type=FACT`、`conversation_id` 关联、`meta.source=conversation`）。Memory 不再仅手动录入，与 Knowledge（外部上传文档-分块）的起源分野真正可观察。
 - **关联术语**: Long-term Memory, Knowledge Document, VectorRecallService
 
 ## 背景
