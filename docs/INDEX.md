@@ -15,6 +15,7 @@
 |---|---|---|---|
 | 总览 / 核心域=Chat | [ADR-0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | §1 §9 | [术语表](decisions/glossary.md) |
 | 迁移路线图 / 阶段验收 | - | [§6 路线图](migration/Python重构迁移文档.md) · §11 清单 | - |
+| 后续升级 / 缺口与预留 | - | [后续升级计划](migration/后续升级计划.md) | - |
 | 数据模型（8 表） | 0001 / 0002 / 0004 / 0005 / 0006 | §7.2.2 | - |
 | 向量召回基建 VectorRecallService | [0001](decisions/adr/0001-memory-vs-knowledge-two-tables-shared-recall.md) | §7.3 | - |
 | 短期记忆（滑窗+摘要+PG fallback） | [0003](decisions/adr/0003-message-store-pg-source-of-truth.md) · [0004](decisions/adr/0004-memory-concept-and-conversation-naming.md) | §7.6 | - |
@@ -35,6 +36,7 @@
 |------|------|
 | [migration/Python重构迁移文档.md](migration/Python重构迁移文档.md) | Java->Python 迁移蓝图（唯一，含 ADR 索引 §0.1） |
 | [migration/testing-notes.md](migration/testing-notes.md) | 测试与集成踩坑留痕（langchain 导入 hang / test_migration 性能 / 异步客户端 loop） |
+| [migration/后续升级计划.md](migration/后续升级计划.md) | 计划内缺口（摘要接入·首要）+ 可升级预留项（LangGraph/语义切分/tsvector/Pinecone/数据归并） |
 | [decisions/adr/](decisions/adr/) | 7 份架构决策记录 0001~0007 |
 | [decisions/glossary.md](decisions/glossary.md) | 领域术语表（10 术语全 settled） |
 | [integration/deepseek-notes.md](integration/deepseek-notes.md) | DeepSeek thinking/非思考模式集成约定 |
