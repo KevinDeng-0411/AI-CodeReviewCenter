@@ -88,6 +88,7 @@ app/
 - 每阶段代码与测试同步交付，测试不过不进下一阶段
 - **覆盖率方针**：核心模块（rag/memory/code_review）≥80% 是**下限，不是目标**；重逻辑模块（检索融合/记忆窗口+fallback/结构化解析）深测、自然到 90%+；**不追求全局 90%**——测对的地方，不测所有地方。薄 API 层/getter/LLM 调用本身（已 mock）不强求覆盖
 - 断言验证**行为**而非"不崩"；关键路径配集成测试；LLM mock 覆盖边界用例（空返回/格式错/超时）
+- 测试/集成踩坑见 [docs/migration/testing-notes.md](docs/migration/testing-notes.md)（langchain 导入 hang、test_migration 性能、异步客户端 loop）
 
 ## 常用命令
 
