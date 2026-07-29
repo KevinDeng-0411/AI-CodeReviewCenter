@@ -177,7 +177,7 @@ codeaware-py/
 | `LongTermMemoryManager` | `ai/memory/long_term.py` | 内联 pgvector，调 VectorRecallService |
 | `HybridRetriever` | `ai/rag/hybrid_retriever.py` | pg_trgm + pgvector + RRF，作用在 `knowledge_chunks` |
 | `QueryRewriter` | `ai/rag/query_rewriter.py` | + 结构化输出 |
-| `SemanticChunker` | `ai/rag/semantic_chunker.py` | 或 `RecursiveCharacterTextSplitter` |
+| `SemanticChunker` | `ai/rag/semantic_chunker.py` | C: `MarkdownHeaderTextSplitter`(结构) + `RecursiveCharacterTextSplitter`(500/50) |
 | `RagService` | `ai/services/rag.py` | 写 `documents`+`knowledge_chunks`(ADR-0002) |
 | `ChatService` | `ai/services/chat.py` | `astream` + `StreamingResponse`；CHAT prompt 走模板(ADR-0005)；`conversation_id`(ADR-0004) |
 | `DocumentParserService`(Tika) | `ai/services/document_parser.py` | `unstructured` |
@@ -211,13 +211,15 @@ codeaware-py/
 ### 6.1 P3 子优先级（先做面试最能讲的）
 1. `PromptTemplateManager`（版本化+激活，ADR-0005）+ `CodeReviewService`（七层 Prompt 主打 + 改进③）
 2. `ShortTermMemoryManager`（PG fallback，ADR-0003）-> `LongTermMemoryManager`（内联 pgvector，ADR-0001）
-3. `SemanticChunker` + `QueryRewriter` + `HybridRetriever`（改进②）
+3. `SemanticChunker`（C: MarkdownHeaderTextSplitter + RecursiveCharacterTextSplitter，500/50）+ `QueryRewriter` + `HybridRetriever`（改进②）
 4. `RagService`（父子表，ADR-0002）-> `ChatService`（三级整合 + SSE + CHAT 模板，改进④）
 5. `UnitTestService` / `AiReadmeService` / `DocumentParserService`(unstructured) / `PromptService`（薄壳，复制 CR 模式，低优先）
 
 > 总计约 2–3 周（业余时间）。
 >
 > **本次迁移范围**:P0–P5 交付功能基线(Chat 功能基线 + 薄工具);LangGraph/Agent 编排等 Chat 工程深度加深为**预留,不在本次迁移**(见 [ADR-0007](../decisions/adr/0007-core-domain-and-bounded-contexts.md) 决策点 4)。
+>
+> **分块策略(P3-3,已定)**:LangChain `MarkdownHeaderTextSplitter`(按 Markdown 标题切,结构感知)+ `RecursiveCharacterTextSplitter`(控大小 chunk_size=500/overlap=50,自然边界)。即**结构 + 自然边界**,非 embedding 语义切分;贴合 Markdown 知识文档且轻量(Java 版 `SemanticChunker` 同为结构+边界,名字误导、非 embedding 语义)。仅作用于 Knowledge 文档(ADR-0002);Long-term Memory 原子不分块(ADR-0001)。
 
 ### 6.2 测试策略与分层
 
