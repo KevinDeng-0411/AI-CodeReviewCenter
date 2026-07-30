@@ -48,7 +48,8 @@ Code Review、Unit Test、AIReadMe 是复用同一 AI 基建的薄工具。
 
 ## 快速启动
 
-所有命令从仓库根执行。全新 Compose volume 会创建 Java `ai_center` 和 Python
+需要 Docker Desktop/Compose、Python 3.12、uv 和 Node.js/npm；七域浏览器验收还需要
+Chrome。所有命令从仓库根执行。全新 Compose volume 会创建 Java `ai_center` 和 Python
 `ai_center_py`；已有 volume 用幂等脚本补建 Python 数据库，不删除现有数据。
 
 ```bash
@@ -108,12 +109,14 @@ data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":4
 拒绝开发库、Redis DB 0、远程目标和伪造 sentinel，并在成功、失败或中断后精确清理。
 
 ```bash
+./codeaware-py/scripts/verify_current_release.sh
 (cd codeaware-py && uv run python scripts/run_tests_safe.py -q)
 (cd codeaware-py && uv run python scripts/run_tests_safe.py --cov=app --cov-report=term-missing -q)
 (cd codeaware-py/frontend && npm run test)
 (cd codeaware-py/frontend && npm run lint)
 (cd codeaware-py/frontend && npm run build)
 ./codeaware-py/scripts/demo_c2_mocked.sh
+./codeaware-py/scripts/demo_c3_handoff.sh
 ```
 
 空 volume 验证：
@@ -127,6 +130,15 @@ data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":4
 ```bash
 ./codeaware-py/scripts/demo_c2_live.sh
 ```
+
+冻结版本的安全回退演练只使用 detached 临时 worktree 和一次性数据库：
+
+```bash
+./codeaware-py/scripts/verify_c3_rollback.sh
+```
+
+完整预期输出和交接顺序见[C3 交接运行手册](docs/roadmap/current-release/C3-交接运行手册.md)，
+版本变化与限制见[0.1.0 发布说明](docs/releases/0.1.0.md)。
 
 ## AIReadMe 与文件安全
 
@@ -153,5 +165,6 @@ Knowledge 文件上传支持 PDF、DOCX、HTML、Markdown、TXT，默认限制�
 - 当前路线：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
 - 面试准备：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
 - DeepSeek 集成：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
+- 当前发布说明：[docs/releases/0.1.0.md](docs/releases/0.1.0.md)
 - Java → Python 历史迁移：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
 - Java legacy 模块：`ai-center-common`、`ai-center-model`、`ai-center-ai`、`ai-center-server`

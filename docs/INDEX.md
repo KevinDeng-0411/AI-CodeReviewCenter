@@ -55,8 +55,10 @@
 | [roadmap/current-release/01-当前缺口修复.md](roadmap/current-release/01-当前缺口修复.md) | 修复 typed SSE、摘要、multipart、空环境和真实 AIReadMe |
 | [roadmap/current-release/02-现有功能闭环验收.md](roadmap/current-release/02-现有功能闭环验收.md) | 现有 7 个功能域的契约、测试、持久化和 UI 演示闭环 |
 | [roadmap/current-release/03-版本冻结与交接.md](roadmap/current-release/03-版本冻结与交接.md) | 文档/OpenAPI/配置校准、空环境复现、指标与 Agent 解锁条件 |
+| [roadmap/current-release/C3-交接运行手册.md](roadmap/current-release/C3-交接运行手册.md) | 新接手者从干净仓库执行冻结验证、聚焦演示和安全回退 |
 | [roadmap/current-release/04-BM25检索增强.md](roadmap/current-release/04-BM25检索增强.md) | C3 后以真实 BM25 替换 pg_trgm 词法腿，完成评测、融合、回退与 Evidence |
 | [roadmap/current-release/验收证据模板.md](roadmap/current-release/验收证据模板.md) | 当前版本每阶段必须提交的验收证据 |
+| [releases/0.1.0.md](releases/0.1.0.md) | 当前冻结版本的能力、契约变化、迁移、限制和回退说明 |
 | [roadmap/chat-to-agent/README.md](roadmap/chat-to-agent/README.md) | 个人默认路线总入口、能力 DAG、门禁与平台参考边界 |
 | [roadmap/chat-to-agent/personal/README.md](roadmap/chat-to-agent/personal/README.md) | `personal-local-readonly` 默认档案：C1–C4 → S1-lite → S2-lite → S4-lite → S5-lite |
 | [roadmap/chat-to-agent/personal/S1-精简项目隔离.md](roadmap/chat-to-agent/personal/S1-精简项目隔离.md) | S1-lite：最小 Project 表、五个父实体作用域与跨项目隔离 |

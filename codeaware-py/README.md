@@ -83,10 +83,17 @@ Fresh bootstrap：
 ./codeaware-py/scripts/verify_fresh_bootstrap.sh
 ```
 
+当前版本一键冻结验证：
+
+```bash
+./codeaware-py/scripts/verify_current_release.sh
+```
+
 七域 mocked 演示：
 
 ```bash
 ./codeaware-py/scripts/demo_c2_mocked.sh
+./codeaware-py/scripts/demo_c3_handoff.sh
 ```
 
 真实依赖 smoke（显式产生 DeepSeek 调用）：
@@ -94,6 +101,15 @@ Fresh bootstrap：
 ```bash
 ./codeaware-py/scripts/demo_c2_live.sh
 ```
+
+detached worktree + 一次性数据库回退演练：
+
+```bash
+./codeaware-py/scripts/verify_c3_rollback.sh
+```
+
+交接步骤见[`C3-交接运行手册`](../docs/roadmap/current-release/C3-交接运行手册.md)，版本
+变化和限制见[`0.1.0` 发布说明](../docs/releases/0.1.0.md)。
 
 ## 本地能力安全边界
 
