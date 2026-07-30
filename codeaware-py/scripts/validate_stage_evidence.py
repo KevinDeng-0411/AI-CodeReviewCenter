@@ -100,6 +100,73 @@ C1_REQUIRED_COMMANDS = {
     "frontend-build",
     "rollback",
 }
+C2_REQUIRED_COMMANDS = {
+    "dependency-lock",
+    "compose-config",
+    "c2-mocked-demo",
+    "backend-full",
+    "backend-coverage",
+    "api-e2e",
+    "frontend-install",
+    "frontend-test",
+    "frontend-lint",
+    "frontend-build",
+    "browser-e2e",
+    "live-smoke",
+    "rollback",
+}
+C2_COMMAND_CONTRACTS = {
+    "dependency-lock": ("codeaware-py", ["uv", "lock", "--check"]),
+    "compose-config": (".", ["docker", "compose", "config", "--quiet"]),
+    "c2-mocked-demo": (
+        ".",
+        ["./codeaware-py/scripts/demo_c2_mocked.sh"],
+    ),
+    "backend-full": (
+        "codeaware-py",
+        ["uv", "run", "python", "scripts/run_tests_safe.py", "-q"],
+    ),
+    "backend-coverage": (
+        "codeaware-py",
+        [
+            "uv",
+            "run",
+            "python",
+            "scripts/run_tests_safe.py",
+            "--cov=app",
+            "--cov-report=term-missing",
+            "-q",
+        ],
+    ),
+    "api-e2e": (
+        "codeaware-py",
+        [
+            "uv",
+            "run",
+            "python",
+            "scripts/run_tests_safe.py",
+            "tests/contracts",
+            "tests/e2e",
+            "-q",
+        ],
+    ),
+    "frontend-install": ("codeaware-py/frontend", ["npm", "ci"]),
+    "frontend-test": ("codeaware-py/frontend", ["npm", "run", "test"]),
+    "frontend-lint": ("codeaware-py/frontend", ["npm", "run", "lint"]),
+    "frontend-build": ("codeaware-py/frontend", ["npm", "run", "build"]),
+    "browser-e2e": (
+        "codeaware-py",
+        [
+            "uv",
+            "run",
+            "python",
+            "scripts/run_tests_safe.py",
+            "--browser-e2e",
+        ],
+    ),
+    "live-smoke": (".", ["./codeaware-py/scripts/demo_c2_live.sh"]),
+    "rollback": (".", ["./codeaware-py/scripts/verify_c2_rollback.sh"]),
+}
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 RUN_ID_PATTERN = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$")
@@ -197,6 +264,23 @@ def _validate_repo_cwd(cwd: Any, label: str, errors: list[str]) -> None:
         return
     if not path.is_dir():
         errors.append(f"{label} cwd 不存在: {cwd}")
+
+
+def _artifact_text(
+    manifest_dir: Path,
+    relative_path: Any,
+) -> str:
+    if not isinstance(relative_path, str):
+        return ""
+    path = (manifest_dir / relative_path).resolve()
+    try:
+        path.relative_to(manifest_dir.resolve())
+    except ValueError:
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
 
 
 def _parse_rfc3339(value: Any) -> datetime | None:
@@ -426,6 +510,61 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
             "C1 commands 必须精确为 "
             f"{sorted(C1_REQUIRED_COMMANDS)}，实为 {sorted(command_ids)}"
         )
+    if stage == "C2":
+        if command_ids != C2_REQUIRED_COMMANDS:
+            errors.append(
+                "C2 commands 必须精确为 "
+                f"{sorted(C2_REQUIRED_COMMANDS)}，实为 {sorted(command_ids)}"
+            )
+        command_map = {
+            command.get("id"): command
+            for command in commands
+            if isinstance(command, dict)
+        }
+        for command_id, (expected_cwd, expected_argv) in C2_COMMAND_CONTRACTS.items():
+            command = command_map.get(command_id)
+            if command is None:
+                continue
+            if command.get("cwd") != expected_cwd:
+                errors.append(
+                    f"C2 命令 {command_id} cwd 必须为 {expected_cwd!r}"
+                )
+            if command.get("argv") != expected_argv:
+                errors.append(
+                    f"C2 命令 {command_id} argv 与冻结契约不一致"
+                )
+
+        required_markers = {
+            "c2-mocked-demo": [
+                "[PASS] Code Review",
+                "[PASS] Unit Test",
+                "[PASS] AIReadMe",
+                "[PASS] Chat",
+                "[PASS] Knowledge",
+                "[PASS] Memory",
+                "[PASS] Prompt",
+                "[C2 MOCKED] PASS",
+            ],
+            "backend-full": ["passed, 2 deselected", "exact cleanup complete"],
+            "browser-e2e": ["7 passed", "exact cleanup complete"],
+            "live-smoke": [
+                '"dimension": 1024',
+                '"real_llm_calls": 3',
+                "[C2 LIVE] PASS",
+                "exact cleanup complete",
+            ],
+            "rollback": ["[C2 ROLLBACK] PASS"],
+        }
+        for command_id, markers in required_markers.items():
+            command = command_map.get(command_id)
+            if command is None:
+                continue
+            output = _artifact_text(manifest_dir, command.get("stdout"))
+            for marker in markers:
+                if marker not in output:
+                    errors.append(
+                        f"C2 命令 {command_id} 日志缺少标记: {marker}"
+                    )
 
     checks = manifest.get("checks")
     if not isinstance(checks, list):

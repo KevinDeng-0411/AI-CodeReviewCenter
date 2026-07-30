@@ -6,8 +6,12 @@ import subprocess
 
 from validate_stage_evidence import (
     C1_REQUIRED_COMMANDS,
+    C2_COMMAND_CONTRACTS,
+    C2_REQUIRED_COMMANDS,
     DAG,
+    manifest_path_for,
     REQUIRED_CHECKS,
+    sha256_file,
     validate,
     validate_evidence_commit,
 )
@@ -110,8 +114,109 @@ def _base_c1_manifest(tmp_path) -> dict:
     }
 
 
+def _base_c2_manifest(tmp_path) -> dict:
+    manifest = _base_c1_manifest(tmp_path)
+    c1_path = manifest_path_for("C1")
+    c1_manifest = json.loads(c1_path.read_text(encoding="utf-8"))
+    migration = tmp_path / "migration.json"
+    migration.write_text(
+        json.dumps({"heads": ["0005"], "current": ["0005"]}),
+        encoding="utf-8",
+    )
+    command_log = tmp_path / "backend.log"
+    command_log.write_text(
+        "\n".join(
+            [
+                "[PASS] Code Review",
+                "[PASS] Unit Test",
+                "[PASS] AIReadMe",
+                "[PASS] Chat",
+                "[PASS] Knowledge",
+                "[PASS] Memory",
+                "[PASS] Prompt",
+                "[C2 MOCKED] PASS",
+                "249 passed, 2 deselected",
+                "7 passed",
+                '"dimension": 1024',
+                '"real_llm_calls": 3',
+                "[C2 LIVE] PASS",
+                "[C2 ROLLBACK] PASS",
+                "exact cleanup complete",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    manifest.update(
+        {
+            "stage": "C2",
+            "migration": {
+                "heads": ["0005"],
+                "current": ["0005"],
+                "log": "migration.json",
+                "sha256": _hash(migration),
+            },
+            "dependencies": [
+                {
+                    "stage": "C1",
+                    "manifest_sha256": sha256_file(c1_path),
+                    "validated_commit": c1_manifest["validated_head"],
+                }
+            ],
+            "commands": [
+                {
+                    "id": command_id,
+                    "argv": argv,
+                    "cwd": cwd,
+                    "exit_code": 0,
+                    "started_at": "2026-07-30T00:00:00Z",
+                    "finished_at": "2026-07-30T00:01:00Z",
+                    "stdout": "backend.log",
+                    "sha256": _hash(command_log),
+                    "required": True,
+                }
+                for command_id, (cwd, argv) in sorted(
+                    C2_COMMAND_CONTRACTS.items()
+                )
+            ],
+            "checks": [
+                {
+                    "id": check_id,
+                    "status": "passed",
+                    "artifacts": [
+                        {
+                            "path": "check.log",
+                            "sha256": _hash(tmp_path / "check.log"),
+                        }
+                    ],
+                }
+                for check_id in REQUIRED_CHECKS["C2"]
+            ],
+        }
+    )
+    assert set(C2_REQUIRED_COMMANDS) == set(C2_COMMAND_CONTRACTS)
+    return manifest
+
+
 def test_accepts_well_formed_c1(tmp_path):
     assert validate("C1", _base_c1_manifest(tmp_path), tmp_path) == []
+
+
+def test_accepts_well_formed_c2_with_live_and_browser_logs(tmp_path):
+    assert validate("C2", _base_c2_manifest(tmp_path), tmp_path) == []
+
+
+def test_rejects_c2_missing_live_marker_or_wrong_browser_command(tmp_path):
+    manifest = _base_c2_manifest(tmp_path)
+    log = tmp_path / "backend.log"
+    log.write_text(log.read_text(encoding="utf-8").replace("[C2 LIVE] PASS", "failed"))
+    digest = _hash(log)
+    for command in manifest["commands"]:
+        command["sha256"] = digest
+        if command["id"] == "browser-e2e":
+            command["argv"] = ["npm", "run", "test:e2e"]
+    errors = validate("C2", manifest, tmp_path)
+    assert any("live-smoke 日志缺少标记" in error for error in errors)
+    assert any("browser-e2e argv" in error for error in errors)
 
 
 def test_rejects_wrong_route_profile(tmp_path):
