@@ -1,6 +1,6 @@
 // Chat - 核心域。SSE 流式 + 多轮 + 会话侧栏 + 信号轨迹
 import { useEffect, useRef, useState } from "react";
-import { MessageSquare, Plus, Send, Trash2, User, Cpu } from "lucide-react";
+import { MessageSquare, Plus, Send, Square, Trash2, User, Cpu } from "lucide-react";
 import { chat, chatStream, ApiError } from "../api/client";
 import type { ChatMessage, ConversationItem } from "../api/types";
 import { Button, EmptyState, SignalTrace, ToastBar, useToast } from "../components/ui";
@@ -242,10 +242,18 @@ export default function ChatPage() {
               rows={1}
               className="flex-1 resize-none px-3 py-2 bg-paper border border-line rounded text-sm text-ink placeholder:text-mute/60 focus:outline-none focus:border-oxblood max-h-32"
             />
-            <Button onClick={send} loading={streaming}>
-              {!streaming && <Send className="w-4 h-4" />}
-              {streaming ? "生成中" : "发送"}
-            </Button>
+            {streaming ? (
+              <button
+                onClick={() => abortRef.current?.abort()}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded bg-amber text-paper hover:bg-amber-soft transition-colors"
+              >
+                <Square className="w-4 h-4" /> 停止生成
+              </button>
+            ) : (
+              <Button onClick={send}>
+                <Send className="w-4 h-4" /> 发送
+              </Button>
+            )}
           </div>
         </div>
       </div>
