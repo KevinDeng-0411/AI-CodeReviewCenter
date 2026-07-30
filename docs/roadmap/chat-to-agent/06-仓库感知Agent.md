@@ -1,11 +1,15 @@
 # S5：本地仓库感知 Agent
 
+> **完整平台参考，非个人默认实施卡。** `personal-local-readonly` 的 S5 唯一权威是
+> [精简 S5](personal/S5-仓库感知Agent.md)。默认不实现 Tree-sitter、Symbol 表、AIReadMe
+> 仓库化或 durable 交接；S5 完成即结束默认路线。
+>
 > **状态：Future / Locked（未来候选，当前版本禁止实施）**
 >
 > 本文不是当前版本任务，也不构成自动开工授权。只有同时满足以下条件，才允许由用户另行决定是否实施：
 >
 > 1. `docs/roadmap/current-release/evidence/C3/manifest.json` 已存在，且 evidence validator 结论为“当前版本完成、允许评审 Agent 路线”；
-> 2. S1、S2、S3、S4 的 `evidence/Sx/manifest.json` 均存在、validator 通过且可复现；当前 Chat 基线直接引用 C1–C3 manifests；
+> 2. 默认 profile 的 S1、S2、S4 manifests 均存在且 validator 通过；S3 仅在显式选择 Graph profile 时出现；
 > 3. 用户在 C3 和所有前置 Agent 阶段完成之后对 **S5** 给出新的、明确的实施授权。
 >
 > 任一条件不满足时，只能阅读和评审本文，不能注册/扫描仓库、创建源码索引迁移、开放代码工具或把本阶段并入当前版本。C3 或任一前置阶段完成均不代表默认进入 S5。
@@ -25,12 +29,12 @@
 
 | 项目 | 唯一入口 |
 |---|---|
-| 前置 manifest | C1/C2/C3 + S1–S4 manifest/validator、C1 scanner inventory、S4 Citation migration、OpenAPI/Alembic head、S5 明确授权 |
+| 前置 manifest | C1/C2/C3 + S1/S2/S4；Graph profile 才加 S3；C1 scanner inventory、S4 Citation migration、OpenAPI/Alembic head、S5 明确授权 |
 | 唯一增量 | 本地 admin CLI 注册、immutable Git snapshot/index、snapshot-scoped R0 tools、repo-aware AIReadMe provenance |
 | 必测 | allowed-root/Git object 安全；snapshot FK/index version；重扫幂等；跨 scope；blob/citation 复算；旧 AIReadMe 迁移 |
 | 演示 | disposable repo + 唯一 commit fixture：register CLI→scan→Agent citation→AIReadMe→new snapshot stale→flag 回退 |
 | 回退 | 先关 repository tools；current snapshot 指回旧 READY；schema 往返只在 detached 临时 worktree + 一次性 PG/Redis 演练 |
-| 下一步 | evidence 完整后交付 snapshot/read ports 给 S6；不得加入 durable Run、patch、shell 或写仓库 |
+| 下一步 | 个人默认路线完成；不得自动进入 S6，不得加入 durable Run、patch、shell 或写仓库 |
 
 ## 1. 阶段目标
 
@@ -84,7 +88,7 @@ register repository
 
 - S1 header-only Project scope 和 local sentinel 已强制执行，remote 仍禁用；
 - S2 已存在不直接暴露 ORM 的 application read port；
-- S3 Graph 和 typed SSE 稳定；
+- 当前 S2 service/可选 S3 Graph runtime 与 typed SSE 稳定；
 - S4 Registry、Executor、CitationValidator、4/6 预算和 non-thinking 模型已完成；
 - S4 security tests 能拒绝未注册工具、跨项目 chunk 和伪造 Citation；
 - `READ_ONLY_AGENT_ENABLED=false` 回退已验证；
@@ -979,7 +983,7 @@ ChatService 如何组合长期记忆、RAG 和对话历史？请给出代码证�
 
 ## 18. Definition of Done
 
-- [ ] C1–C3、S1–S4 evidence 已核验
+- [ ] C1–C3、S1/S2/S4 及当前所选依赖 evidence 已核验
 - [ ] Repository 与 Snapshot 有 project scope 和唯一约束
 - [ ] commit 在扫描前解析为完整、不可变 SHA
 - [ ] scanner 默认读取 Git object，不读取未提交 worktree
@@ -1059,7 +1063,7 @@ READ_ONLY_AGENT_ENABLED=true
 - 明确声明“无 shell、无写工具、无 durable Run、无 checkpoint”。
 - detached 实施/回退 worktree 的 base/validated commit、一次性 stack identity、safe-runner target guard 与精确 cleanup report。
 
-交给 S6 的稳定接口：
+若未来满足 durable 触发条件，可供重新规划 S6 的稳定接口：
 
 - Repository/Snapshot/Symbol 数据模型；
 - 安全 Git object reader 和 scanner；
@@ -1070,4 +1074,5 @@ READ_ONLY_AGENT_ENABLED=true
 - AIReadMe provenance/freshness 闭环；
 - S4/S5 的类型化事件出口。
 
-S6 只负责把 Agent Run、Step、ToolCall 和事件变为可持久、可恢复；不得借持久化之名放宽本阶段的仓库安全边界。
+S5 完成不自动授权 S6。若未来重新规划 S6，它只负责把 Agent Run、Step、ToolCall 和事件
+变为可持久、可恢复；不得借持久化之名放宽本阶段的仓库安全边界。

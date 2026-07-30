@@ -1,8 +1,14 @@
 # S2：Graph 前分层重构
 
+> **完整平台参考，非个人默认实施卡。** `personal-local-readonly` 的 S2 唯一权威是
+> [精简 S2](personal/S2-轻量分层.md)。默认 S2 直接为 S4 的简单有界 tool loop 服务，
+> 不以引入 Graph 为完成目标；本文件后续 DoD 不能替换默认 check 集。
+>
 > **状态：FUTURE LOCKED。**
 >
-> 本阶段是一次严格的行为保持型重构：把 Chat 的数据库访问、上下文拼装、模型调用和 turn 后处理拆成可注入边界，为 S3 的确定性 Graph 节点提供稳定接口。S2 不安装 LangGraph，不增加工具，不改变任何公共行为。
+> 本阶段是一次严格的行为保持型重构：把 Chat 的数据库访问、上下文拼装、模型调用和 turn
+> 后处理拆成可注入边界，默认交给 S4 的简单有界 tool loop；若 S3 被独立选择，同一边界
+> 也可供 Graph 使用。S2 不安装 LangGraph，不增加工具，不改变任何公共行为。
 >
 > 当前唯一实施路线是 [`current-release/`](../current-release/README.md) 的 C1 → C2 → C3。S2 只有在 C1/C2/C3 与 S1 的 `evidence/<stage>/manifest.json` 均经 validator 通过、C3 已冻结当前版本、且用户在 C3 之后明确授权 Agent 路线时才可解锁。文档存在或允许评审不等于允许实施。
 >
@@ -23,7 +29,7 @@
 | 必测 | C1/S1 golden parity；summary CAS watermark；PG commit/rollback；Redis post-commit；typed warning；architecture imports |
 | 演示 | 同一 fixture 的 Prompt/SSE/DB/cache hash 在重构前后完全一致 |
 | 回退 | 无 migration；仅在 detached 临时 worktree 反向应用 S2 patch，并用一次性 PG/Redis 重跑 C1/C2/S1 contracts |
-| 下一步 | 只把 ports/value/UoW 交给 S3；不得安装 LangGraph、创建双业务实现或改变公共 wire contract |
+| 下一步 | 默认把 ports/value/UoW 交给 S4；S3 只是可选消费者；不得在 S2 安装 LangGraph |
 
 ## 1. 阶段目标与用户可见结果
 
@@ -122,7 +128,7 @@ git status --short
 - 不增加 Agent/Tool/Run/Step/Citation/Artifact/Approval。
 - 不增加数据库表、列或 Alembic revision。
 - 不增加 public API、请求字段、响应字段、事件名或 feature flag。
-- 不改变 `service|graph` 路径；该双路径从 S3 才出现。
+- 默认不创建 `service|graph` 双路径；只有 S3 被单独选择时才允许出现。
 - 不改变 Project header、隔离谓词或默认 Project。
 - 不改变 CHAT Prompt 字符、RAG top_k、threshold、query rewrite、RRF 或 memory policy。
 - 不改变 DeepSeek model、thinking 模式、temperature、timeout、fallback。
@@ -749,7 +755,9 @@ test "$(git rev-parse --is-inside-work-tree)" = "true"
 docs/roadmap/chat-to-agent/evidence/S2/manifest.json
 ```
 
-同时生成 manifest 引用的 `report.md`/artifacts，并从仓库根运行 `(cd codeaware-py && uv run python scripts/validate_stage_evidence.py S2)`；旧式单文件 evidence、Markdown 勾选或未被 manifest 引用的文件不能解锁 S3。证据必须包含：
+同时生成 manifest 引用的 `report.md`/artifacts，并从仓库根运行
+`(cd codeaware-py && uv run python scripts/validate_stage_evidence.py S2)`；旧式单文件
+evidence、Markdown 勾选或未被 manifest 引用的文件不能解锁默认 S4。证据必须包含：
 
 - 起止 commit、branch 和 S1 Alembic head；
 - 重构前/后 fixture 路径与 SHA256；
@@ -764,4 +772,5 @@ docs/roadmap/chat-to-agent/evidence/S2/manifest.json
 - 回退后 C1/C2/S1 契约仍通过的结果；
 - 明确声明“本阶段没有新增用户功能、public API、migration、Graph 或 Tool”。
 
-S3 只可消费这些 ports/value types，不得重新把 session、ORM、Redis 或 model client 放进 Graph State/node。
+S4 Tool handler 与可选 S3 都只可消费这些 ports/value types，不得重新把 session、ORM、
+Redis 或 model client 放进 tool/runtime state。

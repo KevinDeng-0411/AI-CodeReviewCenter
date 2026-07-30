@@ -8,7 +8,9 @@
 1. 要编码某功能 -> 在下表查「功能」行 -> 读对应 ADR 与当前执行卡。
 2. ADR 负责长期语义；`current-release/` 负责当前 C1–C3 实施；`migration/` 只作迁移历史与背景。
 3. 当前先按[升级总入口](roadmap/README.md)完成 C1–C3；只有[机器可校验证据](roadmap/证据清单与解锁规则.md)可以改变阶段状态。
-4. Chat → Agent 是锁定的未来方向；C3 后仍需用户逐阶段另行授权，才按[未来路线](roadmap/chat-to-agent/README.md)实施。
+4. Chat → Agent 是锁定的未来方向；个人项目默认按
+   [`personal-local-readonly`](roadmap/chat-to-agent/personal/README.md) 的
+   `S1-lite → S2-lite → S4-lite → S5-lite` 实施，C3 后仍需逐卡另行授权。
 5. 所有 coding agent 共用的编码铁律、技术栈、目录结构见根目录 `AGENTS.md`。
 
 ## 功能 -> 文档映射
@@ -20,9 +22,10 @@
 | 后续升级 / 缺口与预留 | - | [后续升级计划](migration/后续升级计划.md) | - |
 | 当前版本必须完成 | [ADR-0001~0007](decisions/adr/) | - | [当前版本 C1–C3](roadmap/current-release/README.md) · [证据模板](roadmap/current-release/验收证据模板.md) |
 | 阶段解锁 / 机器可校验证据 | - | - | [证据清单与解锁规则](roadmap/证据清单与解锁规则.md) |
-| Chat → Agent 渐进升级（未来、锁定） | [ADR-0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | - | [未来路线与阶段实施卡](roadmap/chat-to-agent/README.md) · [公共契约](roadmap/chat-to-agent/00-执行约定与公共契约.md) |
+| Chat → Agent 个人默认路线（未来、锁定） | [ADR-0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | - | [个人路线](roadmap/chat-to-agent/personal/README.md) · [总入口](roadmap/chat-to-agent/README.md) · [公共契约](roadmap/chat-to-agent/00-执行约定与公共契约.md) |
 | 技术选型 / AI 搜索 / Agent 能力地图 | [ADR-0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | - | [技术选型与能力地图](roadmap/技术选型与能力地图.md) |
-| Agent Run / Tool / Artifact / Approval / SSE 事件 | - | - | [公共契约](roadmap/chat-to-agent/00-执行约定与公共契约.md) |
+| Agent Tool / Citation / SSE 事件 | - | - | [精简 S4](roadmap/chat-to-agent/personal/S4-只读工具Agent.md) · [公共契约](roadmap/chat-to-agent/00-执行约定与公共契约.md) |
+| Agent Run / Artifact / Approval（条件型） | - | - | [可选升级触发条件](roadmap/chat-to-agent/personal/可选升级触发条件.md) · [平台参考契约](roadmap/chat-to-agent/00-执行约定与公共契约.md) |
 | 阶段闭环 / 演示 / 验收证据 | - | - | [统一规则](roadmap/证据清单与解锁规则.md) · [当前模板](roadmap/current-release/验收证据模板.md) · [Agent 模板](roadmap/chat-to-agent/验收证据模板.md) |
 | 数据模型（8 表） | 0001 / 0002 / 0004 / 0005 / 0006 | §7.2.2 | - |
 | 向量召回基建 VectorRecallService | [0001](decisions/adr/0001-memory-vs-knowledge-two-tables-shared-recall.md) | §7.3 | - |
@@ -51,22 +54,28 @@
 | [roadmap/current-release/02-现有功能闭环验收.md](roadmap/current-release/02-现有功能闭环验收.md) | 现有 7 个功能域的契约、测试、持久化和 UI 演示闭环 |
 | [roadmap/current-release/03-版本冻结与交接.md](roadmap/current-release/03-版本冻结与交接.md) | 文档/OpenAPI/配置校准、空环境复现、指标与 Agent 解锁条件 |
 | [roadmap/current-release/验收证据模板.md](roadmap/current-release/验收证据模板.md) | 当前版本每阶段必须提交的验收证据 |
-| [roadmap/chat-to-agent/README.md](roadmap/chat-to-agent/README.md) | 锁定的未来 Chat → Agent 顺序、阶段依赖、门禁与完成标准 |
-| [roadmap/chat-to-agent/00-执行约定与公共契约.md](roadmap/chat-to-agent/00-执行约定与公共契约.md) | Conversation / Run / Tool / Event / Artifact / Approval 的跨阶段稳定契约 |
+| [roadmap/chat-to-agent/README.md](roadmap/chat-to-agent/README.md) | 个人默认路线总入口、能力 DAG、门禁与平台参考边界 |
+| [roadmap/chat-to-agent/personal/README.md](roadmap/chat-to-agent/personal/README.md) | `personal-local-readonly` 默认档案：C1–C3 → S1-lite → S2-lite → S4-lite → S5-lite |
+| [roadmap/chat-to-agent/personal/S1-精简项目隔离.md](roadmap/chat-to-agent/personal/S1-精简项目隔离.md) | S1-lite：最小 Project 表、五个父实体作用域与跨项目隔离 |
+| [roadmap/chat-to-agent/personal/S2-轻量分层.md](roadmap/chat-to-agent/personal/S2-轻量分层.md) | S2-lite：ReplyEngine、Context、read ports 与短事务边界 |
+| [roadmap/chat-to-agent/personal/S4-只读工具Agent.md](roadmap/chat-to-agent/personal/S4-只读工具Agent.md) | S4-lite：不依赖 LangGraph 的有界 R0 工具循环与 Citation |
+| [roadmap/chat-to-agent/personal/S5-仓库感知Agent.md](roadmap/chat-to-agent/personal/S5-仓库感知Agent.md) | S5-lite：固定 commit 的本地只读代码检索和行号引用 |
+| [roadmap/chat-to-agent/personal/可选升级触发条件.md](roadmap/chat-to-agent/personal/可选升级触发条件.md) | S3/S6–S9 何时值得重新评审；不构成实施卡 |
+| [roadmap/chat-to-agent/00-执行约定与公共契约.md](roadmap/chat-to-agent/00-执行约定与公共契约.md) | 默认路线只使用 Tool/Citation/Event 子集；Run/Artifact/Approval 为平台参考 |
 | [roadmap/chat-to-agent/01-稳定Chat基线.md](roadmap/chat-to-agent/01-稳定Chat基线.md) | 当前 Chat 基线技术附录；实施以 current-release/C1 为唯一来源 |
-| [roadmap/chat-to-agent/02-项目作用域隔离.md](roadmap/chat-to-agent/02-项目作用域隔离.md) | S1：项目模型、数据回填、API 上下文与跨项目隔离 |
-| [roadmap/chat-to-agent/03-Graph前分层重构.md](roadmap/chat-to-agent/03-Graph前分层重构.md) | S2：行为等价地拆分 repository、context、model gateway 与 post-turn |
-| [roadmap/chat-to-agent/04-确定性LangGraph.md](roadmap/chat-to-agent/04-确定性LangGraph.md) | S3：双运行时对照的确定性 Workflow，不宣称 Agent |
-| [roadmap/chat-to-agent/05-只读工具Agent.md](roadmap/chat-to-agent/05-只读工具Agent.md) | S4：受预算约束的只读工具选择、事件与引用 |
-| [roadmap/chat-to-agent/06-仓库感知Agent.md](roadmap/chat-to-agent/06-仓库感知Agent.md) | S5：安全源码索引、代码检索工具和可定位引用 |
-| [roadmap/chat-to-agent/07-可恢复AgentRun.md](roadmap/chat-to-agent/07-可恢复AgentRun.md) | S6：持久 Run、队列 Worker、检查点、回放和故障恢复 |
-| [roadmap/chat-to-agent/08-沙箱补丁Agent.md](roadmap/chat-to-agent/08-沙箱补丁Agent.md) | S7：安全物化源码快照、补丁产物和独立受限验证 |
-| [roadmap/chat-to-agent/09-审批式行动Agent.md](roadmap/chat-to-agent/09-审批式行动Agent.md) | S8：精确审批、受控本地分支与提交 |
-| [roadmap/chat-to-agent/10-生态集成与多Agent.md](roadmap/chat-to-agent/10-生态集成与多Agent.md) | S9：按指标触发的 Git、MCP、远程身份与多 Agent 扩展 |
+| [roadmap/chat-to-agent/02-项目作用域隔离.md](roadmap/chat-to-agent/02-项目作用域隔离.md) | 完整平台 S1 参考；不是个人默认实施卡 |
+| [roadmap/chat-to-agent/03-Graph前分层重构.md](roadmap/chat-to-agent/03-Graph前分层重构.md) | 完整平台 S2 参考；不是个人默认实施卡 |
+| [roadmap/chat-to-agent/04-确定性LangGraph.md](roadmap/chat-to-agent/04-确定性LangGraph.md) | S3 条件型平台参考；个人默认不实施 |
+| [roadmap/chat-to-agent/05-只读工具Agent.md](roadmap/chat-to-agent/05-只读工具Agent.md) | 完整平台 S4 参考；个人默认使用精简卡 |
+| [roadmap/chat-to-agent/06-仓库感知Agent.md](roadmap/chat-to-agent/06-仓库感知Agent.md) | 完整平台 S5 参考；个人默认使用精简卡 |
+| [roadmap/chat-to-agent/07-可恢复AgentRun.md](roadmap/chat-to-agent/07-可恢复AgentRun.md) | 条件型 S6 参考：持久 Run、队列、检查点和恢复 |
+| [roadmap/chat-to-agent/08-沙箱补丁Agent.md](roadmap/chat-to-agent/08-沙箱补丁Agent.md) | 条件型 S7 参考：安全物化、补丁与隔离验证 |
+| [roadmap/chat-to-agent/09-审批式行动Agent.md](roadmap/chat-to-agent/09-审批式行动Agent.md) | 条件型 S8 参考：精确审批和本地 Git 行动 |
+| [roadmap/chat-to-agent/10-生态集成与多Agent.md](roadmap/chat-to-agent/10-生态集成与多Agent.md) | 条件型 S9 参考：按子卡触发 Git/MCP/身份/多 Agent |
 | [roadmap/chat-to-agent/验收证据模板.md](roadmap/chat-to-agent/验收证据模板.md) | 每阶段必须提交的测试、演示、指标、回滚和交接证据模板 |
 | [migration/Python重构迁移文档.md](migration/Python重构迁移文档.md) | Java → Python 历史迁移记录（含 ADR 索引；不再直接下发任务） |
 | [migration/testing-notes.md](migration/testing-notes.md) | 测试与集成踩坑留痕（langchain 导入 hang / test_migration 性能 / 异步客户端 loop） |
-| [migration/后续升级计划.md](migration/后续升级计划.md) | 计划内缺口（摘要接入·首要）+ 可升级预留项（后端分层重构·U1前置 / LangGraph / 语义切分 / tsvector / Pinecone / 数据归并） |
+| [migration/后续升级计划.md](migration/后续升级计划.md) | 历史缺口和旧 U1–U5 预留，仅作背景；实施以 current-release 与个人路线为准 |
 | [decisions/adr/](decisions/adr/) | 7 份架构决策记录 0001~0007 |
 | [decisions/glossary.md](decisions/glossary.md) | 领域术语表（10 术语全 settled） |
 | [integration/deepseek-notes.md](integration/deepseek-notes.md) | DeepSeek thinking/非思考模式集成约定 |

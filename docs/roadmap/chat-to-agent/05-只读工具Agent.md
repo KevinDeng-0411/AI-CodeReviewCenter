@@ -1,14 +1,18 @@
 # S4：只读工具 Agent
 
+> **完整平台参考，非个人默认实施卡。** `personal-local-readonly` 的 S4 唯一权威是
+> [精简 S4](personal/S4-只读工具Agent.md)，其直接依赖是 S2，不是 S3。后文关于 Graph、
+> S3 evidence、4/6 默认预算和平台化 DoD 均不能扩大默认 S4 范围。
+>
 > **状态：Future / Locked（未来候选，当前版本禁止实施）**
 >
 > 本文不是当前版本任务，也不构成自动开工授权。只有同时满足以下条件，才允许由用户另行决定是否实施：
 >
 > 1. `docs/roadmap/current-release/evidence/C3/manifest.json` 已存在、validator 通过且结论为“当前版本完成、允许评审 Agent 路线”；
-> 2. S1、S2、S3 的 `evidence/Sx/manifest.json` 均存在、validator 通过且可复现；当前 Chat 基线直接引用 C1–C3 manifests；
-> 3. 用户在 C3 和 S3 完成之后对 **S4** 给出新的、明确的实施授权。
+> 2. S1、S2 的 manifests 均存在且 validator 通过；只有显式选择 Graph profile 时才额外要求 S3；
+> 3. 用户在 S2（或已选择的 S3）完成之后对 **S4** 给出新的、明确的实施授权。
 >
-> 任一条件不满足时，只能阅读和评审本文，不能增加 Tool Registry、切换 DeepSeek 模式、修改前后端或把本阶段并入当前版本。C3 或 S3 完成均不代表默认进入 S4。
+> 任一条件不满足时，只能阅读和评审本文。S2 或可选 S3 完成都不代表自动进入 S4。
 
 > 本阶段首次允许模型自主选择工具。工具只来自进程内的类型化 registry，且全部为 `R0_READ`。
 > Agent 同步依附当前 Chat 请求，不持久化 Run；durable run、checkpoint、审批和写操作均属于后续阶段。
@@ -23,7 +27,7 @@
 
 | 项目 | 唯一入口 |
 |---|---|
-| 前置 manifest | C1/C2/C3 + S1/S2/S3 manifest/validator、Runtime/UoW/event hashes、OpenAPI/Alembic head、S4 明确授权 |
+| 前置 manifest | C1/C2/C3 + S1/S2；Graph profile 才加 S3；Runtime/UoW/event hashes、OpenAPI/Alembic head、S4 明确授权 |
 | 唯一增量 | `mode=agent`、R0 Registry/Executor、受预算 loop、Citation whitelist/persistence、前端工具时间线 |
 | 必测 | 4/6 预算；schema/risk/timeout；跨项目；sentinel 不可覆盖；事件 base；TurnCoordinator；刷新后 Citation |
 | 演示 | disposable 项目数据中走一次有工具、无工具、伪造工具/Citation、预算耗尽和 feature-flag 回退 |
@@ -32,11 +36,11 @@
 
 ## 1. 阶段目标
 
-在 S3 确定性 Chat Workflow 之外新增显式 `mode=agent` 路径，使 DeepSeek 在严格预算内自主选择项目级只读 Knowledge 工具，并返回可验证 Citation、类型化工具事件和受控错误。
+在 S2 service runtime（或明确选择的 S3 Graph profile）上新增 `mode=agent` 路径，使 DeepSeek 在严格预算内自主选择项目级只读 Knowledge 工具，并返回可验证 Citation、类型化工具事件和受控错误。
 
 完成后应满足：
 
-- `mode=chat` 仍运行 S3 Graph，行为不回归；
+- `mode=chat` 仍运行当前已选择的 S2 service/S3 Graph runtime，行为不回归；
 - `mode=agent` 使用 C3 后重新 live 验证为支持标准 tool calling 的 DeepSeek 模型，并固定 **non-thinking**；
 - 工具仅从内部 `ToolRegistry` 获得，模型不能构造任意函数；
 - Tool 输入、输出、风险、scope、超时和最大输出均有 schema；
@@ -72,7 +76,7 @@
 - 请求不存在的工具得到 `TOOL_NOT_ALLOWED`；
 - 伪造 Citation 不会进入最终返回；
 - 达到工具预算后不再执行额外调用，并返回 `BUDGET_EXCEEDED`；
-- 将模式切回 `chat` 后仍是 S3 的固定 Workflow。
+- 将模式切回 `chat` 后仍是当前稳定 Chat runtime。
 
 ## 3. 前置条件与阶段门禁
 
@@ -81,8 +85,8 @@
 - current-release C1 类型化 SSE 已完成；
 - S1 header-only Project scope 在 Knowledge、Memory、Conversation 查询中强制执行，actor 为不可覆盖的 local sentinel，remote 仍禁用；
 - S2 application port 可供 Tool handler 调用，handler 不需要直接写 SQL；
-- S3 Graph 默认路径、节点 trace 和 `CHAT_RUNTIME=service|graph` 回退已通过；
-- S3 evidence 明确证明没有残留重复消息写入；
+- S2 service runtime 与 C1 TurnCoordinator/UoW 回归已通过；Graph profile 才验证 S3 路径和 node trace；
+- 直接依赖 evidence 明确证明没有残留重复消息写入；
 - DeepSeek non-thinking tool calling 已使用 mock contract 验证；
 - 当前全量测试与前端检查通过。
 
@@ -90,7 +94,7 @@
 
 ## 4. 历史现状证据（pre-C1/pre-S4，必须复核）
 
-下列内容只说明 S4 新增能力，不是重做 C1/C2 的任务。解锁后以 S3 evidence 和 C3 OpenAPI 为准复核实际路径：
+下列内容只说明 S4 新增能力，不是重做 C1/C2 的任务。解锁后以直接依赖 evidence 和 C3 OpenAPI 为准复核实际路径：
 
 - `app/ai/config.py` 只有普通 `get_chat_model()`，没有专用 non-thinking Agent 模型工厂；
 - `app/ai/services/chat.py` 由应用预先调用 RAG，模型本身不能选择工具；
@@ -101,7 +105,7 @@
 - C1 冻结的 Chat 前端不展示工具时间线和 Citations；
 - 当前没有 AgentRun/ToolCall 表，这一现状在 S4 保持不变。
 
-实施者必须重新核验 C1–C3 与 S1–S3 的实际代码；若前序阶段已移动文件，应使用新位置。
+实施者必须重新核验 C1–C3、S1、S2，以及仅在已选择时的 S3 实际代码；若前序阶段已移动文件，应使用新位置。
 
 ## 5. 范围
 
@@ -394,12 +398,12 @@ TurnCoordinator transaction A: ensure Conversation + persist USER + commit
 - 同一个 tool call ID 只能执行一次；
 - S4 不把 loop checkpoint 到数据库；
 - HTTP 断开或任务取消后停止循环；
-- USER/ASSISTANT、context/post-turn warning、短 PG transaction、Redis post-commit 与 terminal 仍逐项遵循 C1/S3/S2；
+- USER/ASSISTANT、context/post-turn warning、短 PG transaction、Redis post-commit 与 terminal 仍逐项遵循 C1/S2 和当前所选 runtime；
 - ToolResult 不作为 Conversation Message 长期展示，避免污染普通对话历史；
 - 只有经过 Citation whitelist filter 的 canonical assistant 回答才保存为 Message；validated Citation snapshot 与该 Message 原子保存；
 - Citation filter 在 token 阶段只过滤并累计；`CITATION_REJECTED` 必须晚于 transaction B commit、以 `post_turn.warning(component="citation_validation")` 发出，且早于唯一 `chat.completed`；
 - tool call/event 在 S6 前不持久化，但 Citation provenance 已随 Message 持久化，刷新后不得丢失；
-- Agent 路径不得调用 S3 `assemble_context` 后再无条件搜索同一 Knowledge；是否调用工具由模型决定。
+- Agent 路径不得先由 ChatContextBuilder/可选 Graph 无条件搜索 Knowledge、再让工具重复搜索；是否调用工具由模型决定。
 
 ## 11. 类型化事件和 API
 
@@ -480,7 +484,7 @@ citation.added
 | `codeaware-py/app/core/config.py` | Agent model、4/6 预算、timeout、output bytes、feature flag |
 | `codeaware-py/app/ai/config.py` | 独立 `get_agent_chat_model()`，固定 non-thinking |
 | `codeaware-py/app/models/message.py` | 增加 validated `citations_json` snapshot；不保存 ToolResult |
-| `codeaware-py/alembic/versions/<next>_message_citations.py` | 从实际 S3 head 增加非空默认空数组的 Citation snapshot |
+| `codeaware-py/alembic/versions/<next>_message_citations.py` | 从实施时实际 Alembic head 增加非空默认空数组的 Citation snapshot |
 | `codeaware-py/app/schemas/chat.py` | `mode`、可选 Citations 和 usage |
 | `codeaware-py/app/schemas/tools.py` | ToolDefinition、ToolResult、ToolError、ToolContext、各工具输入输出 |
 | `codeaware-py/app/schemas/citations.py` | 公共 Citation 及 inline 引用校验类型 |
@@ -506,7 +510,7 @@ citation.added
 
 ## 13. 顺序化实施步骤
 
-1. **冻结 S3 Chat 回归集**：`mode=chat` 的所有 contract 测试保持通过。
+1. **冻结当前 Chat 回归集**：`mode=chat` 的所有 contract 测试保持通过。
 2. **落地 schemas/migration**：先实现公共 Citation、ToolDefinition、ToolResult、ToolError、事件和 Message citation snapshot，不写 loop。
 3. **实现 Registry**：注册空/静态 fake tools，验证 `(name,version)`、active version、非法风险和完整 toolset hash。
 4. **实现 Executor**：用 fake handler 覆盖 scope、timeout、输出过大、Pydantic 输入输出错误。
@@ -676,8 +680,8 @@ READ_ONLY_AGENT_ENABLED=false
 
 ## 17. Definition of Done
 
-- [ ] C1–C3、S1–S3 evidence 已核验
-- [ ] `mode=chat` 默认且 S3 contract 无回归
+- [ ] C1–C3、S1/S2 及当前所选直接依赖 evidence 已核验
+- [ ] `mode=chat` 默认且当前 Chat contract 无回归
 - [ ] Agent 模型固定 DeepSeek non-thinking
 - [ ] Registry 只包含内部 R0_READ 工具
 - [ ] Registry 以 `(name,version)` 唯一、每 name 只暴露一个 active version，完整 definition hash 稳定
@@ -713,7 +717,7 @@ CHAT_RUNTIME=graph
 
 回退后：
 
-- `mode=chat` 继续使用 S3 Graph；
+- `mode=chat` 继续使用当前 S2 service runtime；只有 Graph profile 已选择时才使用 S3；
 - `mode=agent` 返回明确的 feature disabled 错误；
 - 不删除 Conversation/Message；
 - 立即 feature rollback 不需要数据库 downgrade；`citations_json` 保留为向后兼容的只读历史数据；
@@ -725,7 +729,7 @@ CHAT_RUNTIME=graph
 2. 删除 Agent runtime、registry、executor、built-in tools；
 3. 删除独立 Agent 模型工厂和相关配置；
 4. 移除前端 Agent 开关但保留类型化 Chat SSE；
-5. 运行 S3 双运行时 contract；
+5. 运行当前所选 Chat runtime contract；
 6. 若确认可丢弃所有 Citation provenance，只在一次性数据库执行 S4 downgrade roundtrip；Message 文本必须保留；
 7. 不恢复裸 token SSE。
 

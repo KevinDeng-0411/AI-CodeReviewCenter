@@ -1,8 +1,12 @@
 # S8：审批式行动 Agent
 
+> **条件型平台参考，个人默认不实施。** 手工应用补丁成为真实瓶颈、且 S7 新路线 evidence
+> 通过后，才能重新评审本地写入；默认 S5 不创建 branch、commit 或 Approval。
+>
 > **状态：Future / Locked（未来候选，当前版本禁止实施）。**
 >
-> 只有 current-release C3 evidence、S1–S7 evidence 全部通过，并且用户在这些阶段完成后对 S8 另行明确授权，才能开工。C3 或前置阶段完成均不自动授权本阶段。
+> 只有按新路线完成 S7、手工应用补丁已成为真实瓶颈，并且用户随后对 S8 另行明确授权，
+> 才能开工。S7 完成不自动授权本阶段。
 >
 > 本阶段首次引入 `R2_LOCAL_WRITE`：用户明确批准后，以隔离物化和 Git plumbing 创建本地分支和 commit。S8 只允许 local-only 闭环；远程或多用户环境必须硬关闭 R2，直到 S9-C 身份/多租户 evidence 完成。永不自动 push、建 PR 或 merge。
 >

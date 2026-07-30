@@ -1,28 +1,42 @@
 # S9：生态集成与多 Agent（条件型扩展）
 
+> **条件型平台参考，个人默认不实施。** 各子能力不再统一依赖 S8：只读 MCP、远程身份、
+> durable multi-agent、外部写分别有不同触发条件。开工前必须按
+> [可选升级触发条件](personal/可选升级触发条件.md) 重写所选子卡依赖和证据规则。
+>
 > **状态：Future / Locked（可选方向，当前版本禁止实施）。**
 >
-> 只有 current-release C3 evidence、S1–S8 evidence 全部通过、评测达到本文门槛，并且用户对所选 S9 子卡另行明确授权，才能开工。不能用一次笼统授权同时启用 Git、MCP、远程身份和多 Agent。
+> 所选子卡必须先按触发条件重写直接依赖：A 外部写依赖 S8，B 只读 MCP 可从 S5
+> 评审，C 远程身份可从 S5 评审，D durable multi-agent 依赖 S6。只有所需直接依赖
+> evidence、评测门槛、路线修订和该子卡单独授权全部满足后才能开工。
 >
-> 本文件不是必须整包实施的下一阶段，而是 S8 稳定后的四张独立扩展卡。每次只选择一张，先写 ADR 和评测门槛，再形成自己的测试、演示、回滚和 evidence。
+> 本文件不是必须整包实施的下一阶段，而是四张独立扩展参考卡。每次只选择一张，先写 ADR、
+> 直接依赖和评测门槛，再形成自己的测试、演示、回滚和 evidence。
 >
-> **实施入口 / 本阶段闭环：** 仅在 local-only S8 evidence、业务触发条件、所选子卡 ADR/指标和该子卡单独授权均通过后，选择 A/B/C/D 之一，完成 `最小扩展 → 越权/故障/幂等或统计验证 → 真实隔离演示 → feature flag 回退 → evidence`；完成一张不代表其他子卡获授权。
+> **实施入口 / 本阶段闭环：** 仅在所选子卡的直接依赖 evidence、业务触发条件、ADR/指标、
+> 新 evidence schema 和该子卡单独授权均通过后，选择 A/B/C/D 之一，完成
+> `最小扩展 → 越权/故障/幂等或统计验证 → 真实隔离演示 → feature flag 回退 → evidence`；
+> 完成一张不代表其他子卡获授权。
 >
 > **契约来源：** Run、State、Tool、Event、Artifact、Approval、Risk 和错误的公共语义以[公共契约](00-执行约定与公共契约.md)为准；本文只定义 S9 各独立生态/身份/多 Agent 增量。协议 adapter、provider 或 child-run 不得旁路公共契约。
 
 ## 1. 进入条件
 
-只有满足以下条件，才可启动任一扩展：
+只有满足所选子卡条件，才可启动：
 
-- S8 的 `evidence/S8/manifest.json` 存在，且 `(cd codeaware-py && uv run python scripts/validate_stage_evidence.py S8)` 通过；清单明确其 R2 仅为 local-only。任何远程/multi-user 部署继续硬关闭 R2/R3，直到 S9-C 完成。
-- 至少有一组覆盖真实目标场景的离线任务集和 S8 单 Agent 基线。
-- 未授权本地/远程写入拦截率为 100%。
-- Tool、Run 恢复、approval mismatch/stale-base 回归集全部通过。
-- 已观察到具体业务需求，而不是为了展示框架或协议。
+| 子卡 | 最小直接依赖 | 额外边界 |
+|---|---|---|
+| S9-A 外部写 | S8 | 远程/多人部署还必须先有 S9-C |
+| S9-B 只读 MCP | S5 | 只允许 R0；需要 durable audit/recovery 时再依赖 S6 |
+| S9-C 远程身份 | S5 | 完成身份治理也不自动开启 R2/R3 |
+| S9-D 多 Agent | S6 | 只有包含写任务时才额外依赖 S7/S8 |
+
+所有子卡还必须有覆盖真实目标场景的基线、明确业务问题和独立 feature flag，而不是为了
+展示框架或协议。
 
 每张扩展卡新增一个 ADR，必须记录：
 
-- 用户问题与为什么现有 S8 不能满足；
+- 用户问题与为什么当前已完成能力不能满足；
 - 替代方案；
 - 权限/威胁模型；
 - 成功、成本、P95 时延和回退门槛；
@@ -34,11 +48,13 @@
 
 - FastAPI、React/Vite、PostgreSQL/pgvector 不因本阶段自动替换。
 - 所有外部 Tool 仍映射到公共 ToolDefinition、Risk、scope、timeout、幂等和审计。
-- 所有外部写操作都是 `R3_EXTERNAL_WRITE`，逐次审批。
-- R3 复用 S8 的 JCS ActionManifest、双期限、ActionExecution lease/outbox/reconciliation；外部系统不支持原子事务时必须记录 `UNKNOWN` 并查询真实远端状态，不能盲重试。
+- 只有 S9-A 引入 `R3_EXTERNAL_WRITE`，且必须逐次审批。
+- S9-A 的 R3 复用 S8 JCS ActionManifest、双期限、ActionExecution
+  lease/outbox/reconciliation；外部系统不支持原子事务时必须记录 `UNKNOWN` 并查询真实
+  远端状态，不能盲重试。
 - 远程身份、tenant/project membership 和最小权限短期凭证必须端到端传递。
 - MCP/A2A 的能力声明和风险 hint 只能作为元数据，不能代替本地策略。
-- 任何扩展都可通过 feature flag/allowlist 独立关闭，关闭后退回 S8。
+- 任何扩展都可通过 feature flag/allowlist 独立关闭，关闭后退回它声明的直接依赖能力。
 
 ## 3. S9-A：GitHub/GitLab 草稿 PR 集成
 
@@ -101,10 +117,11 @@ MCP server
   → 本地 allowlist/schema 校验
   → 映射为内部 ToolDefinition
   → 本地 scope/risk/approval policy
-  → ToolCall 审计
+  → 结构化工具日志（已安装 S6 时再进入持久 ToolCall 审计）
 ```
 
-MCP 不能绕过 S4–S8 已建立的工具治理。实现：
+MCP 不能绕过 S4/S5 已建立的只读工具治理；所选子卡若显式依赖 S6–S8，也不能旁路这些
+已安装能力的 Run、审批或副作用契约。实现：
 
 - **实施当天重新核对官方 Versioning、最终规范 tag/changelog、SDK release 和 conformance 状态。** 只固定标记为 Current/GA 且所选 SDK 已稳定支持的协议版本；RC/draft、预发布 SDK 或博客预计日期不能作为生产版本依据。
 - 在 lockfile/ADR/evidence 同时固定 protocol version、SDK package/version、conformance suite commit/result。若使用 Tasks/MCP Apps 等 extension，分别固定 extension ID/version；不能把扩展版本等同 core 版本。
@@ -112,7 +129,9 @@ MCP 不能绕过 S4–S8 已建立的工具治理。实现：
 - 仅连接管理员登记的稳定 `connector_id + server identity + transport + origin`；server 自报 name 不能充当唯一身份。
 - 工具按需发现和加载，不能把所有 schema 每轮塞入模型上下文。
 - MCP Tool 不保证提供独立 version，且 name 只在单 server 内唯一。内部 ToolDefinition.version 必须由 `connector_id + protocol_version + canonical tool schema hash` 生成；以 connector namespace 解决重名，并对 name/input/output schema/annotations 做本地快照和变更检测。
-- output schema 缺失时把结果规范化为受限 opaque envelope/Artifact，不伪造强类型输出。JSON Schema 校验必须拒绝自动解析外部 `$ref`，限制 schema 大小、深度、正则/编译时间和验证资源。
+- output schema 缺失时把结果规范化为受限 opaque envelope，不伪造强类型输出；只有已安装
+  Artifact 能力时才可把超限结果转存 Artifact。JSON Schema 校验必须拒绝自动解析外部
+  `$ref`，限制 schema 大小、深度、正则/编译时间和验证资源。
 - 未知/变化的工具默认禁用。
 - `readOnlyHint/destructiveHint` 不可信；Risk 由本地策略决定。
 - OAuth 使用正确 audience/scope，禁止 token passthrough。
@@ -138,19 +157,28 @@ MCP 不能绕过 S4–S8 已建立的工具治理。实现：
 
 服务不再是单机 local-only，或需要两名以上用户/组织共同使用。
 
-S8 的完成只证明 local-only R2，不授权远程写。S9-C 实施和验收期间，所有远程 R2/R3 feature flag 与 scope 必须保持关闭；只有本卡 DoD/evidence 完成后，才能另行授权某个远程写卡并重新跑其审批与越权测试。
+S5 的完成只证明 local-only 只读能力，不授权远程访问或写入。S9-C 实施和验收期间，
+所有远程 R2/R3 feature flag 与 scope 必须保持关闭；若这些写能力尚未安装，对应路由必须
+保持不存在。只有本卡 DoD/evidence 完成后，才能另行授权某个远程写卡并重新跑其审批与
+越权测试。
 
 ### 最小交付
 
 - OIDC/JWT 验签、issuer/audience/expiry 校验；
 - `users / organizations / memberships / roles`，以及 project/repository membership；
 - scopes 从后端 RBAC 计算，不相信请求自报；
-- tenant/project 过滤在 SQL、vector、cache key、Artifact、Run、Tool 和 trace 全链路生效；
-- 服务到 Git/MCP/runner 使用最小权限短期凭证；
-- 配额覆盖并发 Run、模型 token/成本、工具次数、索引量和 Artifact 保留期；
+- tenant/project 过滤在 SQL、vector、cache key、Conversation/Message、Knowledge/Memory、
+  Repository/Snapshot、Citation、Tool 和 Chat SSE 全链路生效；
+- 已安装的 Run、Artifact、Approval、MCP、runner 或远程 Git 能力也必须纳入相同隔离，
+  并使用最小权限短期凭证；未安装能力不得为满足本卡而提前新增；
+- 配额至少覆盖并发请求、模型 token/成本、工具次数和索引量；Run 并发和 Artifact 保留期
+  只在对应能力已安装时追加；
 - 管理员 kill switch、审计导出和数据删除。
 
-必须以两个 tenant 的同名 project/repo/文档/用户 fixture 做隔离测试，并包含向量召回、SSE 回放、Artifact 下载、Approval 和 R3 Tool。任何跨租户命中都阻断上线。
+必须以两个 tenant 的同名 project/repo/文档/用户 fixture 做隔离测试，并覆盖向量召回、
+Conversation/Message、Knowledge/Memory、Repository/Snapshot、Citation、只读 Tool 和
+Chat SSE。只有已经安装 Run replay、Artifact、Approval 或 R3 Tool 时才追加相应隔离测试，
+且其远程启用必须另获授权并重新验收。任何跨租户命中都阻断上线。
 
 该扩展是远程 R2/R3 的前置，不是可以晚补的 UI 登录页。S9-C 完成本身只建立身份治理，不自动打开任何写能力；启用 S9-A 或远程 R2 仍需单独授权和 evidence。
 
@@ -158,7 +186,8 @@ S8 的完成只证明 local-only R2，不授权远程写。S9-C 实施和验收�
 
 ### 触发条件
 
-只有 S8 单 Agent 的 trace/eval 证明至少一种问题持续存在：
+只有 S6 durable 单 Agent 的 trace/eval 证明至少一种问题持续存在；若实验任务包含
+patch/写入，还必须先完成 S7/S8：
 
 - 工具过多导致选择准确率显著下降；
 - 不同任务需要严格隔离的上下文或权限；
@@ -173,20 +202,27 @@ S8 的完成只证明 local-only R2，不授权远程写。S9-C 实施和验收�
 
 - development set：允许调 prompt/router；
 - held-out set：冻结后只用于最终决策，不得按结果继续调参；
-- zero-tolerance safety set：未授权写入、跨 tenant/scope、审批绕过、预算逃逸和 prompt injection 等对抗轨迹；任一漏拦截即失败，不能用“估计 100%”替代确定性策略测试。
+- zero-tolerance safety set：未授权写入、跨 tenant/scope、预算逃逸和 prompt injection
+  等对抗轨迹；已安装审批能力时再加入审批绕过。任一漏拦截即失败，不能用“估计 100%”
+  替代确定性策略测试。
 
 单 Agent 与候选多 Agent 使用完全相同的任务、模型、工具/index 版本和环境快照，按任务配对、随机顺序并重复运行：
 
 | 指标 | 单 Agent 基线 | 候选多 Agent |
 |---|---:|---:|
 | 最终环境任务成功率 | 必填 | 必填 |
-| Citation/patch 正确率 | 必填 | 必填 |
+| Citation 正确率；选择写任务时再加 patch 正确率 | 必填 | 必填 |
 | 安全策略通过/阻断 | 必填 | 必填 |
 | P50/P95 时延 | 必填 | 必填 |
 | 每成功任务 token/成本 | 必填 | 必填 |
 | 重复工具调用和失败恢复 | 必填 | 必填 |
 
-报告每任务配对差值、均值/方差、95% 置信区间和失败轨迹；离散成功率使用配对 bootstrap、置换检验或 ADR 预注册的等价方法。建议最低要求：主要成功指标提升的置信区间下界达到预注册门槛（不能仅看点估计），Citation/patch 正确率无劣于预注册界限，成本和 P95 不超过基线 1.5 倍。若目标是并行降时延，则成功率/Citation/patch 必须满足非劣，时延改善的置信区间达到预注册门槛。Safety set 必须零违规。
+报告每任务配对差值、均值/方差、95% 置信区间和失败轨迹；离散成功率使用配对
+bootstrap、置换检验或 ADR 预注册的等价方法。建议最低要求：主要成功指标提升的置信区间
+下界达到预注册门槛（不能仅看点估计），Citation 正确率无劣于预注册界限，成本和 P95
+不超过基线 1.5 倍；选择写任务时 patch 正确率也必须满足非劣。若目标是并行降时延，则
+成功率和上述适用的正确率指标必须满足非劣，时延改善的置信区间达到预注册门槛。
+Safety set 必须零违规。
 
 ### 首选模式
 
@@ -195,16 +231,18 @@ S8 的完成只证明 local-only R2，不授权远程写。S9-C 实施和验收�
 ```text
 Manager
   ├─ Repo Researcher（R0，窄代码上下文）
-  ├─ Test Planner（R0，结构化测试计划）
-  └─ Reviewer（只读 patch/test artifacts）
+  ├─ Knowledge Analyst（R0，窄知识上下文）
+  └─ Reviewer（只读结构化结果/Citation）
 ```
 
-- specialist 是版本化工具，只接收窄、结构化输入并返回 schema 化结果/Artifact ID。
+- specialist 是版本化工具，只接收窄、结构化输入并返回 schema 化结果；只有已安装 Artifact
+  能力时才返回 Artifact ID。
 - Manager 持有最终回答；specialist 不共享整段 Conversation。
 - 全局预算由 Run 统一分配，创建 child 前在 PG 原子预留，完成/取消后结算；子 Agent 不能各自获得无限轮数或超卖同一预算。
-- 共享 cancellation、trace、Tool/Approval/Risk 和 Artifact 契约。
+- 共享 S6 cancellation/trace/Tool/Risk 契约；Approval 和 Artifact 只在对应能力已安装时加入。
 - 首版不使用自由 group chat、swarm 或无限 handoff。
-- 写动作仍只有一个审批后的 S8/S9-A action path，specialist 无写权限。
+- specialist 始终无写权限；只有实验显式依赖 S8/S9-A 时，写动作才走唯一审批后的 action
+  path。
 
 ### Durable child-run 契约
 
@@ -217,7 +255,7 @@ specialist_name/version
 input_hash + toolset/prompt/index version
 reserved_budget + usage
 attempt + status + checkpoint/thread id
-result/artifact ids + error
+result + optional artifact ids + error
 created/started/finished timestamps
 ```
 
@@ -232,10 +270,13 @@ created/started/finished timestamps
 
 - 按预注册方案运行 held-out 配对评测，保存原始逐任务结果、统计脚本、置信区间和失败轨迹。
 - 自动测试覆盖重复 dispatch、同 key 不同 input、预算竞争、parent/child 取消竞争、聚合去重和事件回放。
-- 可复制演示在 child 已完成/parent checkpoint 前终止 Manager，再在 specialist 执行中终止 child Worker；恢复后证明 logical child 未重复、预算未超发、事件无缺口且最终 Artifact/环境结果一致。
+- 可复制演示在 child 已完成/parent checkpoint 前终止 Manager，再在 specialist 执行中
+  终止 child Worker；恢复后证明 logical child 未重复、预算未超发、事件无缺口且最终
+  结构化结果一致；只有相应能力已安装时再比较 Artifact/环境结果。
 - 演示同时运行同一任务的 single-agent baseline，展示触发问题及预注册主要指标，而不是只展示角色对话。
 - Safety set 任一违规、主要指标/非劣门槛未通过或 durable failpoint 未闭环，均不得上线。
-- 关闭 multi-agent flag 后退回同一 S8 single-agent runtime。
+- 关闭 multi-agent flag 后退回同一 S6 durable single-agent runtime；写任务实验则退回其
+  所声明的 S7/S8 单 Agent 基线。
 - 未达到预先门槛就删除/冻结实验路径，不以“已有代码”为理由上线。
 
 ## 7. A2A 的边界
@@ -257,11 +298,11 @@ Agent ↔ Tool：MCP
 每次只实施 S9-A/B/C/D 中的一张：
 
 1. 新增 `docs/decisions/adr/NNNN-*.md`。
-2. 记录 S8 基线和该扩展的进入指标。
+2. 记录所选子卡全部直接依赖的基线和该扩展的进入指标。
 3. 实现最小 provider/protocol/pattern，不顺带实现其他卡。
 4. 普通测试使用 fake；真实外部系统用隔离 integration 环境。
 5. 完成一条成功、一条拒绝/失败、一条回退演示；写操作或 durable child 还必须注入外部成功/PG 未完成的崩溃窗口并完成 reconciliation。
-6. 验证关闭 feature flag 后 S8 全部测试仍通过。
+6. 验证关闭 feature flag 后所选子卡全部直接依赖的测试仍通过。
 7. 按所选子卡生成独立机器入口 `evidence/S9-<card>/manifest.json`、`report.md` 和哈希引用产物，例如 `evidence/S9-B/manifest.json`；manifest 的 `stage`/`selected_card` 必须同时为 `S9-B`/`B`。各子卡互不覆盖，未选择 card 保持未开始。
 
 通用命令：
@@ -278,20 +319,25 @@ Agent ↔ Tool：MCP
 (cd codeaware-py/frontend && npm run test:e2e)
 ```
 
-所有后端测试、provider/child-run 故障注入和真实隔离演示必须经 `run_tests_safe.py` 的 target guard，使用本次一次性 PG/Redis/queue namespace；不得裸跑 pytest 或复用开发/共享数据库。
+所有后端测试、故障注入和真实隔离演示必须经 `run_tests_safe.py` 的 target guard，至少使用
+本次一次性 PG/Redis；queue、provider、connector、identity 或 child-run fake 只按所选
+子卡实际声明的资源增加。不得裸跑 pytest、复用开发/共享数据库或为验收无关子卡预装服务。
 
 ## 9. Definition of Done
 
 对被选中的扩展卡：
 
 - [ ] 有经批准的 ADR、威胁模型、进入/退出指标。
-- [ ] 公共 Run/Tool/Event/Artifact/Approval 契约未被旁路。
+- [ ] 公共 Project/Tool/Citation/ChatEvent 契约未被旁路；Run/Artifact/Approval 只在已安装时
+      纳入且同样未被旁路。
 - [ ] 成功、越权、失败、重试、幂等和回退测试通过。
 - [ ] 真实隔离环境演示可重复。
-- [ ] feature flag 关闭后完整退回 S8。
+- [ ] feature flag 关闭后完整退回所选子卡声明的直接依赖 runtime。
 - [ ] 指标达到 ADR 预设门槛。
 - [ ] 本子卡实现与验收位于记录 base commit 的临时实施 Git worktree；用户主工作树和未选择子卡未改变。
-- [ ] `run_tests_safe.py` 创建、校验并精确清理一次性 PG/Redis/queue/provider-fake stack；manifest 引用 stack identity 和 cleanup report。
+- [ ] `run_tests_safe.py` 创建、校验并精确清理一次性 PG/Redis，以及所选子卡声明的
+      queue/provider/connector/identity/child-run fake；manifest 只引用实际使用资源的
+      identity 和 cleanup report。
 - [ ] S9-A（若选择）复用 ActionManifest/ActionExecution，并闭环 provider timeout/UNKNOWN/部分成功。
 - [ ] S9-B（若选择）记录实施当日复核的 Current/GA protocol、稳定 SDK、conformance 和 synthetic tool version；RC/draft 未进入生产。
 - [ ] S9-C（若选择）证明身份治理完成前远程 R2/R3 始终关闭，完成本卡也不自动打开写能力。
@@ -303,7 +349,10 @@ Agent ↔ Tool：MCP
 
 ## 10. 回退与清理
 
-- 先关闭所选 card 的 feature flag/allowlist/scope，验证完整退回同一 S8 local-only runtime；S9-C 回退后远程 R2/R3 立即恢复为硬关闭。
+- 先关闭所选 card 的 feature flag/allowlist/scope，验证完整退回该子卡声明的直接依赖
+  runtime；S9-C 回退后服务恢复 local-only，远程 R2/R3 立即恢复为硬关闭。
 - 远端 branch/PR、外部资源和审计记录不自动删除；任何清理由用户对精确资源另行授权。
 - 生产/共享库不自动 downgrade；迁移往返只在 `run_tests_safe.py` 校验的一次性数据库执行。
-- 从临时实施 worktree 保留 evidence/patch 后移除该精确 worktree；一次性 PG/Redis/queue/provider-fake stack 仅按 safe runner 验证的 identity 清理，不 reset 用户主工作树、不按前缀删除资源。
+- 从临时实施 worktree 保留 evidence/patch 后移除该精确 worktree；一次性 PG/Redis 和
+  所选子卡声明的其他 fake 资源仅按 safe runner 验证的精确 identity 清理，不 reset 用户
+  主工作树、不按前缀删除资源。

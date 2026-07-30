@@ -7,7 +7,7 @@
 
 ## Python 重构版（codeaware-py）
 
-**当前状态**：Java → Python 的 P0–P5 结构迁移已完成，但 Python Chat 版本尚未完成发布闭环。已知基线为 **74 passed, 1 deselected**、前端 lint/build 可通过；typed SSE、摘要真实触发、multipart、空环境库名、AIReadMe 真实仓库快照及七域契约仍须按 [C1–C3 当前版本收尾](docs/roadmap/current-release/README.md)实施和验收。Agent 只是一条[锁定的未来路线](docs/roadmap/chat-to-agent/README.md)。
+**当前状态**：Java → Python 的 P0–P5 结构迁移已完成，但 Python Chat 版本尚未完成发布闭环。已知基线为 **74 passed, 1 deselected**、前端 lint/build 可通过；typed SSE、摘要真实触发、multipart、空环境库名、AIReadMe 真实仓库快照及七域契约仍须按 [C1–C3 当前版本收尾](docs/roadmap/current-release/README.md)实施和验收。Agent 只是一条[锁定的个人项目未来路线](docs/roadmap/chat-to-agent/personal/README.md)，默认止于本机只读仓库 Agent。
 
 > 安全提示：C1 完成前不要直接运行 pytest。现有 fixture 可能对调用者预先导出的数据库执行 `drop_all`、对 Redis 执行 `flushdb`；先按 [C1 安全测试入口](docs/roadmap/current-release/01-当前缺口修复.md)完成 fail-closed 隔离。
 
@@ -15,7 +15,7 @@
 |------|------|
 | 语言 | Python 3.12 |
 | Web | FastAPI（原生 async + 内置 /docs） |
-| AI 框架 | LangChain（与 LangChain4j 1:1 对称；LangGraph 编排预留） |
+| AI 框架 | LangChain adapter（LangGraph 仅在出现明确编排需求后条件评审） |
 | LLM | DeepSeek（`ChatOpenAI` base_url，OpenAI 兼容） |
 | Embedding | Ollama bge-m3（1024-d，不变） |
 | 向量存储 | pgvector `Vector(1024)` **内联同表**（消除 Java 版 UUID 反查） |
@@ -55,7 +55,7 @@ docker exec ai-center-ollama ollama pull bge-m3
 - 面试话术：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
 - 文档索引（编码先查）：[docs/INDEX.md](docs/INDEX.md)
 - 当前版本 C1–C3：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
-- 后续 Chat → Agent 路线：[docs/roadmap/chat-to-agent/README.md](docs/roadmap/chat-to-agent/README.md)
+- 后续个人项目 Chat → Agent 路线：[docs/roadmap/chat-to-agent/personal/README.md](docs/roadmap/chat-to-agent/personal/README.md)
 
 > **API 契约状态**：目标仍是 Python 版 22 端点与下文示例及 OpenAPI 对齐；当前已知差异由 C1/C2 收口，不能再用“只有 `session_id` → `conversation_id` 一项差异”作为验收结论。端口 Java 8080 / Python 8000。
 

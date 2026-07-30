@@ -7,20 +7,28 @@
 >
 > 当前优先级以[升级总入口](docs/roadmap/README.md)为准：先完成[当前版本 C1–C3 收尾](docs/roadmap/current-release/README.md)。Chat → Agent 是锁定的未来方向；没有 C1–C3 evidence 和用户在其后的另行授权，不得开始 Agent 代码改造。
 >
-> 获得未来 Agent 实施授权后，工作另受 [Chat → Agent 渐进升级总路线](docs/roadmap/chat-to-agent/README.md)约束。实施前必须再读[公共契约](docs/roadmap/chat-to-agent/00-执行约定与公共契约.md)和当前阶段卡；一次只实施一个阶段，未形成测试、演示、回滚和证据闭环，不得进入下一阶段。
+> 获得未来 Agent 实施授权后，默认采用个人项目档案
+> [`personal-local-readonly`](docs/roadmap/chat-to-agent/personal/README.md)，顺序为
+> `S1-lite → S2-lite → S4-lite → S5-lite`。实施前必须再读
+> [Chat → Agent 总入口](docs/roadmap/chat-to-agent/README.md)、当前精简阶段卡及
+> [公共契约](docs/roadmap/chat-to-agent/00-执行约定与公共契约.md)中与本阶段相关的子集；
+> 一次只实施一个阶段，未形成测试、演示、回滚和证据闭环，不得进入能力 DAG 中依赖它的卡。
 >
 > 阶段完成与解锁只认[证据清单与解锁规则](docs/roadmap/证据清单与解锁规则.md)定义的 `manifest.json`。ADR 管长期语义，`current-release/` 管当前实现，`migration/` 只作历史背景；C3 之后首次 Agent 实施授权只能解锁 S1。
 
-## Chat → Agent 阶段实施铁律
+## 个人默认 Chat → Agent 阶段实施铁律
 
 - 当前版本 C1–C3 未全部完成前，本节仅供未来参考；不得据此提前安装框架、建表或开放工具。
-- 当前阶段以[总路线阶段表](docs/roadmap/chat-to-agent/README.md#4-未来唯一实施顺序)为唯一顺序，不从旧“预留项”中自行挑选功能。
-- 开工前验证上一个阶段的 `evidence/Sx/manifest.json`；验证器未通过时，不实施下一阶段。
-- `Conversation / Memory / AgentRun / AgentState / ToolCall / RunEvent / Artifact / Approval` 必须按公共契约分开，不混用生命周期。
-- S3 只是确定性 LangGraph Workflow；S4 模型能够选择只读工具后才可称为 Agent。
-- S1–S8 只证明本机单用户模式：固定 sentinel actor，`project_id` 只做数据隔离；远程身份、成员关系和 R2/R3 写能力必须等 S9-C。
-- S1 前不开放工具，S6 前不做可暂停审批，S7 前不执行模型生成内容，S8 前不修改源仓库。
-- 新能力必须带 feature flag 或兼容路径、明确删除阶段，并按[验收证据模板](docs/roadmap/chat-to-agent/验收证据模板.md)留档。
+- 默认能力 DAG 是 `C3 → S1 → S2 → S4 → S5`；S4 直接依赖 S2，S3 缺失是合法状态，
+  不得伪造 S3 evidence。
+- 开工前验证当前卡声明的全部直接依赖 manifests；验证器未通过时，不实施当前卡。
+- S1/S2/S4/S5 只证明本机单用户模式：固定 sentinel actor，`project_id` 只做数据隔离；
+  不实现远程身份、成员关系或 R2/R3。
+- S1 前不开放工具；S2 保持唯一 TurnCoordinator/短事务边界；S4 只开放 R0 Knowledge
+  工具；S5 只开放固定 Git snapshot 的仓库读取。
+- 默认路线不实现 LangGraph、AgentRun/checkpoint、Celery、sandbox、patch、shell、审批、
+  Git 写入、MCP 或多 Agent。触发高阶需求时先修改路线/ADR/证据 DAG，再取得单独授权。
+- 新能力必须带 feature flag 或兼容路径，并明确保留理由或触发式删除条件；按[验收证据模板](docs/roadmap/chat-to-agent/验收证据模板.md)留档。
 
 ## 项目是什么
 
@@ -53,7 +61,7 @@ app/
 ├── core/                   # config / response / exceptions
 ├── api/v1/                 # 7 router + deps.py
 ├── schemas/                # Pydantic DTO/VO
-├── models/                 # SQLAlchemy ORM（8 表）
+├── models/                 # SQLAlchemy ORM（C1–C3 当前基线 8 表）
 ├── ai/
 │   ├── config.py           # LLM/Embedding 工厂
 │   ├── infra/vector_recall.py   # 共享 VectorRecallService
@@ -65,7 +73,11 @@ app/
 └── repositories/
 ```
 
-## 领域模型（8 表，必须遵循 ADR）
+## 领域模型（C1–C3 当前基线 8 表，必须遵循 ADR）
+
+下表约束当前 Chat 基线。只有对应精简阶段已按 evidence/授权解锁后，才可新增该卡明确列出的
+`Project`、`messages.citations_json`、`Repository/RepositorySnapshot` 等增量；不得借未来
+路线提前建表，也不得在阶段卡之外自行扩展领域模型。
 
 | 实体 | 表 | 关键约束 | ADR |
 |------|----|---------|-----|
@@ -106,7 +118,7 @@ app/
 - **LLM 必须 mock**（monkeypatch/fake response），CI 不调真实 DeepSeek/Ollama；真实连通性测试标 `@pytest.mark.integration` 本地跑
 - 测试库隔离：每次运行使用带唯一后缀的一次性 PG db（含独立迁移测试库）+ 非 0 的测试专用 Redis DB；安全执行器必须拒绝开发库 `ai_center` / `ai_center_py`
 - 核心 fixtures：`db_session`（回滚）、`redis_client`、`mock_llm`、`mock_embedder`（固定 1024 维）
-- 每阶段代码与测试同步交付，测试不过不进下一阶段
+- 每阶段代码与测试同步交付；测试不过则当前卡未完成，依赖它的任何卡不得开始
 - **覆盖率方针**：核心模块（rag/memory/code_review）≥80% 是**下限，不是目标**；重逻辑模块（检索融合/记忆窗口+fallback/结构化解析）深测、自然到 90%+；**不追求全局 90%**——测对的地方，不测所有地方。薄 API 层/getter/LLM 调用本身（已 mock）不强求覆盖
 - 断言验证**行为**而非"不崩"；关键路径配集成测试；LLM mock 覆盖边界用例（空返回/格式错/超时）
 - 测试/集成踩坑见 [docs/migration/testing-notes.md](docs/migration/testing-notes.md)（langchain 导入 hang、test_migration 性能、异步客户端 loop）

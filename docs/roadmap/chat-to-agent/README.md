@@ -1,184 +1,134 @@
-# CodeAware：Chat → Agent 渐进升级路线（未来方向）
+# CodeAware：个人项目 Chat → Agent 路线
 
-> 本路线是当前版本交付后的后续目标与方向，不是当前实施任务。当前必须先完成[当前版本收尾计划](../current-release/README.md)；即使收尾完成，也要用户另行明确授权，才能开始任何 Agent 代码改造。
+> **当前状态：`FUTURE_LOCKED`。**
 >
-> 面向后续开发模型：任何 Chat → Agent 相关实现，必须先读本文件、[公共契约](00-执行约定与公共契约.md)、[证据与解锁规则](../证据清单与解锁规则.md)和当前阶段文档。
->
-> - 制定日期：2026-07-29
-> - 当前基线：Python/FastAPI Chat；短期记忆 + 长期记忆 + RAG + SSE，但仍有 C1 已确认缺口
-> - 已知测试快照：`74 passed, 1 deselected`，全局覆盖率 92%；前端 lint/build 可通过；这不等于当前版本已闭环
-> - 核心原则：一次只实施一个阶段；每阶段都必须能独立运行、测试、演示、回退
-> - 当前状态：**`FUTURE_LOCKED`，整条 Agent 路线仅供方向参考**
+> 本路线是 C1–C3 完成后的未来方向，不是当前代码任务。默认交付档已经收缩为
+> [`personal-local-readonly`](personal/README.md)：精简 S1、精简 S2、跳过 S3，
+> 再实施 S4、S5，并在本机只读仓库 Agent 处结束。
 
----
+## 1. 当前决策
 
-## 1. 最终目标
+个人项目不默认承担 LangGraph 双运行时、Celery/checkpoint、Docker sandbox、审批状态机、
+远程身份、MCP 和多 Agent 的长期维护成本。
 
-把当前“系统预先拼好上下文、模型只负责回答”的 Chat，逐步升级为：
+唯一默认顺序：
 
 ```text
-用户任务
-  → Agent 判断是否需要工具
-  → 按项目/仓库检索证据
-  → 形成计划或补丁
-  → 在隔离环境验证
-  → 需要写入时暂停并请求审批
-  → 审批后产生可回退的本地分支/提交
-  → 返回答案、引用、补丁和测试证据
+C1 → C2 → C3
+  → S1-lite 项目隔离
+  → S2-lite 轻量分层
+  → S4-lite 只读工具 Agent
+  → S5-lite 仓库感知 Agent
+  → 默认路线完成
 ```
 
-最终系统仍以 **单 Agent** 为默认。多 Agent、MCP、GitHub/GitLab PR 属于完成安全单 Agent 之后的扩展，不得提前引入。
+这条路线的终点是：
 
-## 2. 阶段定义
+> **本机单用户 Repo-aware Read-only Agent**
 
-| 概念 | 本项目中的严格定义 |
-|---|---|
-| Chat | 应用固定拼接记忆/RAG/历史，模型仅生成答案 |
-| Workflow | 固定节点和固定边的确定性流程；即使使用 LangGraph，也不等于 Agent |
-| Read-only Agent | 模型可在受限轮数内自主选择只读工具，但不能修改仓库或外部系统 |
-| Repo-aware Agent | 能读取本地仓库、检索符号和文件，并给出 commit/path/line 引用 |
-| Durable Agent | Run、Step、Tool Call 和事件可持久化，进程中断后可恢复 |
-| Patch Agent | 能生成补丁并在隔离环境验证，但不写入源仓库 |
-| Action Agent | 经人工批准后，执行与审批内容完全一致的受控写操作 |
+它可以检索项目知识和固定 Git commit、返回来源引用，但不能运行模型生成内容、修改仓库、
+创建提交、push、建立 PR 或访问远程系统。
 
-## 3. 启动前硬门禁
+## 2. 启动前硬门禁
 
-在进入下表 S1 前，必须同时满足：
+进入 S1 前必须同时满足：
 
-1. [当前版本 C1、C2、C3](../current-release/README.md) 均有通过的 evidence。
-2. C3 明确写明当前 Chat 版本已完成。
-3. 证据验证器给出 `REVIEW_UNLOCKED`。
-4. 用户在 C3 之后另行明确授权“实施 S1”；“文档已经写好”或一次性批准整条路线不构成授权。
-5. 实施者重新核对仓库现状；未来路线中的建议路径若已变化，只做有记录的机械映射。
+1. [当前版本 C1、C2、C3](../current-release/README.md) manifests 全部验证通过。
+2. C3 明确当前 Chat 版本已交付并给出 `REVIEW_UNLOCKED`。
+3. 用户在 C3 evidence 形成后明确授权“实施 S1”。
+4. 实施者重新核对 freeze commit、OpenAPI 和 Alembic head。
 
-前三项只允许正式评审；第四项成立后才形成 `IMPLEMENTATION_UNLOCKED:S1`。以后每个 S 阶段都需要前一阶段 manifest 通过且用户重新明确授权。门禁未满足时，可以修改本路线文档，但不得安装 LangGraph、建 Agent 表、开放 Tool 或实现 sandbox/审批。
+C3 只允许评审，不构成 Agent 实施授权。以后 S2、S4、S5 都需要在其直接依赖 manifest
+形成后重新取得当前卡的明确授权。
 
-当前 Chat 的修复细节以[current-release/C1](../current-release/01-当前缺口修复.md)为准；[稳定 Chat 基线附录](01-稳定Chat基线.md)不得形成第二套冲突方案。
+## 3. 默认阶段
 
-### S1–S8 的运行边界
-
-S1–S8 只交付 **本机单用户模式**：
-
-- 使用不可由请求伪造的固定 sentinel actor；`project_id` 仅是数据隔离键，不代表认证或成员资格。
-- 只监听 loopback 或受信本地入口；远程部署、多人共享和 R2/R3 写能力全部关闭。
-- 本地仓库注册/扫描走管理员 CLI 或受控配置，不向普通 HTTP API 暴露任意 `local_path`。
-- 远程身份、项目成员关系和外部写权限在 S9-C 独立补齐；完成前不得把本地证据解释成远程安全证明。
-
-## 4. 未来唯一实施顺序
-
-| 阶段 | 交付物 | 状态 | 详细实施卡 |
+| 阶段 | 交付物 | 状态 | 权威实施卡 |
 |---|---|---|---|
-| S1 | 项目级数据与检索隔离 | 未来，锁定 | [02-项目作用域隔离](02-项目作用域隔离.md) |
-| S2 | Graph-ready 分层 | 未来，锁定 | [03-Graph前分层重构](03-Graph前分层重构.md) |
-| S3 | 确定性 LangGraph Workflow | 未来，锁定 | [04-确定性LangGraph](04-确定性LangGraph.md) |
-| S4 | 只读工具 Agent | 未来，锁定 | [05-只读工具Agent](05-只读工具Agent.md) |
-| S5 | 本地仓库感知 Agent | 未来，锁定 | [06-仓库感知Agent](06-仓库感知Agent.md) |
-| S6 | 可恢复 Agent Run | 未来，锁定 | [07-可恢复AgentRun](07-可恢复AgentRun.md) |
-| S7 | 沙箱补丁 Agent | 未来，锁定 | [08-沙箱补丁Agent](08-沙箱补丁Agent.md) |
-| S8 | 审批式行动 Agent | 未来，锁定 | [09-审批式行动Agent](09-审批式行动Agent.md) |
-| S9 | Git/MCP/多 Agent 扩展 | 未来，条件触发且锁定 | [10-生态集成与多Agent](10-生态集成与多Agent.md) |
+| S1-lite | Project 数据与检索隔离 | 未来，锁定 | [精简 S1](personal/S1-精简项目隔离.md) |
+| S2-lite | ReplyEngine、上下文、read ports 与短事务边界 | 未来，锁定 | [精简 S2](personal/S2-轻量分层.md) |
+| S4-lite | 无 LangGraph 的有界 R0 工具循环与 Citation | 未来，锁定 | [精简 S4](personal/S4-只读工具Agent.md) |
+| S5-lite | 固定 commit 的只读代码检索与行号引用 | 未来，锁定 | [精简 S5](personal/S5-仓库感知Agent.md) |
 
-### 阶段依赖
+依赖是能力 DAG，不按编号推导：
 
 ```text
-当前版本 C1 → C2 → C3
-  → 用户明确授权 S1
-  → S1 → 每阶段重新授权 → S2 → S3 → S4 → S5 → S6 → S7 → S8
-                                                               └→ S9-A/B/C/D（逐卡授权，可选）
+C3 → S1 → S2 → S4 → S5
 ```
 
-不得跳过：
+因此：
 
-- 当前版本 C1–C3 未闭环时，不能开始 S1。
-- S1 之前不能开放工具，因为当前 Knowledge、Memory、Conversation 缺少严格项目隔离。
-- S2 之前不能上 Graph，否则只会把数据库和业务耦合搬进节点。
-- S3 只是 Workflow，不能对外宣称完成 Agent。
-- S6 之前不能加入需要暂停/恢复的审批写操作。
-- S7 之前不能执行模型生成的代码或命令。
-- S8 之前不能修改源仓库、创建提交或调用外部写 API。
-- 没有单 Agent 评测数据时不能进入多 Agent。
+- S4 的直接依赖是 S2，不是 S3。
+- S3 缺失是合法状态，不能生成 `skipped` 或虚假通过 manifest。
+- S5 的直接依赖只有 S4。
+- S5 完成后默认停止，不自动请求 S6。
 
-## 5. 后续模型的执行协议
+## 4. 部署与安全边界
 
-每个实施模型只领取一个阶段，并严格执行：
-
-1. 先运行统一验证器确认当前版本 C1–C3、全部前置 S 阶段和当前阶段授权，再阅读根目录 `AGENTS.md`、`docs/INDEX.md`、本总览、公共契约、当前阶段卡和相关 ADR。
-2. 检查 Git 状态，保留用户已有修改，不覆盖与当前阶段无关的内容。
-3. 运行阶段文档中的“实施前基线”；基线失败时先记录，不得把既有失败误算为本阶段回归。
-4. 只修改当前阶段“允许范围”内的模块，不顺手实现下一阶段。
-5. 数据库、公共 API 或核心状态变化必须新增 Alembic migration，并同步 schema/types。
-6. 运行当前阶段要求的单测、集成测试、前端检查和演示。
-7. 按[验收证据模板](验收证据模板.md)生成报告与产物，写入唯一的 `evidence/Sx/manifest.json`。
-8. 只有统一证据验证器通过，才把上表状态改为“已完成”；这只允许请求用户授权下一阶段，不会自动解锁。
-9. 若失败，保留阶段为“未完成”，记录阻塞点，不得用降低断言、吞异常或跳过测试伪造闭环。
-
-## 6. 每阶段必须形成的闭环
+默认 S1/S2/S4/S5 全部是 local-only：
 
 ```text
-需求边界
-  → 实现
-  → 自动测试
-  → 可重复演示
-  → 观察持久化/事件/产物
-  → 验证回退
-  → manifest 引用的可校验证据
-  → 才能进入下一阶段
+actor_id = "local-single-user"
+REMOTE_ACCESS_ENABLED = false
+bind host = 127.0.0.1 / ::1
 ```
 
-每阶段至少交付：
+- `X-Project-ID` 是隔离选择器，不是认证凭据。
+- 本地仓库只能由 admin CLI 从 allowed roots 注册。
+- 只允许 R0 只读工具；不存在 shell、patch、Git 写入或外部写 API。
+- S4/S5 不创建 durable AgentRun/checkpoint，不承诺断线恢复和事件 replay。
+- 所有阶段仍使用 safe runner、一次性 PG/Redis/fixture、manifest 哈希和回退证据。
 
-- 一条用户可感知的完整路径，或一条可验证的行为等价路径；
-- 正常、异常、边界和回退测试；
-- 一个无需阅读源码即可复现的演示；
-- 明确的“不做事项”；
-- 下一阶段可依赖的稳定接口。
+## 5. 实施协议
 
-## 7. 全局测试命令
+每次只领取一张默认阶段卡：
 
-实施模型应从仓库根按阶段运行以下命令，不得把真实 DeepSeek/Ollama 调用放入普通 CI。C1 安全执行器未完成前禁止直接运行 pytest：
+1. 验证 C1–C3 和当前卡全部直接依赖。
+2. 验证用户授权发生在所有直接依赖 evidence 之后。
+3. 阅读根 `AGENTS.md`、本文件、[个人路线总览](personal/README.md)、当前精简卡、
+   [公共契约](00-执行约定与公共契约.md)中与当前卡相关的子集，以及证据规则。
+4. 只实现精简卡“最小实施范围”，平台参考卡不能扩大本阶段 DoD。
+5. 完成自动测试、可复制演示、数据/事件核验和 feature-flag 回退。
+6. 生成 `evidence/Sx/report.md`、`manifest.json` 和哈希引用产物。
+7. 只有 validator 通过，才可请求下一张默认卡授权。
 
-```bash
-(cd codeaware-py && uv run python scripts/run_tests_safe.py -q)
-(cd codeaware-py && uv run python scripts/run_tests_safe.py --cov=app --cov-report=term-missing -q)
+manifest 必须声明：
+
+```json
+{
+  "route_profile": "personal-local-readonly"
+}
 ```
 
-```bash
-(cd codeaware-py/frontend && npm run lint)
-(cd codeaware-py/frontend && npm run build)
-```
+## 6. 高阶平台参考
 
-后续新增：
+以下文档保留技术设计价值，但**不再是个人默认路线的实施卡**：
 
-```bash
-(cd codeaware-py/frontend && npm run test)
-(cd codeaware-py/frontend && npm run test:e2e)
-```
+| 参考 | 默认状态 |
+|---|---|
+| [完整 S1 项目隔离](02-项目作用域隔离.md) | 平台化扩展参考 |
+| [完整 S2 Graph-ready 分层](03-Graph前分层重构.md) | 平台化扩展参考 |
+| [S3 确定性 LangGraph](04-确定性LangGraph.md) | 未选择；不能作为 S4 硬前置 |
+| [完整 S4 工具 Agent](05-只读工具Agent.md) | 平台化扩展参考 |
+| [完整 S5 仓库 Agent](06-仓库感知Agent.md) | 平台化扩展参考 |
+| [S6 Durable Run](07-可恢复AgentRun.md) | 条件型参考 |
+| [S7 Sandbox Patch](08-沙箱补丁Agent.md) | 条件型参考 |
+| [S8 Approval/Local Action](09-审批式行动Agent.md) | 条件型参考 |
+| [S9 生态与多 Agent](10-生态集成与多Agent.md) | 条件型参考 |
 
-真实模型、真实 embedding、Docker sandbox 和故障恢复测试使用 `integration` 或 `live_eval` 标记单独运行。
+是否值得重新启用这些能力，只看[可选升级触发条件](personal/可选升级触发条件.md)。触发后要先
+修订路线、阶段卡和证据 DAG，再单独取得实施授权；不能直接执行旧平台卡。
 
-## 8. 全局不做事项
+## 7. 完成标准
 
-- 不把“安装 LangGraph”当作 Agent 交付。
-- 不让 Graph 节点、Tool handler 直接写 SQL。
-- 不把 Run checkpoint、Conversation、Memory 混成同一张表或同一生命周期。
-- 不让模型直接获得 SQLAlchemy session、Redis client、文件句柄、shell 或长期密钥。
-- 不用裸字符串承载工具输入输出、SSE 事件或审批内容。
-- 不静默吞掉检索、工具、审批和 sandbox 错误。
-- 不在 FastAPI Web 进程执行模型生成的 shell。
-- 不为展示技术标签提前替换 pgvector、React/Vite 或 FastAPI。
-- 不长期保留多套重复运行路径；兼容路径必须写明删除阶段。
+默认路线完成需要：
 
-## 9. 完成标准
+- C1/C2/C3/S1/S2/S4/S5 manifests 全部通过；
+- 两个 Project 的知识、记忆、会话和检索无串数据；
+- 模型能选择 `search_knowledge`，预算和 Citation 校验生效；
+- 本地仓库按 immutable commit 建索引；
+- 答案引用可复算到 commit/path/line；
+- 关闭 Agent/Repository feature flags 后稳定退回 Chat；
+- durable、patch、shell、R2/R3、remote、MCP、多 Agent 路径不存在或硬关闭。
 
-S8 完成后，CodeAware 才可称为“本机单用户、受控研发协作 Agent”：
-
-- 模型能自主选择只读工具；
-- 回答和补丁均能引用具体仓库证据；
-- Run 可取消、重试、重连和恢复；
-- 补丁先在隔离环境验证；
-- 未经批准不产生源仓库写入；
-- 批准后只执行被批准的精确操作；
-- 每个步骤都有 trace、事件、审计和测试证据；
-- 随时可以退回只读 Agent 或稳定 Chat。
-
-远程或多人环境仍必须保持关闭，直到 S9-C 身份与授权边界通过独立验收。
+完成后不得把产品描述为 Durable、Patch 或 Action Agent。

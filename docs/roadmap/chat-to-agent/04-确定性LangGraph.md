@@ -1,12 +1,17 @@
 # S3：确定性 LangGraph Workflow
 
+> **条件型平台参考，个人默认不实施。** S3 不再是 S4 的硬前置，也不创建 skipped/passed
+> manifest。只有在 S2 后、S4 前出现[明确触发条件](personal/可选升级触发条件.md)，并先
+> 修订路线、阶段卡与证据 DAG 后，本文件才可作为设计输入；S4/S5 已完成后不得直接执行旧卡。
+>
 > **状态：Future / Locked（未来候选，当前版本禁止实施）**
 >
 > 本文不是当前版本任务，也不构成自动开工授权。只有同时满足以下条件，才允许由用户另行决定是否实施：
 >
 > 1. `docs/roadmap/current-release/evidence/C3/manifest.json` 已存在、validator 通过且结论为“当前版本完成、允许评审 Agent 路线”；
 > 2. S1、S2 的 `evidence/S1/manifest.json`、`evidence/S2/manifest.json` 均存在、validator 通过且可复现；当前 Chat 基线直接引用 C1–C3 manifests，不另建 S0 evidence；
-> 3. 用户在 C3 完成之后对 **S3** 给出新的、明确的实施授权。
+> 3. 路线、阶段卡和证据 DAG 已纳入 S3，且用户在上述 S2 evidence 形成、这些修订完成
+>    之后，对 **S3** 给出新的、明确的实施授权。
 >
 > 任一条件不满足时，只能阅读和评审本文，不能安装 LangGraph、修改代码、创建迁移或把本阶段并入当前版本。C3 完成也只代表具备评审条件，不代表默认进入 S3。
 

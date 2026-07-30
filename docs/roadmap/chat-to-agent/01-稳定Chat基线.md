@@ -102,7 +102,8 @@ S0 不产生新的产品能力，也不再修复当前版本。它只回答一�
 - 不重新设计 SSE/summary/post-turn。
 - 不创建与 C1 冲突的 compatibility flag。
 - 不增加 Project、LangGraph、Agent、Tool、Run、Checkpoint、Approval。
-- 不增加 actor header、登录/RBAC、`REMOTE_ACCESS_ENABLED` 或伪造的远程安全能力；S1–S8 仍只规划 local single-user。
+- 不增加 actor header、登录/RBAC、`REMOTE_ACCESS_ENABLED` 或伪造的远程安全能力；
+  个人默认 S1/S2/S4/S5 及未重新规划的高级参考都保持 local single-user。
 - 不把复验失败“顺便修掉”后继续 S1；失败说明 current release 未冻结。
 - 不更新 Chat → Agent README 状态为已完成，除非所有复验通过且用户已授权路线实施。
 
