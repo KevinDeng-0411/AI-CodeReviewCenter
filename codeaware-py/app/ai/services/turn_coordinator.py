@@ -1,4 +1,4 @@
-"""TurnCoordinator - C1-A: Chat 单轮编排状态机。
+"""TurnCoordinator - C1-A/C1-B: Chat 单轮编排状态机。
 
 同步 /api/chat/send 与流式 /api/chat/send/stream 共用本协调器。
 - 自管 session 生命周期：每段事务自建 AsyncSessionLocal，显式 commit；模型流式期间不持有 DB 事务。
@@ -23,6 +23,7 @@ from app.ai.rag.hybrid_retriever import HybridRetriever
 from app.ai.rag.query_rewriter import QueryRewriter
 from app.ai.rag.semantic_chunker import SemanticChunker
 from app.ai.services.rag import RagService
+from app.core.config import settings
 from app.core.enums import PromptType
 from app.db.session import AsyncSessionLocal
 from app.models import Conversation, LongTermMemory
@@ -37,7 +38,6 @@ from app.schemas.chat_events import (
 )
 
 MEMORY_EXTRACT_THRESHOLD = 4
-SUMMARY_THRESHOLD = 10  # C1-A 用现有阈值；C1-B 以 summary_message_count 水位线精修
 
 logger = logging.getLogger(__name__)
 
@@ -478,7 +478,25 @@ class TurnCoordinator:
 
             if msgs and msgs[-1].role == "USER" and msgs[-1].content == message:
                 msgs = msgs[:-1]  # 排除本轮 USER
-            history = "\n".join(f"{m.role}: {m.content}" for m in msgs)
+
+            summary, summary_cache_failed = await self._load_summary(cid)
+            if summary_cache_failed:
+                warnings.append(
+                    self._context_warning(
+                        cid,
+                        "summary_cache",
+                        "REDIS_UNAVAILABLE",
+                        "摘要缓存读取失败，已使用 PostgreSQL 真相",
+                    )
+                )
+            history_parts = []
+            if summary:
+                history_parts.append(f"## 历史对话摘要\n{summary}")
+            if msgs:
+                history_parts.append(
+                    "## 最近对话\n" + "\n".join(f"{m.role}: {m.content}" for m in msgs)
+                )
+            history = "\n\n".join(history_parts)
 
             long_ctx = ""
             try:
@@ -574,49 +592,15 @@ class TurnCoordinator:
         return warnings
 
     async def _post_turn_summary(self, cid, warnings: list[dict]) -> None:
+        """按 PG 水位线生成增量摘要；任何降级均不阻止 turn 完成。"""
         try:
             async with AsyncSessionLocal() as s:
                 st = ShortTermMemoryManager(self.redis, s, self.chat_model)
-                count = await st.message_count(cid)
-            if count < SUMMARY_THRESHOLD:
-                return
-            msgs, message_cache_failed = await self._load_messages(cid)
-            existing, summary_cache_failed = await self._load_summary(cid)
-            if message_cache_failed:
-                warnings.append(
-                    self._post_warning(
-                        cid,
-                        "message_cache",
-                        "REDIS_UNAVAILABLE",
-                        "消息缓存回填失败，已使用 PostgreSQL 真相",
-                    )
-                )
-            if summary_cache_failed:
-                warnings.append(
-                    self._post_warning(
-                        cid,
-                        "summary_cache",
-                        "REDIS_UNAVAILABLE",
-                        "摘要缓存回填失败，已使用 PostgreSQL 真相",
-                    )
-                )
-            summary_text = await st.summarize_text(msgs, existing)  # 纯 LLM
-            if not summary_text:
-                return
-            async with AsyncSessionLocal() as s2:
-                st2 = ShortTermMemoryManager(self.redis, s2, self.chat_model)
-                await st2.write_summary(cid, summary_text)
-                await s2.commit()
-            try:
-                await st2.refresh_summary_cache(cid, summary_text)
-            except Exception:
-                warnings.append(
-                    self._post_warning(
-                        cid,
-                        "summary_cache",
-                        "REDIS_UNAVAILABLE",
-                        "摘要缓存刷新失败",
-                    )
+                work = await st.read_summary_work(
+                    cid,
+                    threshold=settings.mem_summary_threshold,
+                    interval=settings.mem_summary_interval,
+                    batch_size=settings.mem_summary_batch_size,
                 )
         except Exception:
             warnings.append(
@@ -625,6 +609,91 @@ class TurnCoordinator:
                     "summary",
                     "SUMMARY_FAILED",
                     "摘要生成降级",
+                )
+            )
+            return
+
+        if work is None:
+            return
+        summary_prompt = ShortTermMemoryManager.build_summary_prompt(
+            work,
+            max_chars=settings.mem_summary_max_chars,
+        )
+        if summary_prompt is None:
+            warnings.append(
+                self._post_warning(
+                    cid,
+                    "summary",
+                    "SUMMARY_FAILED",
+                    "摘要生成降级",
+                )
+            )
+            return
+
+        try:
+            # 上方读取 session 已退出，LLM 调用期间不存在打开的数据库事务。
+            summary_text = await st.generate_summary(summary_prompt.text)
+        except Exception:
+            summary_text = None
+        if not summary_text:
+            warnings.append(
+                self._post_warning(
+                    cid,
+                    "summary",
+                    "SUMMARY_FAILED",
+                    "摘要生成降级",
+                )
+            )
+            return
+
+        target_watermark = (
+            work.expected_watermark + summary_prompt.included_message_count
+        )
+        try:
+            async with AsyncSessionLocal() as s2:
+                st2 = ShortTermMemoryManager(self.redis, s2, self.chat_model)
+                updated = await st2.conditional_write_summary(
+                    cid,
+                    summary_text,
+                    expected_watermark=work.expected_watermark,
+                    target_watermark=target_watermark,
+                )
+                if not updated:
+                    logger.info(
+                        "summary update skipped code=stale_watermark "
+                        "conversation_id=%s expected_watermark=%s",
+                        cid,
+                        work.expected_watermark,
+                    )
+                    return
+                await s2.commit()
+        except Exception:
+            warnings.append(
+                self._post_warning(
+                    cid,
+                    "summary",
+                    "SUMMARY_FAILED",
+                    "摘要持久化降级",
+                )
+            )
+            return
+
+        try:
+            async with AsyncSessionLocal() as cache_session:
+                cache_manager = ShortTermMemoryManager(
+                    self.redis,
+                    cache_session,
+                    self.chat_model,
+                )
+                # PG 已提交；此 session 未执行 SQL，不存在与 Redis I/O 重叠的事务。
+                await cache_manager.refresh_summary_cache(cid, summary_text)
+        except Exception:
+            warnings.append(
+                self._post_warning(
+                    cid,
+                    "summary_cache",
+                    "REDIS_UNAVAILABLE",
+                    "摘要缓存刷新失败",
                 )
             )
 

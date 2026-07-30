@@ -1,16 +1,17 @@
 """ShortTermMemoryManager - 工作记忆（ADR-0003）。
 
-C1-A：PG 是消息/摘要真相源，Redis 只做可丢弃缓存。
+C1-B：PG 是消息/摘要真相源，Redis 只做可丢弃缓存。
 - persist_message：PG 写（coordinator 拥有事务，显式 commit）
 - refresh_message_cache / refresh_summary_cache：仅在对应 PG commit 后刷新 Redis，失败由调用方转 warning
-- summarize_text：纯 LLM 调用，不持有 DB 事务（读/写由 coordinator 在短事务内完成）
+- read_summary_work / conditional_write_summary：短事务读取增量、按旧水位线原子提交
+- generate_summary：纯 LLM 调用，不持有 DB 事务
 - get_messages：Redis 优先，miss 回查 PG 重建（ADR-0003 fallback）
 """
 
 from dataclasses import dataclass
 
 import redis.asyncio as redis
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -18,14 +19,29 @@ from app.models import Conversation, Message
 
 SEP = ":::"
 WINDOW_SIZE = settings.mem_window_size  # 20
-SUMMARY_THRESHOLD = settings.mem_summary_threshold  # 10
 TTL_SECONDS = 168 * 3600  # 7 天
+MIDDLE_TRUNCATION = "\n…[中间内容已截断]…\n"
+TAIL_TRUNCATION = "…[内容已截断]"
 
 
 @dataclass
 class MessageEntry:
     role: str
     content: str
+
+
+@dataclass(frozen=True)
+class SummaryWork:
+    existing_summary: str | None
+    expected_watermark: int
+    total_count: int
+    messages: tuple[MessageEntry, ...]
+
+
+@dataclass(frozen=True)
+class SummaryPrompt:
+    text: str
+    included_message_count: int
 
 
 class ShortTermMemoryManager:
@@ -98,8 +114,6 @@ class ShortTermMemoryManager:
 
     async def message_count(self, cid: str) -> int:
         """PG 消息总数（不受 Redis 滑窗裁剪影响，用于摘要阈值）。"""
-        from sqlalchemy import func
-
         return (
             await self.session.scalar(
                 select(func.count()).select_from(Message).where(Message.conversation_id == cid)
@@ -129,26 +143,125 @@ class ShortTermMemoryManager:
             select(Conversation.summary).where(Conversation.conversation_id == cid)
         )
 
-    async def summarize_text(self, messages: list[MessageEntry], existing: str | None) -> str | None:
-        """纯 LLM 摘要（不持有 DB 事务）。返回 None 表示无需生成。"""
-        if self.chat_model is None or not messages:
+    async def read_summary_work(
+        self,
+        cid: str,
+        *,
+        threshold: int,
+        interval: int,
+        batch_size: int,
+    ) -> SummaryWork | None:
+        """从 PG 读取一次摘要决策快照；调用方须在 session 退出后再调用 LLM。"""
+        state = (
+            await self.session.execute(
+                select(Conversation.summary, Conversation.summary_message_count).where(
+                    Conversation.conversation_id == cid
+                )
+            )
+        ).one_or_none()
+        if state is None:
             return None
-        half = max(1, len(messages) // 2)
-        to_summarize = messages[:half]
-        conv = "\n".join(f"{m.role}: {m.content}" for m in to_summarize)
-        prompt = (
-            f"请将以下对话历史总结为简洁摘要(200字以内),保留关键信息:\n{conv}\n\n"
-            f"现有摘要(如有):{existing or '无'}\n\n请合并新旧信息输出最终摘要:"
-        )
-        resp = await self.chat_model.ainvoke(prompt)
-        return resp.content if hasattr(resp, "content") else str(resp)
+        existing_summary, watermark = state
+        total_count = await self.message_count(cid)
+        if total_count < threshold or total_count - watermark < interval:
+            return None
 
-    async def write_summary(self, cid: str, text: str) -> None:
-        """PG 写摘要（coordinator commit）。与 summary_message_count 同事务（C1-B）。"""
-        await self.session.execute(
-            update(Conversation).where(Conversation.conversation_id == cid).values(summary=text)
+        result = await self.session.execute(
+            select(Message.role, Message.content)
+            .where(Message.conversation_id == cid)
+            .order_by(Message.id.asc())
+            .offset(watermark)
+            .limit(batch_size)
         )
-        await self.session.flush()
+        messages = tuple(MessageEntry(role=row.role, content=row.content) for row in result)
+        if not messages:
+            return None
+        return SummaryWork(
+            existing_summary=existing_summary,
+            expected_watermark=watermark,
+            total_count=total_count,
+            messages=messages,
+        )
+
+    @staticmethod
+    def build_summary_prompt(
+        work: SummaryWork,
+        *,
+        max_chars: int,
+    ) -> SummaryPrompt | None:
+        """构造有界增量摘要 Prompt，并返回实际纳入的消息数。"""
+        instruction = (
+            "请将既有摘要与新增对话合并为简洁摘要（200字以内），"
+            "保留用户目标、关键事实、决定与未完成事项。\n\n"
+        )
+        summary_header = "## 既有摘要\n"
+        messages_header = "\n\n## 新增对话\n"
+        suffix = "\n\n只输出合并后的最终摘要。"
+
+        existing = work.existing_summary or "（无）"
+        summary_limit = min(2000, max_chars // 4)
+        existing = ShortTermMemoryManager._truncate_middle(existing, summary_limit)
+        prompt = instruction + summary_header + existing + messages_header
+
+        included = 0
+        for message in work.messages:
+            separator = "" if included == 0 else "\n"
+            prefix = f"{message.role}: "
+            full_line = separator + prefix + message.content
+            available = max_chars - len(prompt) - len(suffix)
+            if len(full_line) <= available:
+                prompt += full_line
+                included += 1
+                continue
+
+            content_budget = available - len(separator) - len(prefix)
+            if content_budget < len(TAIL_TRUNCATION):
+                break
+            prompt += (
+                separator
+                + prefix
+                + ShortTermMemoryManager._truncate_tail(message.content, content_budget)
+            )
+            included += 1
+            break
+
+        if included == 0:
+            return None
+        return SummaryPrompt(
+            text=(prompt + suffix)[:max_chars],
+            included_message_count=included,
+        )
+
+    async def generate_summary(self, prompt: str) -> str | None:
+        """纯 LLM 调用；调用方保证此时没有打开的数据库事务。"""
+        if self.chat_model is None:
+            return None
+        response = await self.chat_model.ainvoke(prompt)
+        content = response.content if hasattr(response, "content") else str(response)
+        content = content.strip()
+        return content or None
+
+    async def conditional_write_summary(
+        self,
+        cid: str,
+        text: str,
+        *,
+        expected_watermark: int,
+        target_watermark: int,
+    ) -> bool:
+        """按旧水位线条件更新摘要与新水位线，防止旧结果覆盖并发赢家。"""
+        result = await self.session.execute(
+            update(Conversation)
+            .where(
+                Conversation.conversation_id == cid,
+                Conversation.summary_message_count == expected_watermark,
+            )
+            .values(
+                summary=text,
+                summary_message_count=target_watermark,
+            )
+        )
+        return result.rowcount == 1
 
     async def refresh_summary_cache(self, cid: str, text: str) -> None:
         """PG commit 后刷新 Redis 摘要缓存（post-commit）。"""
@@ -183,6 +296,25 @@ class ShortTermMemoryManager:
         await self.redis.rpush(key, *entries)
         await self.redis.ltrim(key, -WINDOW_SIZE, -1)
         await self.redis.expire(key, TTL_SECONDS)
+
+    @staticmethod
+    def _truncate_middle(text: str, limit: int) -> str:
+        if len(text) <= limit:
+            return text
+        if limit <= len(MIDDLE_TRUNCATION):
+            return MIDDLE_TRUNCATION[:limit]
+        remaining = limit - len(MIDDLE_TRUNCATION)
+        head = (remaining + 1) // 2
+        tail = remaining // 2
+        return text[:head] + MIDDLE_TRUNCATION + (text[-tail:] if tail else "")
+
+    @staticmethod
+    def _truncate_tail(text: str, limit: int) -> str:
+        if len(text) <= limit:
+            return text
+        if limit <= len(TAIL_TRUNCATION):
+            return TAIL_TRUNCATION[:limit]
+        return text[: limit - len(TAIL_TRUNCATION)] + TAIL_TRUNCATION
 
     @staticmethod
     def _parse(entry: str) -> MessageEntry:

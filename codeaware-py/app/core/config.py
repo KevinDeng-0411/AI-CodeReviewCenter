@@ -4,6 +4,7 @@
 P0 骨架无 LLM 调用可空启动；P2 起未配置将调用失败（明确报错）。
 """
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,8 +38,11 @@ class Settings(BaseSettings):
     ollama_embedding_model: str = "bge-m3"
 
     # 记忆（对应 application.yml:86-93）
-    mem_window_size: int = 20
-    mem_summary_threshold: int = 10
+    mem_window_size: int = Field(default=20, gt=0)
+    mem_summary_threshold: int = Field(default=10, gt=0)
+    mem_summary_interval: int = Field(default=5, gt=0)
+    mem_summary_batch_size: int = Field(default=20, gt=0)
+    mem_summary_max_chars: int = Field(default=12000, gt=0)
 
     # RAG（对应 application.yml:95-101）
     rag_chunk_size: int = 500

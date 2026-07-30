@@ -54,6 +54,9 @@ def test_conversations_summary_and_conversation_id():
     assert "conversation_id" in cols
     assert cols["conversation_id"].unique
     assert "summary" in cols  # ADR-0003 摘要持久化
+    assert "summary_message_count" in cols
+    assert cols["summary_message_count"].nullable is False
+    assert str(cols["summary_message_count"].server_default.arg) == "0"
 
 
 def test_messages_fk_to_conversation_cascade():

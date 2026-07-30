@@ -239,6 +239,10 @@ class _ProbeRedis:
     def __init__(self, probe: _BlockingExternalProbe) -> None:
         self.probe = probe
 
+    async def get(self, *_args):
+        await self.probe.checkpoint("redis.get")
+        return None
+
     async def lrange(self, *_args):
         await self.probe.checkpoint("redis.lrange")
         return []
@@ -486,6 +490,7 @@ async def test_build_context_never_awaits_external_io_with_active_transaction(
         "redis.rpush",
         "redis.ltrim",
         "redis.expire",
+        "redis.get",
         "embed:事务边界问题",
         "query_rewriter",
         "embed:variant-1",
