@@ -10,8 +10,19 @@ export interface ChatEventBase {
 export interface ChatStarted extends ChatEventBase {
   created: boolean;
 }
+
+export const WARNING_COMPONENTS = [
+  "message_cache",
+  "summary_cache",
+  "memory_recall",
+  "rag_retrieval",
+  "summary",
+  "memory_extraction",
+] as const;
+export type WarningComponent = (typeof WARNING_COMPONENTS)[number];
+
 export interface ContextWarning extends ChatEventBase {
-  component: string;
+  component: WarningComponent;
   code: string;
   message: string;
   retryable: boolean;
@@ -20,7 +31,7 @@ export interface TokenDelta extends ChatEventBase {
   delta: string;
 }
 export interface PostTurnWarning extends ChatEventBase {
-  component: string;
+  component: WarningComponent;
   code: string;
   message: string;
   retryable: boolean;
@@ -34,10 +45,21 @@ export interface ErrorInfo {
   message: string;
   retryable: boolean;
 }
+
+export const FAILURE_PHASES = [
+  "start",
+  "context",
+  "model",
+  "persist",
+  "post_turn",
+  "cancelled",
+] as const;
+export type FailurePhase = (typeof FAILURE_PHASES)[number];
+
 export interface ChatFailed extends ChatEventBase {
-  phase: string;
+  phase: FailurePhase;
   error: ErrorInfo;
-  partial_output_persisted: boolean;
+  partial_output_persisted: false;
 }
 
 export type ChatEvent =

@@ -7,7 +7,7 @@ sequence 从 1 开始、单 stream 内严格递增。
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ProtocolVersion = Literal[1]
 
@@ -28,7 +28,7 @@ class ChatEventBase(BaseModel):
     protocol_version: ProtocolVersion = 1
     conversation_id: str
     turn_id: str
-    sequence: int
+    sequence: int = Field(ge=1)
 
 
 class ChatStarted(ChatEventBase):
@@ -49,7 +49,7 @@ class ContextWarning(ChatEventBase):
 class TokenDelta(ChatEventBase):
     """单个非空模型 chunk；delta 原样 JSON 编码，不 trim。"""
 
-    delta: str
+    delta: str = Field(min_length=1)
 
 
 class PostTurnWarning(ChatEventBase):
@@ -70,8 +70,8 @@ class ErrorInfo(BaseModel):
 class ChatCompleted(ChatEventBase):
     """成功终态：assistant 已 commit，post-turn 已完成或转 warning。"""
 
-    assistant_message_id: int
-    warning_count: int
+    assistant_message_id: int = Field(ge=1)
+    warning_count: int = Field(ge=0)
 
 
 class ChatFailed(ChatEventBase):
@@ -79,7 +79,7 @@ class ChatFailed(ChatEventBase):
 
     phase: Phase
     error: ErrorInfo
-    partial_output_persisted: bool  # 固定 False
+    partial_output_persisted: Literal[False] = False
 
 
 # 事件名 -> 类型映射（供序列化/反序列化对齐）

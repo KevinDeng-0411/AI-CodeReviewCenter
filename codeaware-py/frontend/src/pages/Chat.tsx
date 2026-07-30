@@ -1,7 +1,8 @@
 // Chat - 核心域。SSE 流式 + 多轮 + 会话侧栏 + 信号轨迹
 import { useEffect, useRef, useState } from "react";
 import { MessageSquare, Plus, Send, Square, Trash2, User, Cpu } from "lucide-react";
-import { chat, chatStream, ApiError } from "../api/client";
+import { chat, chatStream } from "../api/client";
+import { ChatStreamProtocolError } from "../api/sseParser";
 import type { ChatMessage, ConversationItem } from "../api/types";
 import { Button, EmptyState, SignalTrace, ToastBar, useToast } from "../components/ui";
 import Markdown from "../components/Markdown";
@@ -14,6 +15,8 @@ import {
 } from "./chatTurnController";
 
 const CANCELLED_STATUS = "生成已取消";
+const INTERRUPTED_STATUS = "生成中断，已从服务器恢复消息";
+const PROTOCOL_ERROR_STATUS = "聊天流协议错误，已从服务器恢复消息";
 
 export default function ChatPage() {
   const toast = useToast();
@@ -88,12 +91,12 @@ export default function ChatPage() {
     }
   };
 
-  const reconcileCancelledTurn = async (turn: ChatTurn) => {
+  const reconcileUncommittedTurn = async (turn: ChatTurn, status: string) => {
     if (!mountedRef.current || !turnController.isCurrent(turn)) return;
 
     // 立即丢弃 optimistic USER 与 partial ASSISTANT，绝不把它们当作 PG 消息。
     setMessages(cancelledTurnMessages(turn.baseMessages));
-    setTurnStatus(CANCELLED_STATUS);
+    setTurnStatus(status);
 
     const {
       persistedMessages: persistedResult,
@@ -145,7 +148,7 @@ export default function ChatPage() {
     setMessages(optimisticTurnMessages(turn.baseMessages, text));
 
     try {
-      await chatStream(
+      const outcome = await chatStream(
         { conversation_id: turn.conversationId ?? undefined, message: text },
         {
           onStarted: (e) => {
@@ -167,52 +170,31 @@ export default function ChatPage() {
           },
           onContextWarning: (e) =>
             setWarnings((w) =>
-              turnController.acceptsEvents(turn) ? [...w, e.message] : w,
+              turnController.acceptsEvents(turn) ? [...w, `[${e.component}] ${e.message}`] : w,
             ),
           onPostWarning: (e) =>
             setWarnings((w) =>
-              turnController.acceptsEvents(turn) ? [...w, e.message] : w,
+              turnController.acceptsEvents(turn) ? [...w, `[${e.component}] ${e.message}`] : w,
             ),
-          onFailed: (e) => {
-            setMessages((m) => {
-              if (!turnController.acceptsEvents(turn)) return m;
-              const next = [...m];
-              const last = next[next.length - 1];
-              if (!last || last.role !== "ASSISTANT") return m;
-              next[next.length - 1] = {
-                role: "ASSISTANT",
-                content: `（生成失败：${e.error.message}）`,
-              };
-              return next;
-            });
-          },
-          onUnknown: () => {
-            setMessages((m) => {
-              if (!turnController.acceptsEvents(turn)) return m;
-              const next = [...m];
-              const last = next[next.length - 1];
-              if (!last || last.role !== "ASSISTANT") return m;
-              next[next.length - 1] = {
-                role: "ASSISTANT",
-                content: "（协议版本不兼容，请升级前端）",
-              };
-              return next;
-            });
-          },
         },
         ctrl.signal,
       );
 
       if (!turnController.isCurrent(turn)) return;
-      if (turn.cancelRequested) {
-        await reconcileCancelledTurn(turn);
-      } else {
+      if (turn.cancelRequested || ctrl.signal.aborted || outcome.status === "aborted") {
+        // Stop 已同步清掉 optimistic turn；即使与 completed 竞态，也必须从 PG 回读。
+        await reconcileUncommittedTurn(turn, CANCELLED_STATUS);
+      } else if (outcome.status === "completed") {
+        // 只有已完整校验、且后面没有额外事件的 chat.completed 才进入成功刷新路径。
         try {
           const nextConvs = await chat.conversations();
           if (mountedRef.current && turnController.isCurrent(turn)) setConvs(nextConvs);
         } catch (e) {
           if (mountedRef.current && turnController.isCurrent(turn)) toast.show(e);
         }
+      } else if (outcome.status === "failed") {
+        const message = `生成失败：${outcome.event.error.message}`;
+        await reconcileUncommittedTurn(turn, message);
       }
     } catch (e) {
       if (!mountedRef.current || !turnController.isCurrent(turn)) return;
@@ -220,21 +202,14 @@ export default function ChatPage() {
       const cancelled =
         turn.cancelRequested || ctrl.signal.aborted || (e instanceof Error && e.name === "AbortError");
       if (cancelled) {
-        await reconcileCancelledTurn(turn);
+        await reconcileUncommittedTurn(turn, CANCELLED_STATUS);
       } else {
-        if (e instanceof ApiError || e instanceof Error) toast.show(e);
-        setMessages((m) => {
-          if (!turnController.acceptsEvents(turn)) return m;
-          const next = [...m];
-          const last = next[next.length - 1];
-          if (last && last.role === "ASSISTANT" && !last.content) {
-            next[next.length - 1] = {
-              role: "ASSISTANT",
-              content: "（生成中断）",
-            };
-          }
-          return next;
-        });
+        const status =
+          e instanceof ChatStreamProtocolError
+            ? PROTOCOL_ERROR_STATUS
+            : INTERRUPTED_STATUS;
+        await reconcileUncommittedTurn(turn, status);
+        toast.show(e);
       }
     } finally {
       if (turnController.finish(turn) && mountedRef.current) {

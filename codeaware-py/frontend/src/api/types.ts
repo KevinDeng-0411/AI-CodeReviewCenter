@@ -1,5 +1,6 @@
 // 后端 API 请求/响应类型 - 对齐 codeaware-py 的 Pydantic schemas + router 投影
 // 统一响应包络：{ code: 1|0, msg, data }，code=1 成功
+import type { WarningComponent } from "./chatEvents";
 
 export interface Envelope<T> {
   code: number;
@@ -52,11 +53,18 @@ export interface AiReadmeVO {
 }
 
 // ---------- Chat ----------
+export interface ChatWarning {
+  component: WarningComponent;
+  code: string;
+  message: string;
+  retryable: boolean;
+}
+
 export interface ChatResponseVO {
   conversation_id: string;
   reply: string;
   memory_summary?: string | null;
-  warnings: { component: string; code: string; message: string }[];
+  warnings: ChatWarning[];
 }
 export interface ConversationItem {
   id: number;

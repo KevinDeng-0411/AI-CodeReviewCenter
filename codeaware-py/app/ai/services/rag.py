@@ -4,6 +4,8 @@
 检索 -> QueryRewriter 多查询改写 -> HybridRetriever 混合检索 -> 去重 -> 知识注入。
 """
 
+from dataclasses import dataclass
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.infra.vector_recall import VectorRecallService
@@ -11,6 +13,12 @@ from app.ai.rag.hybrid_retriever import HybridRetriever, ScoredChunk
 from app.ai.rag.query_rewriter import QueryRewriter
 from app.ai.rag.semantic_chunker import SemanticChunker
 from app.models import Document, KnowledgeChunk
+
+
+@dataclass(frozen=True)
+class PreparedSearchQuery:
+    text: str
+    vector: list[float]
 
 
 class RagService:
@@ -47,12 +55,32 @@ class RagService:
         return doc
 
     async def search(self, query: str, top_k: int = 5) -> list[ScoredChunk]:
-        """多查询改写 -> 混合检索 -> 去重 -> Top-K。"""
+        """多查询改写 -> 预生成全部向量 -> 纯 DB 检索 -> 去重 -> Top-K。
+
+        所有外部 LLM/embedding await 都发生在第一条 SQL 之前，避免多 query 循环在
+        前一次检索已开启事务后继续等待下一次 embedding。
+        """
+        prepared = await self.prepare_search(query)
+        return await self.search_prepared(prepared, top_k=top_k)
+
+    async def prepare_search(self, query: str) -> list[PreparedSearchQuery]:
+        """纯外部调用阶段：改写查询并生成全部向量，不执行 SQL。"""
         queries = await self.query_rewriter.rewrite(query)
+        return [
+            PreparedSearchQuery(text=q, vector=await self.vector_recall.embed(q))
+            for q in queries
+        ]
+
+    async def search_prepared(
+        self, queries: list[PreparedSearchQuery], top_k: int = 5
+    ) -> list[ScoredChunk]:
+        """纯数据库阶段：消费预生成向量并完成混合召回与去重。"""
         seen: set[int] = set()
         all_results: list[ScoredChunk] = []
-        for q in queries:
-            results = await self.hybrid_retriever.search(q, top_k=top_k * 2)
+        for query in queries:
+            results = await self.hybrid_retriever.search_by_vector(
+                query.text, query.vector, top_k=top_k * 2
+            )
             for r in results:
                 if r.chunk.id not in seen:
                     seen.add(r.chunk.id)

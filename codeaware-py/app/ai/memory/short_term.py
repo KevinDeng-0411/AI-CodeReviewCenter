@@ -58,19 +58,33 @@ class ShortTermMemoryManager:
         await self.redis.expire(key, TTL_SECONDS)
 
     async def get_messages(self, cid: str) -> list[MessageEntry]:
-        key = f"msgs:{cid}"
         try:
-            entries = await self.redis.lrange(key, 0, -1)
+            messages = await self.read_cached_messages(cid)
         except Exception:
-            entries = []  # Redis 不可用：走 PG fallback
-        if not entries:  # ADR-0003 fallback：Redis miss -> 回查 PG 重建
-            entries = await self._recent_from_pg(cid)
-            if entries:
+            messages = []
+        if not messages:  # ADR-0003 fallback：Redis miss -> 回查 PG 重建
+            messages = await self.read_recent_messages(cid)
+            if messages:
                 try:
-                    await self._refill_redis(cid, entries)  # 回填失败不阻塞返回 PG 真相
+                    await self.refill_message_cache(cid, messages)
                 except Exception:
                     pass
+        return messages
+
+    async def read_cached_messages(self, cid: str) -> list[MessageEntry]:
+        """仅访问 Redis，不读数据库；故障由调用方决定 warning/fallback 语义。"""
+        entries = await self.redis.lrange(f"msgs:{cid}", 0, -1)
         return [self._parse(e) for e in entries]
+
+    async def read_recent_messages(self, cid: str) -> list[MessageEntry]:
+        """仅访问 PG，读取最近窗口；不访问 Redis。"""
+        entries = await self._recent_from_pg(cid)
+        return [self._parse(e) for e in entries]
+
+    async def refill_message_cache(self, cid: str, messages: list[MessageEntry]) -> None:
+        """仅访问 Redis，用 PG 读取结果重建滑窗。"""
+        entries = [f"{message.role}{SEP}{message.content}" for message in messages]
+        await self._refill_redis(cid, entries)
 
     async def get_context_window(self, cid: str) -> str:
         parts = []
@@ -96,17 +110,24 @@ class ShortTermMemoryManager:
     # ---------- 摘要：PG 真相 + Redis 缓存 ----------
 
     async def get_summary(self, cid: str) -> str | None:
-        skey = f"summary:{cid}"
-        s = await self.redis.get(skey)
+        s = await self.read_cached_summary(cid)
         if s:  # Redis 缓存优先
             return s
         # miss -> PG conversations.summary（不重算）
-        s = await self.session.scalar(
+        s = await self.read_summary_from_pg(cid)
+        if s:
+            await self.refresh_summary_cache(cid, s)  # 回填缓存
+        return s
+
+    async def read_cached_summary(self, cid: str) -> str | None:
+        """仅访问 Redis，不读数据库。"""
+        return await self.redis.get(f"summary:{cid}")
+
+    async def read_summary_from_pg(self, cid: str) -> str | None:
+        """仅访问 PG，不访问 Redis。"""
+        return await self.session.scalar(
             select(Conversation.summary).where(Conversation.conversation_id == cid)
         )
-        if s:
-            await self.redis.set(skey, s, ex=TTL_SECONDS)  # 回填缓存
-        return s
 
     async def summarize_text(self, messages: list[MessageEntry], existing: str | None) -> str | None:
         """纯 LLM 摘要（不持有 DB 事务）。返回 None 表示无需生成。"""
@@ -131,7 +152,11 @@ class ShortTermMemoryManager:
 
     async def refresh_summary_cache(self, cid: str, text: str) -> None:
         """PG commit 后刷新 Redis 摘要缓存（post-commit）。"""
-        await self.redis.set(f"summary:{cid}", text, ex=TTL_SECONDS)
+        key = f"summary:{cid}"
+        # 先失效旧值再写新值：若 SET 失败，后续读取会回查 PG，而不会继续命中
+        # 已落后于 PostgreSQL 真相的旧摘要。
+        await self.redis.delete(key)
+        await self.redis.set(key, text, ex=TTL_SECONDS)
 
     async def clear(self, cid: str) -> None:
         """清除会话短期记忆（Redis 缓存）。"""
@@ -150,6 +175,11 @@ class ShortTermMemoryManager:
 
     async def _refill_redis(self, cid: str, entries: list[str]) -> None:
         key = f"msgs:{cid}"
+        # PG fallback 必须精确替换缓存；若之前 lrange 故障但 key 实际存在，盲 append
+        # 会制造重复/伪完整窗口。
+        await self.redis.delete(key)
+        if not entries:
+            return
         await self.redis.rpush(key, *entries)
         await self.redis.ltrim(key, -WINDOW_SIZE, -1)
         await self.redis.expire(key, TTL_SECONDS)

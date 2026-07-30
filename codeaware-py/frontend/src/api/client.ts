@@ -11,7 +11,11 @@ import type {
   PromptTemplateItem,
   UnitTestVO,
 } from "./types";
-import { consumeChatStream, type ChatStreamHandlers } from "./sseParser";
+import {
+  consumeChatStream,
+  type ChatStreamHandlers,
+  type ChatStreamOutcome,
+} from "./sseParser";
 
 export class ApiError extends Error {
   msg: string;
@@ -23,6 +27,33 @@ export class ApiError extends Error {
 }
 
 const BASE = ""; // 同源 / Vite 代理 /api
+
+interface ErrorResponseLike {
+  readonly status: number;
+  json: () => Promise<unknown>;
+}
+
+/**
+ * Prefer the backend's unified error envelope so stable business codes such as
+ * CHAT_TURN_IN_PROGRESS survive pre-stream HTTP failures.
+ */
+export async function readApiErrorMessage(response: ErrorResponseLike): Promise<string> {
+  try {
+    const body = await response.json();
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      "msg" in body &&
+      typeof body.msg === "string" &&
+      body.msg.trim()
+    ) {
+      return body.msg;
+    }
+  } catch {
+    // Non-JSON/empty responses fall back to the transport status below.
+  }
+  return `HTTP ${response.status}`;
+}
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -83,15 +114,16 @@ export async function chatStream(
   p: { conversation_id?: string; message: string },
   handlers: ChatStreamHandlers,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<ChatStreamOutcome> {
   const res = await fetch(`${BASE}/api/chat/send/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(p),
     signal,
   });
-  if (!res.ok || !res.body) throw new ApiError(`HTTP ${res.status}`);
-  await consumeChatStream(res.body, handlers, signal);
+  if (!res.ok) throw new ApiError(await readApiErrorMessage(res));
+  if (!res.body) throw new ApiError(`HTTP ${res.status}: 响应流为空`);
+  return consumeChatStream(res.body, handlers, signal);
 }
 
 // ---------- Knowledge ----------

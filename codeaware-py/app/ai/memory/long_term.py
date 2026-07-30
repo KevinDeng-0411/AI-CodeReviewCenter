@@ -5,6 +5,8 @@
 对话内生：从对话抽取原子事实落库（conversation_id 关联），与外部 Knowledge 文档分野。
 """
 
+from dataclasses import dataclass
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +27,12 @@ EXTRACT_PROMPT = """你是记忆抽取器。从以下对话中提取值得长期
 {convo}
 
 严格以 JSON 返回：{{"facts": ["事实1", "事实2"]}}"""
+
+
+@dataclass(frozen=True)
+class PreparedFact:
+    content: str
+    embedding: list[float]
 
 
 class LongTermMemoryManager:
@@ -93,10 +101,29 @@ class LongTermMemoryManager:
         return [f.strip() for f in facts if f.strip()]
 
     async def save_facts(self, cid: str, facts: list[str]) -> int:
-        """落库抽取的事实（coordinator commit）。"""
+        """先生成全部 embedding，再批量落库；调用前 session 必须尚未开启事务。"""
+        prepared = await self.prepare_facts(facts)
+        return await self.save_prepared_facts(cid, prepared)
+
+    async def prepare_facts(self, facts: list[str]) -> list[PreparedFact]:
+        """纯外部调用阶段：所有事实先完成 embedding，不执行 SQL。"""
+        return [
+            PreparedFact(content=fact, embedding=await self.vector_recall.embed(fact))
+            for fact in facts
+        ]
+
+    async def save_prepared_facts(self, cid: str, facts: list[PreparedFact]) -> int:
+        """纯数据库阶段：写入已带向量的原子事实。"""
         for fact in facts:
-            await self.save_memory(fact, "FACT", cid, {"source": "conversation"})
-        await self.session.flush()
+            memory = LongTermMemory(
+                content=fact.content,
+                memory_type="FACT",
+                conversation_id=cid,
+                meta={"source": "conversation"},
+            )
+            await self.vector_recall.store_preembedded(
+                self.session, memory, fact.embedding
+            )
         return len(facts)
 
     async def has_memories(self, cid: str) -> bool:
@@ -119,4 +146,3 @@ class LongTermMemoryManager:
         except Exception:
             raw = await chat_model.ainvoke(prompt)
             return ExtractedFacts.model_validate_json(_extract_json(raw.content)).facts
-

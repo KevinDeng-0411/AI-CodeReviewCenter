@@ -10,13 +10,15 @@ CI 友好：dependency_overrides 注入 FakeLLM(含 astream + with_structured_ou
 import hashlib
 
 import pytest
+from sqlalchemy import delete
 
 import app.ai.config as ai_config
 from app.ai.infra.vector_recall import VectorRecallService
 from app.ai.prompt.template_manager import PromptTemplateManager
 from app.core.enums import PromptType
-from app.db.session import get_db
+from app.db.session import AsyncSessionLocal, get_db
 from app.main import app
+from app.models import Document, LongTermMemory, PromptTemplate
 from app.schemas.code_review import CodeReviewResult, ReviewIssue
 
 
@@ -103,8 +105,29 @@ async def e2e_overrides(db_session):
             "## 用户问题\n{{user_message}}"
         ),
     )
+    # TurnCoordinator 使用自管短 session；生产模板由 Alembic 已提交 seed 提供。
+    await db_session.commit()
     yield
     app.dependency_overrides.clear()
+    await db_session.rollback()
+    # delete_conversation 按生产语义显式 commit，测试中复用的 db_session 会连带提交
+    # 前序 E2E 数据；精确清理由本 fixture 创建的项目/模板，避免污染后续测试。
+    async with AsyncSessionLocal() as cleanup_session:
+        await cleanup_session.execute(
+            delete(Document).where(Document.project_name == "e2e")
+        )
+        await cleanup_session.execute(
+            delete(LongTermMemory).where(
+                LongTermMemory.content == "团队使用 SQLAlchemy 2.0 作为 ORM 框架"
+            )
+        )
+        await cleanup_session.execute(
+            delete(PromptTemplate).where(
+                PromptTemplate.name == "v1",
+                PromptTemplate.type.in_(["CODE_REVIEW", "CHAT"]),
+            )
+        )
+        await cleanup_session.commit()
 
 
 async def test_full_chain_knowledge_rag_chat_review(client, e2e_overrides):

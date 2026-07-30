@@ -6,7 +6,13 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.services.chat import ChatService
-from app.ai.services.turn_coordinator import ChatTurnFailed, ChatTurnInProgress, TurnCoordinator
+from app.ai.services.turn_coordinator import (
+    ChatConversationNotFound,
+    ChatTurnFailed,
+    ChatTurnInProgress,
+    ChatTurnStartFailed,
+    TurnCoordinator,
+)
 from app.api.v1.deps import get_chat_service, get_db, get_turn_coordinator
 from app.core.response import Result
 from app.models import Conversation, Message
@@ -17,6 +23,90 @@ router = APIRouter(prefix="/api/chat", tags=["Chat"])
 
 # 事件类 -> SSE event 名
 _EVENT_NAME = {cls: name for name, cls in EVENT_TYPES.items()}
+
+_CHAT_COMMON_ERROR_RESPONSES = {
+    422: {
+        "model": Result[None],
+        "description": "请求字段校验失败",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": 0,
+                    "msg": "CHAT_REQUEST_INVALID",
+                    "data": None,
+                }
+            }
+        },
+    },
+    404: {
+        "model": Result[None],
+        "description": "conversation_id 不存在",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": 0,
+                    "msg": "CHAT_CONVERSATION_NOT_FOUND",
+                    "data": None,
+                }
+            }
+        },
+    },
+    409: {
+        "model": Result[None],
+        "description": "同一会话已有 turn 正在执行",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": 0,
+                    "msg": "CHAT_TURN_IN_PROGRESS",
+                    "data": None,
+                }
+            }
+        },
+    },
+}
+
+_SYNC_CHAT_ERROR_RESPONSES = {
+    **_CHAT_COMMON_ERROR_RESPONSES,
+    500: {
+        "model": Result[None],
+        "description": "初始化失败或同步 Chat 核心失败",
+        "content": {
+            "application/json": {
+                "examples": {
+                    code: {
+                        "summary": code,
+                        "value": {"code": 0, "msg": code, "data": None},
+                    }
+                    for code in [
+                        "CHAT_START_FAILED",
+                        "CONTEXT_FAILED",
+                        "MODEL_STREAM_FAILED",
+                        "PERSIST_FAILED",
+                        "POST_TURN_FAILED",
+                    ]
+                }
+            }
+        },
+    },
+}
+
+_STREAM_CHAT_ERROR_RESPONSES = {
+    **_CHAT_COMMON_ERROR_RESPONSES,
+    500: {
+        "model": Result[None],
+        "description": "SSE 响应建立前 Transaction A 初始化失败",
+        "content": {
+            "application/json": {
+                "example": {
+                    "code": 0,
+                    "msg": "CHAT_START_FAILED",
+                    "data": None,
+                }
+            }
+        },
+    },
+}
 
 
 class _ClosingStreamingResponse(StreamingResponse):
@@ -69,20 +159,25 @@ async def _format_sse(event_gen):
             await close_event_gen()
 
 
-@router.post("/send")
-async def send(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn_coordinator),
-               svc: ChatService = Depends(get_chat_service)):
+@router.post(
+    "/send",
+    response_model=Result[ChatResponseVO],
+    responses=_SYNC_CHAT_ERROR_RESPONSES,
+)
+async def send(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn_coordinator)):
     """同步对话：drain TurnCoordinator -> ChatResponseVO。"""
-    if req.conversation_id and not await svc.conversation_exists(req.conversation_id):
-        return _error(404, "会话不存在")
     try:
-        coordinator.acquire_turn(req.conversation_id)
+        prepared = await coordinator.prepare_turn(req.conversation_id, req.message)
+    except ChatConversationNotFound:
+        return _error(404, "CHAT_CONVERSATION_NOT_FOUND")
     except ChatTurnInProgress:
         return _error(409, "CHAT_TURN_IN_PROGRESS")
+    except ChatTurnStartFailed:
+        return _error(500, "CHAT_START_FAILED")
     try:
-        result = await coordinator.run_sync(req.conversation_id, req.message)
+        result = await coordinator.run_sync(prepared, req.message)
     except ChatTurnFailed as e:
-        return _error(500, e.event.error.message)
+        return _error(500, e.event.error.code)
     return Result.ok(ChatResponseVO(
         conversation_id=result.conversation_id,
         reply=result.reply,
@@ -90,23 +185,38 @@ async def send(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn
     ))
 
 
-@router.post("/send/stream")
-async def send_stream(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn_coordinator),
-                      svc: ChatService = Depends(get_chat_service)):
+@router.post(
+    "/send/stream",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "description": "版本化 typed SSE Chat 事件流",
+            "content": {"text/event-stream": {"schema": {"type": "string"}}},
+        },
+        **_STREAM_CHAT_ERROR_RESPONSES,
+    },
+)
+async def send_stream(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn_coordinator)):
     """流式对话：typed SSE。"""
-    if req.conversation_id and not await svc.conversation_exists(req.conversation_id):
-        return _error(404, "会话不存在")
     try:
-        coordinator.acquire_turn(req.conversation_id)
+        prepared = await coordinator.prepare_turn(req.conversation_id, req.message)
+    except ChatConversationNotFound:
+        return _error(404, "CHAT_CONVERSATION_NOT_FOUND")
     except ChatTurnInProgress:
         return _error(409, "CHAT_TURN_IN_PROGRESS")
-    event_gen = coordinator.run(req.conversation_id, req.message)
-    return _ClosingStreamingResponse(
-        _format_sse(event_gen),
-        event_gen=event_gen,
-        on_close=lambda: coordinator.release_turn(req.conversation_id),
-        media_type="text/event-stream",
-    )
+    except ChatTurnStartFailed:
+        return _error(500, "CHAT_START_FAILED")
+    try:
+        event_gen = coordinator.run(prepared, req.message)
+        return _ClosingStreamingResponse(
+            _format_sse(event_gen),
+            event_gen=event_gen,
+            on_close=lambda: coordinator.release_turn(prepared.conversation_id),
+            media_type="text/event-stream",
+        )
+    except BaseException:
+        coordinator.release_turn(prepared.conversation_id)
+        raise
 
 
 @router.get("/conversations")

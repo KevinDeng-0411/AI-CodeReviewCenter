@@ -35,3 +35,18 @@ class HybridRetriever:
             text_column="chunk_content",
         )
         return [ScoredChunk(chunk=r[0], score=r[1], match_type=r[2]) for r in results]
+
+    async def search_by_vector(
+        self, query: str, query_vector: list[float], top_k: int = 5
+    ) -> list[ScoredChunk]:
+        """使用预先生成的向量执行纯数据库混合检索。"""
+        results = await self.vector_recall.recall_by_vector(
+            self.session,
+            KnowledgeChunk,
+            query,
+            query_vector,
+            top_k=top_k,
+            hybrid=True,
+            text_column="chunk_content",
+        )
+        return [ScoredChunk(chunk=r[0], score=r[1], match_type=r[2]) for r in results]
