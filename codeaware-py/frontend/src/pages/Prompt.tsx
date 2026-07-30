@@ -1,12 +1,38 @@
-// Prompt - 模板列表 + 预览渲染 + 激活（ADR-0005 版本化）
+// Prompt - 新建版本 + 模板列表 + 预览渲染 + 激活（ADR-0005 版本化）
 import { useEffect, useState } from "react";
-import { Settings2, Eye, Check } from "lucide-react";
+import { Settings2, Eye, Check, Plus, X } from "lucide-react";
 import { prompt } from "../api/client";
-import type { PromptTemplateItem } from "../api/types";
-import { Button, EmptyState, Input, ToastBar, useToast } from "../components/ui";
+import type { PromptCreateInput, PromptTemplateItem } from "../api/types";
+import { Button, EmptyState, Field, Input, Textarea, ToastBar, useToast } from "../components/ui";
 import PageHeader from "../components/PageHeader";
 
 const TYPES = ["ALL", "CODE_REVIEW", "CHAT", "UNIT_TEST", "AI_README"];
+const CREATE_TYPES: PromptCreateInput["type"][] = [
+  "CODE_REVIEW",
+  "CHAT",
+  "UNIT_TEST",
+  "AI_README",
+];
+const DEFAULT_BODIES: Record<PromptCreateInput["type"], string> = {
+  CODE_REVIEW: "请评审以下代码：\n{{source_code}}",
+  UNIT_TEST:
+    "请为 {{file_path}} 生成 {{test_framework}} 测试：\n{{source_code}}",
+  AI_README: "请为 {{project_name}}（{{project_path}}）生成项目说明。",
+  CHAT:
+    "长期记忆：\n{{long_term_memory}}\n\n知识：\n{{rag_context}}\n\n" +
+    "历史：\n{{conversation_history}}\n\n用户：\n{{user_message}}",
+};
+
+function initialDraft(type: PromptCreateInput["type"] = "CODE_REVIEW"): PromptCreateInput {
+  return {
+    type,
+    name: "",
+    role_setting: "你是专业的软件研发助手。",
+    template_body: DEFAULT_BODIES[type],
+    review_dimensions: null,
+    severity_levels: null,
+  };
+}
 
 export default function PromptPage() {
   const toast = useToast();
@@ -17,12 +43,18 @@ export default function PromptPage() {
   const [preview, setPreview] = useState("");
   const [loadingPrev, setLoadingPrev] = useState(false);
   const [activating, setActivating] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [draft, setDraft] = useState<PromptCreateInput>(() => initialDraft());
 
-  const refresh = async () => {
+  const refresh = async (): Promise<PromptTemplateItem[]> => {
     try {
-      setItems(await prompt.list(type === "ALL" ? undefined : type));
+      const next = await prompt.list(type === "ALL" ? undefined : type);
+      setItems(next);
+      return next;
     } catch (e) {
       toast.show(e);
+      return [];
     }
   };
   useEffect(() => {
@@ -55,13 +87,52 @@ export default function PromptPage() {
     }
   };
 
+  const setDraftType = (nextType: PromptCreateInput["type"]) => {
+    setDraft((current) => ({
+      ...initialDraft(nextType),
+      name: current.name,
+      role_setting: current.role_setting,
+    }));
+  };
+
+  const createVersion = async () => {
+    setCreating(true);
+    try {
+      const created = await prompt.create({
+        ...draft,
+        review_dimensions: draft.review_dimensions || null,
+        severity_levels: draft.severity_levels || null,
+      });
+      setType(created.type);
+      setSelected(created);
+      setShowCreate(false);
+      setDraft(initialDraft(created.type));
+      const rendered = await prompt.preview(created.id);
+      setPreview(rendered.rendered);
+      await refresh();
+    } catch (e) {
+      toast.show(e);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="flex h-full">
       <ToastBar err={toast.err} onClose={toast.clear} />
       {/* 列表 */}
       <div className="w-96 shrink-0 border-r border-line bg-panel flex flex-col">
         <div className="p-4 border-b border-line">
-          <PageHeader icon={Settings2} title="PROMPT" sub="版本化 · 每 type 恰一激活" />
+          <div className="flex items-start justify-between gap-2">
+            <PageHeader icon={Settings2} title="PROMPT" sub="版本化 · 每 type 恰一激活" />
+            <Button
+              variant="ghost"
+              onClick={() => setShowCreate((visible) => !visible)}
+              aria-label={showCreate ? "关闭新建版本" : "新建 Prompt 版本"}
+            >
+              {showCreate ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-1 mt-3">
             {TYPES.map((t) => (
               <button
@@ -111,7 +182,81 @@ export default function PromptPage() {
 
       {/* 预览 */}
       <div className="flex-1 overflow-y-auto p-5">
-        {!selected ? (
+        {showCreate ? (
+          <div className="max-w-3xl space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-ink">新建 Prompt 版本</h3>
+              <p className="mt-1 text-xs text-mute">
+                保存后创建并激活新版本；历史版本保持只读，可随时回滚激活。
+              </p>
+            </div>
+            <Field label="类型">
+              <select
+                className="w-full px-3 py-2 bg-panel border border-line rounded text-sm text-ink"
+                value={draft.type}
+                onChange={(event) =>
+                  setDraftType(event.target.value as PromptCreateInput["type"])
+                }
+              >
+                {CREATE_TYPES.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="版本名称">
+              <Input
+                value={draft.name}
+                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                placeholder="例如：review-security-v2"
+              />
+            </Field>
+            <Field label="角色设定">
+              <Textarea
+                rows={3}
+                value={draft.role_setting}
+                onChange={(event) =>
+                  setDraft({ ...draft, role_setting: event.target.value })
+                }
+              />
+            </Field>
+            <Field label="模板正文" hint="必须保留该类型要求的 {{placeholder}}">
+              <Textarea
+                rows={12}
+                value={draft.template_body}
+                onChange={(event) =>
+                  setDraft({ ...draft, template_body: event.target.value })
+                }
+              />
+            </Field>
+            {draft.type === "CODE_REVIEW" && (
+              <>
+                <Field label="评审维度" hint="可选">
+                  <Input
+                    value={draft.review_dimensions ?? ""}
+                    onChange={(event) =>
+                      setDraft({ ...draft, review_dimensions: event.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="严重级别" hint="可选">
+                  <Input
+                    value={draft.severity_levels ?? ""}
+                    onChange={(event) =>
+                      setDraft({ ...draft, severity_levels: event.target.value })
+                    }
+                  />
+                </Field>
+              </>
+            )}
+            <Button
+              onClick={createVersion}
+              loading={creating}
+              disabled={!draft.name.trim() || !draft.role_setting.trim() || !draft.template_body.trim()}
+            >
+              <Plus className="w-4 h-4" /> 创建并激活
+            </Button>
+          </div>
+        ) : !selected ? (
           <EmptyState
             icon={<Eye className="w-10 h-10" />}
             title="选择模板预览"

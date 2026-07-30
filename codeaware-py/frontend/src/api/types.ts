@@ -108,8 +108,22 @@ export interface MemoryHit {
 // ---------- Prompt ----------
 export interface PromptTemplateItem {
   id: number;
-  type: string;
+  type: "CODE_REVIEW" | "UNIT_TEST" | "AI_README" | "CHAT";
   version: number;
   name: string;
+  role_setting: string;
+  template_body: string;
+  review_dimensions: string | null;
+  severity_levels: string | null;
   is_active: boolean;
+  created_at: string;
+}
+
+export interface PromptCreateInput {
+  type: PromptTemplateItem["type"];
+  name: string;
+  role_setting: string;
+  template_body: string;
+  review_dimensions?: string | null;
+  severity_levels?: string | null;
 }

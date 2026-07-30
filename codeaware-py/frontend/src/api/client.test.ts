@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { aiReadme, ApiError, knowledge, readApiErrorMessage } from "./client";
+import { aiReadme, ApiError, knowledge, prompt, readApiErrorMessage } from "./client";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -114,5 +114,62 @@ describe("aiReadme.capabilities", () => {
     expect(path).toBe("/api/ai-readme/capabilities");
     expect(init?.method).toBeUndefined();
     expect(init?.body).toBeUndefined();
+  });
+});
+
+describe("prompt client", () => {
+  it("使用 canonical sample_code 查询参数", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        code: 1,
+        msg: "success",
+        data: { rendered: "preview" },
+      }),
+    } as Response);
+
+    await prompt.preview(7, "public class A {}");
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/prompts/7/preview?sample_code=public%20class%20A%20%7B%7D",
+    );
+  });
+
+  it("创建新版本时发送完整 append-only 输入", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        code: 1,
+        msg: "success",
+        data: {
+          id: 8,
+          type: "CODE_REVIEW",
+          version: 2,
+          name: "review-v2",
+          role_setting: "role",
+          template_body: "{{source_code}}",
+          review_dimensions: null,
+          severity_levels: null,
+          is_active: true,
+          created_at: "2026-07-30T12:00:00Z",
+        },
+      }),
+    } as Response);
+    const input = {
+      type: "CODE_REVIEW" as const,
+      name: "review-v2",
+      role_setting: "role",
+      template_body: "{{source_code}}",
+    };
+
+    await prompt.create(input);
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/prompts");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   });
 });

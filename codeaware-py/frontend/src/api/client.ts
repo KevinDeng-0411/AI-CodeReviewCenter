@@ -9,6 +9,7 @@ import type {
   Envelope,
   KnowledgeSearchHit,
   MemoryHit,
+  PromptCreateInput,
   PromptTemplateItem,
   UnitTestVO,
 } from "./types";
@@ -171,9 +172,14 @@ export const memory = {
 export const prompt = {
   list: (type?: string) =>
     call<PromptTemplateItem[]>(`/api/prompts${type ? `?type=${type}` : ""}`),
+  create: (input: PromptCreateInput) =>
+    call<PromptTemplateItem>("/api/prompts", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   preview: (id: number, sampleCode = "") =>
     call<{ rendered: string }>(
-      `/api/prompts/${id}/preview?sampleCode=${encodeURIComponent(sampleCode)}`,
+      `/api/prompts/${id}/preview?sample_code=${encodeURIComponent(sampleCode)}`,
     ),
   activate: (id: number) =>
     call<{ id: number; version: number; is_active: boolean }>(`/api/prompts/${id}/activate`, {
