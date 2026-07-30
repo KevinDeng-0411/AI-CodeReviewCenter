@@ -100,6 +100,16 @@ export async function consumeChatStream(
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  const cancelReader = () => {
+    void reader.cancel(signal?.reason).catch(() => {});
+  };
+
+  if (signal?.aborted) {
+    cancelReader();
+  } else {
+    signal?.addEventListener("abort", cancelReader, { once: true });
+  }
+
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -115,6 +125,7 @@ export async function consumeChatStream(
       for (const ev of events) dispatch(ev, handlers);
     }
   } finally {
+    signal?.removeEventListener("abort", cancelReader);
     if (signal?.aborted) {
       await reader.cancel().catch(() => {});
     }

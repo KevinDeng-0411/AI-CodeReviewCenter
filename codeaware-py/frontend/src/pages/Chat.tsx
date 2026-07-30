@@ -5,6 +5,15 @@ import { chat, chatStream, ApiError } from "../api/client";
 import type { ChatMessage, ConversationItem } from "../api/types";
 import { Button, EmptyState, SignalTrace, ToastBar, useToast } from "../components/ui";
 import Markdown from "../components/Markdown";
+import {
+  cancelledTurnMessages,
+  ChatTurnController,
+  optimisticTurnMessages,
+  readCancelledTurnTruth,
+  type ChatTurn,
+} from "./chatTurnController";
+
+const CANCELLED_STATUS = "生成已取消";
 
 export default function ChatPage() {
   const toast = useToast();
@@ -15,18 +24,29 @@ export default function ChatPage() {
   const [streaming, setStreaming] = useState(false);
   const [loadingConv, setLoadingConv] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [turnStatus, setTurnStatus] = useState<string | null>(null);
+  const [turnController] = useState(() => new ChatTurnController());
   const scrollRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      turnController.supersede();
+    };
+  }, [turnController]);
 
   const refreshConvs = async () => {
     try {
-      setConvs(await chat.conversations());
+      const next = await chat.conversations();
+      if (mountedRef.current) setConvs(next);
     } catch (e) {
-      toast.show(e);
+      if (mountedRef.current) toast.show(e);
     }
   };
   useEffect(() => {
-    refreshConvs();
+    void refreshConvs();
   }, []);
 
   // 自动滚到底
@@ -35,16 +55,19 @@ export default function ChatPage() {
   }, [messages]);
 
   const newChat = () => {
-    abortRef.current?.abort();
+    turnController.supersede();
     setActiveCid(null);
     setMessages([]);
     setInput("");
     setStreaming(false);
+    setTurnStatus(null);
+    setWarnings([]);
   };
 
   const selectConv = async (cid: string) => {
     if (streaming) return;
     setActiveCid(cid);
+    setTurnStatus(null);
     setLoadingConv(true);
     try {
       setMessages(await chat.messages(cid));
@@ -59,48 +82,103 @@ export default function ChatPage() {
     try {
       await chat.delete(cid);
       if (activeCid === cid) newChat();
-      refreshConvs();
+      void refreshConvs();
     } catch (e) {
       toast.show(e);
     }
   };
 
+  const reconcileCancelledTurn = async (turn: ChatTurn) => {
+    if (!mountedRef.current || !turnController.isCurrent(turn)) return;
+
+    // 立即丢弃 optimistic USER 与 partial ASSISTANT，绝不把它们当作 PG 消息。
+    setMessages(cancelledTurnMessages(turn.baseMessages));
+    setTurnStatus(CANCELLED_STATUS);
+
+    const {
+      persistedMessages: persistedResult,
+      conversations: conversationsResult,
+    } = await readCancelledTurnTruth(turn, chat);
+
+    if (!mountedRef.current || !turnController.isCurrent(turn)) return;
+
+    if (persistedResult.status === "fulfilled") {
+      setMessages(cancelledTurnMessages(turn.baseMessages, persistedResult.value));
+      if (turn.conversationId) setActiveCid(turn.conversationId);
+    }
+    if (conversationsResult.status === "fulfilled") {
+      setConvs(conversationsResult.value);
+    }
+
+    const failedResult =
+      persistedResult.status === "rejected"
+        ? persistedResult
+        : conversationsResult.status === "rejected"
+          ? conversationsResult
+          : null;
+    if (failedResult) toast.show(failedResult.reason);
+  };
+
+  const stopGeneration = () => {
+    const turn = turnController.cancelCurrent();
+    if (!turn || !mountedRef.current) return;
+    // 用户点击后立即清除 partial；请求收尾后再从 PG 做最终校准。
+    setMessages(cancelledTurnMessages(turn.baseMessages));
+    setTurnStatus(CANCELLED_STATUS);
+  };
+
   const send = async () => {
     const text = input.trim();
-    if (!text || streaming) return;
+    if (!text || turnController.hasActive()) return;
+
+    const ctrl = new AbortController();
+    const turn = turnController.start({
+      controller: ctrl,
+      conversationId: activeCid,
+      baseMessages: messages,
+    });
+
     setInput("");
     setStreaming(true);
     setWarnings([]);
-    const userMsg: ChatMessage = { role: "USER", content: text };
-    const aiMsg: ChatMessage = { role: "ASSISTANT", content: "" };
-    setMessages((m) => [...m, userMsg, aiMsg]);
+    setTurnStatus(null);
+    setMessages(optimisticTurnMessages(turn.baseMessages, text));
 
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-    let cid = activeCid;
     try {
       await chatStream(
-        { conversation_id: cid ?? undefined, message: text },
+        { conversation_id: turn.conversationId ?? undefined, message: text },
         {
           onStarted: (e) => {
-            cid = e.conversation_id;
+            if (!turnController.rememberConversation(turn, e.conversation_id)) return;
             setActiveCid(e.conversation_id); // 立即拿到 cid，不猜最新
           },
           onDelta: (e) => {
             setMessages((m) => {
+              if (!turnController.acceptsEvents(turn)) return m;
               const next = [...m];
+              const last = next[next.length - 1];
+              if (!last || last.role !== "ASSISTANT") return m;
               next[next.length - 1] = {
                 role: "ASSISTANT",
-                content: next[next.length - 1].content + e.delta,
+                content: last.content + e.delta,
               };
               return next;
             });
           },
-          onContextWarning: (e) => setWarnings((w) => [...w, e.message]),
-          onPostWarning: (e) => setWarnings((w) => [...w, e.message]),
+          onContextWarning: (e) =>
+            setWarnings((w) =>
+              turnController.acceptsEvents(turn) ? [...w, e.message] : w,
+            ),
+          onPostWarning: (e) =>
+            setWarnings((w) =>
+              turnController.acceptsEvents(turn) ? [...w, e.message] : w,
+            ),
           onFailed: (e) => {
             setMessages((m) => {
+              if (!turnController.acceptsEvents(turn)) return m;
               const next = [...m];
+              const last = next[next.length - 1];
+              if (!last || last.role !== "ASSISTANT") return m;
               next[next.length - 1] = {
                 role: "ASSISTANT",
                 content: `（生成失败：${e.error.message}）`,
@@ -110,7 +188,10 @@ export default function ChatPage() {
           },
           onUnknown: () => {
             setMessages((m) => {
+              if (!turnController.acceptsEvents(turn)) return m;
               const next = [...m];
+              const last = next[next.length - 1];
+              if (!last || last.role !== "ASSISTANT") return m;
               next[next.length - 1] = {
                 role: "ASSISTANT",
                 content: "（协议版本不兼容，请升级前端）",
@@ -121,24 +202,44 @@ export default function ChatPage() {
         },
         ctrl.signal,
       );
-      setConvs(await chat.conversations());
-    } catch (e) {
-      if (e instanceof ApiError || (e instanceof Error && e.name !== "AbortError")) toast.show(e);
-      const cancelled = e instanceof Error && e.name === "AbortError";
-      setMessages((m) => {
-        const next = [...m];
-        const last = next[next.length - 1];
-        if (last && last.role === "ASSISTANT" && !last.content) {
-          next[next.length - 1] = {
-            role: "ASSISTANT",
-            content: cancelled ? "（生成已取消）" : "（生成中断）",
-          };
+
+      if (!turnController.isCurrent(turn)) return;
+      if (turn.cancelRequested) {
+        await reconcileCancelledTurn(turn);
+      } else {
+        try {
+          const nextConvs = await chat.conversations();
+          if (mountedRef.current && turnController.isCurrent(turn)) setConvs(nextConvs);
+        } catch (e) {
+          if (mountedRef.current && turnController.isCurrent(turn)) toast.show(e);
         }
-        return next;
-      });
+      }
+    } catch (e) {
+      if (!mountedRef.current || !turnController.isCurrent(turn)) return;
+
+      const cancelled =
+        turn.cancelRequested || ctrl.signal.aborted || (e instanceof Error && e.name === "AbortError");
+      if (cancelled) {
+        await reconcileCancelledTurn(turn);
+      } else {
+        if (e instanceof ApiError || e instanceof Error) toast.show(e);
+        setMessages((m) => {
+          if (!turnController.acceptsEvents(turn)) return m;
+          const next = [...m];
+          const last = next[next.length - 1];
+          if (last && last.role === "ASSISTANT" && !last.content) {
+            next[next.length - 1] = {
+              role: "ASSISTANT",
+              content: "（生成中断）",
+            };
+          }
+          return next;
+        });
+      }
     } finally {
-      setStreaming(false);
-      abortRef.current = null;
+      if (turnController.finish(turn) && mountedRef.current) {
+        setStreaming(false);
+      }
     }
   };
 
@@ -226,6 +327,15 @@ export default function ChatPage() {
           </div>
         )}
 
+        {turnStatus && (
+          <div
+            role="status"
+            className="px-5 py-2 border-t border-line bg-graph/50 font-mono text-2xs text-mute tracking-techy"
+          >
+            {turnStatus}
+          </div>
+        )}
+
         {/* 输入器 */}
         <div className="px-5 py-3 border-t border-line bg-panel">
           <div className="max-w-3xl mx-auto flex items-end gap-2">
@@ -244,10 +354,12 @@ export default function ChatPage() {
             />
             {streaming ? (
               <button
-                onClick={() => abortRef.current?.abort()}
+                onClick={stopGeneration}
+                disabled={turnStatus === CANCELLED_STATUS}
                 className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded bg-amber text-paper hover:bg-amber-soft transition-colors"
               >
-                <Square className="w-4 h-4" /> 停止生成
+                <Square className="w-4 h-4" />
+                {turnStatus === CANCELLED_STATUS ? "正在停止" : "停止生成"}
               </button>
             ) : (
               <Button onClick={send}>

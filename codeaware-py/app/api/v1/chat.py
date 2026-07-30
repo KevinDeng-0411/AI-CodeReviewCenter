@@ -1,5 +1,6 @@
 """Chat API - /api/chat（核心域，C1-A typed SSE + TurnCoordinator）。"""
 
+import anyio
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,15 +19,54 @@ router = APIRouter(prefix="/api/chat", tags=["Chat"])
 _EVENT_NAME = {cls: name for name, cls in EVENT_TYPES.items()}
 
 
+class _ClosingStreamingResponse(StreamingResponse):
+    """无论迭代、socket send 或断开监听在哪一步退出，都确定性关闭流。"""
+
+    def __init__(self, content, *args, event_gen=None, on_close=None, **kwargs) -> None:
+        super().__init__(content, *args, **kwargs)
+        self._event_gen = event_gen
+        self._on_close = on_close
+
+    async def stream_response(self, send) -> None:
+        try:
+            await super().stream_response(send)
+        finally:
+            # 旧 ASGI 规范下 Starlette 会在取消域中终止发送任务；shield 保证
+            # cleanup 仍能执行完，从而取消模型并释放 per-cid guard。
+            try:
+                with anyio.CancelScope(shield=True):
+                    try:
+                        close_body = getattr(self.body_iterator, "aclose", None)
+                        if close_body is not None:
+                            await close_body()
+                    finally:
+                        # async generator 若尚未开始迭代，aclose() 不会进入函数体，
+                        # 因而外层 formatter 的 finally 也不会运行。响应直接持有并
+                        # 关闭内层 generator，覆盖 response-start send 失败的边界。
+                        close_events = getattr(self._event_gen, "aclose", None)
+                        if close_events is not None:
+                            await close_events()
+            finally:
+                if self._on_close is not None:
+                    self._on_close()
+
+
 def _error(status: int, msg: str) -> JSONResponse:
     return JSONResponse(status_code=status, content=Result.error(msg).model_dump())
 
 
 async def _format_sse(event_gen):
     """Typed ChatEvent -> SSE 帧：id/event/data 单行 JSON。"""
-    async for ev in event_gen:
-        name = _EVENT_NAME.get(type(ev), "unknown")
-        yield f"id: {ev.sequence}\nevent: {name}\ndata: {ev.model_dump_json()}\n\n"
+    try:
+        async for ev in event_gen:
+            name = _EVENT_NAME.get(type(ev), "unknown")
+            yield f"id: {ev.sequence}\nevent: {name}\ndata: {ev.model_dump_json()}\n\n"
+    finally:
+        # StreamingResponse 在客户端断开时会关闭外层 body iterator。显式关闭
+        # TurnCoordinator generator，才能继续向内取消模型流并立即释放 turn guard。
+        close_event_gen = getattr(event_gen, "aclose", None)
+        if close_event_gen is not None:
+            await close_event_gen()
 
 
 @router.post("/send")
@@ -60,8 +100,13 @@ async def send_stream(req: ChatRequest, coordinator: TurnCoordinator = Depends(g
         coordinator.acquire_turn(req.conversation_id)
     except ChatTurnInProgress:
         return _error(409, "CHAT_TURN_IN_PROGRESS")
-    return StreamingResponse(_format_sse(coordinator.run(req.conversation_id, req.message)),
-                             media_type="text/event-stream")
+    event_gen = coordinator.run(req.conversation_id, req.message)
+    return _ClosingStreamingResponse(
+        _format_sse(event_gen),
+        event_gen=event_gen,
+        on_close=lambda: coordinator.release_turn(req.conversation_id),
+        media_type="text/event-stream",
+    )
 
 
 @router.get("/conversations")

@@ -122,4 +122,20 @@ describe("consumeChatStream dispatch", () => {
     expect(ctxWarn).toBe(true);
     expect(failed).toBe(true);
   });
+
+  it("AbortSignal 会取消 reader 并停止等待后续事件", async () => {
+    let readerCancelled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      cancel() {
+        readerCancelled = true;
+      },
+    });
+    const abortController = new AbortController();
+    const consuming = consumeChatStream(stream, {}, abortController.signal);
+
+    abortController.abort();
+    await consuming;
+
+    expect(readerCancelled).toBe(true);
+  });
 });
