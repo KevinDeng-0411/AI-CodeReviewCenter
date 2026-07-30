@@ -10,8 +10,8 @@
 **当前状态**：Java → Python 的 P0–P5 结构迁移已完成；C1 真实缺口修复与 C2 七域
 API/持久化/UI 闭环均已形成并通过机器可校验的
 [Evidence](docs/roadmap/current-release/evidence/C2/report.md)。下一阶段只能按
-[C1–C3 当前版本收尾](docs/roadmap/current-release/README.md)实施 C3 版本冻结与交接；
-Agent 仍锁定。Agent 只是一条
+[当前版本与检索增强路线](docs/roadmap/current-release/README.md)实施 C3 版本冻结与交接，
+之后再实施 C4 BM25 检索增强；Agent 仍锁定。Agent 只是一条
 [个人项目未来路线](docs/roadmap/chat-to-agent/personal/README.md)，默认止于本机只读仓库
 Agent。
 
@@ -67,7 +67,7 @@ docker compose exec ollama ollama pull bge-m3
 - DeepSeek 集成约定：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
 - 面试话术：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
 - 文档索引（编码先查）：[docs/INDEX.md](docs/INDEX.md)
-- 当前版本 C1–C3：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
+- 当前版本 C1–C3 与 C4 BM25 检索增强：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
 - C1 手动真实启动联调：[docs/roadmap/current-release/C1-手动可视化联调.md](docs/roadmap/current-release/C1-手动可视化联调.md)
 - 后续个人项目 Chat → Agent 路线：[docs/roadmap/chat-to-agent/personal/README.md](docs/roadmap/chat-to-agent/personal/README.md)
 

@@ -1,5 +1,8 @@
 # S5：本地仓库感知 Agent
 
+> **路线门禁更新（2026-07-30）**：C3 后已新增 C4 BM25。下方所有 C3-only 前置描述
+> 均须同时验证 C4 manifest。
+>
 > **完整平台参考，非个人默认实施卡。** `personal-local-readonly` 的 S5 唯一权威是
 > [精简 S5](personal/S5-仓库感知Agent.md)。默认不实现 Tree-sitter、Symbol 表、AIReadMe
 > 仓库化或 durable 交接；S5 完成即结束默认路线。

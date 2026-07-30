@@ -2,7 +2,7 @@
 
 > **当前状态：`FUTURE_LOCKED`。**
 >
-> 本路线是 C1–C3 完成后的未来方向，不是当前代码任务。默认交付档已经收缩为
+> 本路线是 C1–C4 完成后的未来方向，不是当前代码任务。默认交付档已经收缩为
 > [`personal-local-readonly`](personal/README.md)：精简 S1、精简 S2、跳过 S3，
 > 再实施 S4、S5，并在本机只读仓库 Agent 处结束。
 
@@ -14,7 +14,7 @@
 唯一默认顺序：
 
 ```text
-C1 → C2 → C3
+C1 → C2 → C3 → C4
   → S1-lite 项目隔离
   → S2-lite 轻量分层
   → S4-lite 只读工具 Agent
@@ -33,12 +33,12 @@ C1 → C2 → C3
 
 进入 S1 前必须同时满足：
 
-1. [当前版本 C1、C2、C3](../current-release/README.md) manifests 全部验证通过。
-2. C3 明确当前 Chat 版本已交付并给出 `REVIEW_UNLOCKED`。
-3. 用户在 C3 evidence 形成后明确授权“实施 S1”。
-4. 实施者重新核对 freeze commit、OpenAPI 和 Alembic head。
+1. [当前版本与检索增强 C1–C4](../current-release/README.md) manifests 全部验证通过。
+2. C3 明确当前 Chat 版本已交付，C4 明确 BM25 增强完成并给出 `REVIEW_UNLOCKED`。
+3. 用户在 C4 evidence 形成后明确授权“实施 S1”。
+4. 实施者重新核对 C3 freeze commit、C4 validated head、OpenAPI 和 Alembic head。
 
-C3 只允许评审，不构成 Agent 实施授权。以后 S2、S4、S5 都需要在其直接依赖 manifest
+C4 只允许评审，不构成 Agent 实施授权。以后 S2、S4、S5 都需要在其直接依赖 manifest
 形成后重新取得当前卡的明确授权。
 
 ## 3. 默认阶段
@@ -53,7 +53,7 @@ C3 只允许评审，不构成 Agent 实施授权。以后 S2、S4、S5 都需�
 依赖是能力 DAG，不按编号推导：
 
 ```text
-C3 → S1 → S2 → S4 → S5
+C4 → S1 → S2 → S4 → S5
 ```
 
 因此：
@@ -83,7 +83,7 @@ bind host = 127.0.0.1 / ::1
 
 每次只领取一张默认阶段卡：
 
-1. 验证 C1–C3 和当前卡全部直接依赖。
+1. 验证 C1–C4 和当前卡全部直接依赖。
 2. 验证用户授权发生在所有直接依赖 evidence 之后。
 3. 阅读根 `AGENTS.md`、本文件、[个人路线总览](personal/README.md)、当前精简卡、
    [公共契约](00-执行约定与公共契约.md)中与当前卡相关的子集，以及证据规则。

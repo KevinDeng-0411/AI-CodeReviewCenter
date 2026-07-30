@@ -1,5 +1,9 @@
 # S0：稳定 Chat 基线（current-release 技术附录）
 
+> **路线门禁更新（2026-07-30）**：C3 仍是当前 Chat freeze 的来源，但 Agent 前新增
+> C4 BM25 检索增强。本文下方任何“C3 后即可授权/进入 S1”旧措辞均以
+> `C3 freeze + C4 manifest 通过 + 用户在 C4 后另行授权 S1` 为准；不得据旧措辞绕过 C4。
+>
 > **状态：FUTURE LOCKED / 仅验收。**
 >
 > 当前版本的 Chat 修复已经由 [`current-release/01-当前缺口修复.md`](../current-release/01-当前缺口修复.md)（C1）权威接管。C1 对 typed SSE、sequence、摘要 migration/触发、post-turn 事务、multipart、fresh bootstrap 和 AIReadMe 当前版本收尾拥有唯一实施解释权。本文件不得成为第二套实现方案；如与 C1/C2/C3 有任何差异，以 `current-release/` 为准。

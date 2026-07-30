@@ -3,7 +3,7 @@
 > **路线档案：`personal-local-readonly`。当前状态：`FUTURE_LOCKED`。**
 >
 > 这是 CodeAware 在个人项目场景下的默认 Agent 实施入口。当前仍必须先完成
-> [C1–C3](../../current-release/README.md)；C3 只解锁评审，不能自动开始本路线。
+> [C1–C4](../../current-release/README.md)；C4 只解锁评审，不能自动开始本路线。
 
 ## 1. 默认交付目标
 
@@ -18,7 +18,7 @@
 ## 2. 唯一默认顺序
 
 ```text
-C1 → C2 → C3
+C1 → C2 → C3 → C4
   → 用户明确授权 S1
   → S1-lite 项目隔离
   → 用户明确授权 S2
@@ -32,7 +32,7 @@ C1 → C2 → C3
 
 | 阶段 | 用户可见成果 | 实施卡 | 直接依赖 |
 |---|---|---|---|
-| S1-lite | 切换项目后 Chat、Knowledge、Memory 和记录不串数据 | [S1](S1-精简项目隔离.md) | C3 |
+| S1-lite | 切换项目后 Chat、Knowledge、Memory 和记录不串数据 | [S1](S1-精简项目隔离.md) | C4 |
 | S2-lite | Chat 行为不变，但模型、上下文、存储和工具端口可替换 | [S2](S2-轻量分层.md) | S1 |
 | S4-lite | 模型可在预算内自主调用项目知识只读工具并给出引用 | [S4](S4-只读工具Agent.md) | S2 |
 | S5-lite | Agent 可检索固定 Git commit，并返回文件与行号引用 | [S5](S5-仓库感知Agent.md) | S4 |
@@ -42,7 +42,7 @@ C1 → C2 → C3
 
 ## 3. 精简但不能删除的底线
 
-- C1–C3 全部 evidence 通过，且每张 S 卡都在其全部直接依赖 evidence 形成后重新取得用户授权。
+- C1–C4 全部 evidence 通过，且每张 S 卡都在其全部直接依赖 evidence 形成后重新取得用户授权。
 - 固定 `actor_id="local-single-user"`、loopback-only、`REMOTE_ACCESS_ENABLED=false`。
 - `X-Project-ID` 只做数据隔离，不宣称登录、认证或成员授权。
 - S2 保留唯一 TurnCoordinator、短事务 UoW 和 PG commit-first/Redis post-commit。
@@ -80,7 +80,7 @@ evidence/S5/manifest.json
 }
 ```
 
-依赖校验按 `C3 → S1 → S2 → S4 → S5` 的能力 DAG，不按阶段编号减一推导。
+依赖校验按 `C4 → S1 → S2 → S4 → S5` 的能力 DAG，不按阶段编号减一推导。
 
 S5 通过后只能声明：
 

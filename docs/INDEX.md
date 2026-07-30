@@ -6,11 +6,13 @@
 ## 如何用
 
 1. 要编码某功能 -> 在下表查「功能」行 -> 读对应 ADR 与当前执行卡。
-2. ADR 负责长期语义；`current-release/` 负责当前 C1–C3 实施；`migration/` 只作迁移历史与背景。
-3. 当前先按[升级总入口](roadmap/README.md)完成 C1–C3；只有[机器可校验证据](roadmap/证据清单与解锁规则.md)可以改变阶段状态。
+2. ADR 负责长期语义；`current-release/` 负责 C1–C3 当前版本与 C4 BM25 增强实施；
+   `migration/` 只作迁移历史与背景。
+3. 当前先按[升级总入口](roadmap/README.md)完成 C1–C4；只有
+   [机器可校验证据](roadmap/证据清单与解锁规则.md)可以改变阶段状态。
 4. Chat → Agent 是锁定的未来方向；个人项目默认按
    [`personal-local-readonly`](roadmap/chat-to-agent/personal/README.md) 的
-   `S1-lite → S2-lite → S4-lite → S5-lite` 实施，C3 后仍需逐卡另行授权。
+   `S1-lite → S2-lite → S4-lite → S5-lite` 实施，C4 后仍需逐卡另行授权。
 5. 所有 coding agent 共用的编码铁律、技术栈、目录结构见根目录 `AGENTS.md`。
 
 ## 功能 -> 文档映射
@@ -20,7 +22,7 @@
 | 总览 / 核心域=Chat | [ADR-0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | §1 §9 | [术语表](decisions/glossary.md) |
 | 迁移路线图 / 阶段验收 | - | [§6 路线图](migration/Python重构迁移文档.md) · §11 清单 | - |
 | 后续升级 / 缺口与预留 | - | [后续升级计划](migration/后续升级计划.md) | - |
-| 当前版本必须完成 | [ADR-0001~0007](decisions/adr/) | - | [当前版本 C1–C3](roadmap/current-release/README.md) · [证据模板](roadmap/current-release/验收证据模板.md) |
+| 当前版本与检索增强 | [ADR-0001~0007](decisions/adr/) | - | [C1–C4](roadmap/current-release/README.md) · [C4 BM25](roadmap/current-release/04-BM25检索增强.md) · [证据模板](roadmap/current-release/验收证据模板.md) |
 | 阶段解锁 / 机器可校验证据 | - | - | [证据清单与解锁规则](roadmap/证据清单与解锁规则.md) |
 | Chat → Agent 个人默认路线（未来、锁定） | [ADR-0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | - | [个人路线](roadmap/chat-to-agent/personal/README.md) · [总入口](roadmap/chat-to-agent/README.md) · [公共契约](roadmap/chat-to-agent/00-执行约定与公共契约.md) |
 | 技术选型 / AI 搜索 / Agent 能力地图 | [ADR-0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | - | [技术选型与能力地图](roadmap/技术选型与能力地图.md) |
@@ -49,13 +51,14 @@
 | [roadmap/技术选型与能力地图.md](roadmap/技术选型与能力地图.md) | 当前保留/新增技术、搜索/RAG 与 Agent 能力差距、未来选型触发条件 |
 | [roadmap/模型实施任务模板.md](roadmap/模型实施任务模板.md) | 可直接交给其他编码模型的单阶段实施/只读评审任务模板 |
 | [roadmap/证据清单与解锁规则.md](roadmap/证据清单与解锁规则.md) | manifest、产物哈希、安全测试、回退边界与逐阶段授权规则 |
-| [roadmap/current-release/README.md](roadmap/current-release/README.md) | 当前必须实施的 C1 缺口修复、C2 七域闭环、C3 版本冻结 |
+| [roadmap/current-release/README.md](roadmap/current-release/README.md) | C1 缺口修复、C2 七域闭环、C3 版本冻结与 C4 BM25 检索增强 |
 | [roadmap/current-release/01-当前缺口修复.md](roadmap/current-release/01-当前缺口修复.md) | 修复 typed SSE、摘要、multipart、空环境和真实 AIReadMe |
 | [roadmap/current-release/02-现有功能闭环验收.md](roadmap/current-release/02-现有功能闭环验收.md) | 现有 7 个功能域的契约、测试、持久化和 UI 演示闭环 |
 | [roadmap/current-release/03-版本冻结与交接.md](roadmap/current-release/03-版本冻结与交接.md) | 文档/OpenAPI/配置校准、空环境复现、指标与 Agent 解锁条件 |
+| [roadmap/current-release/04-BM25检索增强.md](roadmap/current-release/04-BM25检索增强.md) | C3 后以真实 BM25 替换 pg_trgm 词法腿，完成评测、融合、回退与 Evidence |
 | [roadmap/current-release/验收证据模板.md](roadmap/current-release/验收证据模板.md) | 当前版本每阶段必须提交的验收证据 |
 | [roadmap/chat-to-agent/README.md](roadmap/chat-to-agent/README.md) | 个人默认路线总入口、能力 DAG、门禁与平台参考边界 |
-| [roadmap/chat-to-agent/personal/README.md](roadmap/chat-to-agent/personal/README.md) | `personal-local-readonly` 默认档案：C1–C3 → S1-lite → S2-lite → S4-lite → S5-lite |
+| [roadmap/chat-to-agent/personal/README.md](roadmap/chat-to-agent/personal/README.md) | `personal-local-readonly` 默认档案：C1–C4 → S1-lite → S2-lite → S4-lite → S5-lite |
 | [roadmap/chat-to-agent/personal/S1-精简项目隔离.md](roadmap/chat-to-agent/personal/S1-精简项目隔离.md) | S1-lite：最小 Project 表、五个父实体作用域与跨项目隔离 |
 | [roadmap/chat-to-agent/personal/S2-轻量分层.md](roadmap/chat-to-agent/personal/S2-轻量分层.md) | S2-lite：ReplyEngine、Context、read ports 与短事务边界 |
 | [roadmap/chat-to-agent/personal/S4-只读工具Agent.md](roadmap/chat-to-agent/personal/S4-只读工具Agent.md) | S4-lite：不依赖 LangGraph 的有界 R0 工具循环与 Citation |

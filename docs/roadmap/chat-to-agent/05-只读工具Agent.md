@@ -1,5 +1,8 @@
 # S4：只读工具 Agent
 
+> **路线门禁更新（2026-07-30）**：C3 后已新增 C4 BM25。下方所有 C3-only 前置描述
+> 均须同时验证 C4 manifest，不能借平台参考卡绕过 C4、S1 或 S2。
+>
 > **完整平台参考，非个人默认实施卡。** `personal-local-readonly` 的 S4 唯一权威是
 > [精简 S4](personal/S4-只读工具Agent.md)，其直接依赖是 S2，不是 S3。后文关于 Graph、
 > S3 evidence、4/6 默认预算和平台化 DoD 均不能扩大默认 S4 范围。

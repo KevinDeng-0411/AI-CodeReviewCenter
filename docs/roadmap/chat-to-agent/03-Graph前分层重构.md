@@ -1,5 +1,8 @@
 # S2：Graph 前分层重构
 
+> **路线门禁更新（2026-07-30）**：C3 后已新增 C4 BM25。下方任何 C3-only
+> 基线/授权措辞均须同时包含 C4 manifest，不能用本文绕过 C4 或精简实施卡。
+>
 > **完整平台参考，非个人默认实施卡。** `personal-local-readonly` 的 S2 唯一权威是
 > [精简 S2](personal/S2-轻量分层.md)。默认 S2 直接为 S4 的简单有界 tool loop 服务，
 > 不以引入 Graph 为完成目标；本文件后续 DoD 不能替换默认 check 集。

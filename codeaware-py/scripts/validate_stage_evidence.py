@@ -18,6 +18,7 @@ STAGE_PROFILE = {
     "C1": "current-release",
     "C2": "current-release",
     "C3": "current-release",
+    "C4": "current-release",
     "S1": "personal-local-readonly",
     "S2": "personal-local-readonly",
     "S4": "personal-local-readonly",
@@ -27,7 +28,8 @@ DAG = {
     "C1": [],
     "C2": ["C1"],
     "C3": ["C2"],
-    "S1": ["C3"],
+    "C4": ["C3"],
+    "S1": ["C4"],
     "S2": ["S1"],
     "S4": ["S2"],
     "S5": ["S4"],
@@ -36,6 +38,13 @@ REQUIRED_CHECKS = {
     "C1": ["C1-SAFE-HARNESS", "C1-A", "C1-B", "C1-C", "C1-D", "C1-E"],
     "C2": ["code-review", "unit-test", "ai-readme", "chat", "knowledge", "memory", "prompt"],
     "C3": ["fresh-bootstrap", "docs-contract", "rollback", "freeze-handoff"],
+    "C4": [
+        "bm25-runtime",
+        "lexical-quality",
+        "hybrid-fusion",
+        "index-lifecycle",
+        "fallback-rollback",
+    ],
     "S1": ["migration-scope", "api-scope", "retrieval-isolation", "frontend-scope", "rollback"],
     "S2": ["behavior-parity", "architecture-boundary", "uow-transaction", "rollback"],
     "S4": [
@@ -327,7 +336,12 @@ def _validate_migration(
         return
     heads = migration.get("heads")
     current = migration.get("current")
-    expected_head = "0004" if stage == "C1" else "0005"
+    expected_head = {
+        "C1": "0004",
+        "C2": "0005",
+        "C3": "0005",
+        "C4": "0006",
+    }.get(stage, "0005")
     if heads != [expected_head] or current != [expected_head] or heads != current:
         errors.append(
             "migration heads/current 必须唯一且均为 "

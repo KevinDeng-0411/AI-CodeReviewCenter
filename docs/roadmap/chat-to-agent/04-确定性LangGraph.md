@@ -1,5 +1,8 @@
 # S3：确定性 LangGraph Workflow
 
+> **路线门禁更新（2026-07-30）**：C3 后已新增 C4 BM25。下方所有 C3-only 前置描述
+> 均须同时验证 C4 manifest；C4 也不会自动解锁 LangGraph。
+>
 > **条件型平台参考，个人默认不实施。** S3 不再是 S4 的硬前置，也不创建 skipped/passed
 > manifest。只有在 S2 后、S4 前出现[明确触发条件](personal/可选升级触发条件.md)，并先
 > 修订路线、阶段卡与证据 DAG 后，本文件才可作为设计输入；S4/S5 已完成后不得直接执行旧卡。
