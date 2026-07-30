@@ -1,0 +1,14 @@
+{
+  "assertions": [
+    "typed SSE sequence and terminal verified",
+    "whitespace preserved",
+    "Redis degradation, abort, and concurrency verified"
+  ],
+  "check_id": "C1-A",
+  "source_commands": [
+    "c1-total-demo",
+    "backend-full",
+    "frontend-test"
+  ],
+  "status": "passed"
+}

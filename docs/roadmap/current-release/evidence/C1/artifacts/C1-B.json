@@ -1,0 +1,12 @@
+{
+  "assertions": [
+    "summary threshold and watermark reached 10",
+    "PG/Redis equality and cache warning verified"
+  ],
+  "check_id": "C1-B",
+  "source_commands": [
+    "c1-total-demo",
+    "backend-full"
+  ],
+  "status": "passed"
+}

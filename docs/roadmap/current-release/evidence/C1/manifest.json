@@ -1,0 +1,253 @@
+{
+  "authorization": null,
+  "baseline_commit": "efd6c378885b7d99ca886e3bc6548dd3aabca299",
+  "checks": [
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/C1-SAFE-HARNESS.json",
+          "sha256": "8245779f72dd47c6097961161957849cac9629bd0b9600b65a515f5b870e1d06"
+        }
+      ],
+      "id": "C1-SAFE-HARNESS",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/C1-A.json",
+          "sha256": "49856573edc9f263bff7b1b56a59af78c74079726b311605de576e7f4683c7ed"
+        }
+      ],
+      "id": "C1-A",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/C1-B.json",
+          "sha256": "b0d4ecbe0c3011fb42ca100c20de959811036bfa5aec814a4e8e7b8e44f7ce53"
+        }
+      ],
+      "id": "C1-B",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/C1-C.json",
+          "sha256": "90e862fc29f1d2e2e7eecb2dbb7c58df8ec2ac78286657db36b0d251eb225f97"
+        }
+      ],
+      "id": "C1-C",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/C1-D.json",
+          "sha256": "a58a4b9c0dfe189264cf788072a5ef1b07efabae672f6bea418ed910a3381e34"
+        }
+      ],
+      "id": "C1-D",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/C1-E.json",
+          "sha256": "b4b987c9abc2a7831ccbc5e13602e9136c154320b952d22631a01b2e519a3c2a"
+        }
+      ],
+      "id": "C1-E",
+      "status": "passed"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "uv",
+        "lock",
+        "--check"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T07:59:03Z",
+      "id": "dependency-lock",
+      "required": true,
+      "sha256": "fa03ecbcb057fe83529eb930003dcbfd1b250e049ed526959e5a8513c9f8e009",
+      "started_at": "2026-07-30T07:59:03Z",
+      "stdout": "artifacts/dependency-lock.log"
+    },
+    {
+      "argv": [
+        "docker",
+        "compose",
+        "config",
+        "--quiet"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T07:59:03Z",
+      "id": "compose-config",
+      "required": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "started_at": "2026-07-30T07:59:03Z",
+      "stdout": "artifacts/compose-config.log"
+    },
+    {
+      "argv": [
+        "./codeaware-py/scripts/demo_c1_current_fixes.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T07:59:24Z",
+      "id": "c1-total-demo",
+      "required": true,
+      "sha256": "f18d09251db849bd536c8a131b9d66a4e4db224aad691b097ddc343a8df017bf",
+      "started_at": "2026-07-30T07:59:03Z",
+      "stdout": "artifacts/c1-total-demo.log"
+    },
+    {
+      "argv": [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_tests_safe.py",
+        "-q"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T07:59:33Z",
+      "id": "backend-full",
+      "required": true,
+      "sha256": "18ec100bdfe0441f1ac20fba951cb86090809b0f598c6e6dbd0ab00b1a0d15c2",
+      "started_at": "2026-07-30T07:59:24Z",
+      "stdout": "artifacts/backend-full.log"
+    },
+    {
+      "argv": [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_tests_safe.py",
+        "--cov=app",
+        "--cov-report=term-missing",
+        "-q"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T07:59:49Z",
+      "id": "backend-coverage",
+      "required": true,
+      "sha256": "edfb926e02f663ce38d37fb770b461bf38976dc51b3f88b154dbb3f4934d3a53",
+      "started_at": "2026-07-30T07:59:33Z",
+      "stdout": "artifacts/backend-coverage.log"
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "test"
+      ],
+      "cwd": "codeaware-py/frontend",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T07:59:50Z",
+      "id": "frontend-test",
+      "required": true,
+      "sha256": "db27b8ec07db0ad04e0c4155d5c59f3da99e3440501d424016b647948a5e1569",
+      "started_at": "2026-07-30T07:59:49Z",
+      "stdout": "artifacts/frontend-test.log"
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "cwd": "codeaware-py/frontend",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T07:59:50Z",
+      "id": "frontend-lint",
+      "required": true,
+      "sha256": "af8486d71eaaa4c6c38f6101346ae77821d4e9f27f66365a68c9b23f2bed89a2",
+      "started_at": "2026-07-30T07:59:50Z",
+      "stdout": "artifacts/frontend-lint.log"
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "codeaware-py/frontend",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T07:59:51Z",
+      "id": "frontend-build",
+      "required": true,
+      "sha256": "238268d7a74ec6483bca3749c97c6c046cc026f368e886a855394e079edbcbd7",
+      "started_at": "2026-07-30T07:59:50Z",
+      "stdout": "artifacts/frontend-build.log"
+    },
+    {
+      "argv": [
+        "./codeaware-py/scripts/verify_c1_rollback.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T08:00:26Z",
+      "id": "rollback",
+      "required": true,
+      "sha256": "457e76e58794d74489fccc5236a542c6a2fcf84ae733764b9a60f4ff90d30c47",
+      "started_at": "2026-07-30T07:59:51Z",
+      "stdout": "artifacts/rollback.log"
+    }
+  ],
+  "dependencies": [],
+  "environment": {
+    "mode": "disposable",
+    "postgres_database": "codeaware_test_49d48b152d720489",
+    "redis_database": 1,
+    "sandbox_or_compose_profile": "test"
+  },
+  "implementation_commit": "2a0a4e948e20e3d9ff5dbc24ca9d7a1c5b009231",
+  "implementation_parent": "b683425c9af7c5cd24d44e8a7d88764bd0590406",
+  "limitations": [
+    "deterministic fake models only; formal live smoke is C2",
+    "manual visual smoke is supplemental and non-blocking",
+    "local single-worker conversation guard",
+    "AIReadMe snapshot is disabled by default"
+  ],
+  "migration": {
+    "current": [
+      "0004"
+    ],
+    "heads": [
+      "0004"
+    ],
+    "log": "artifacts/migration.json",
+    "sha256": "92ced9c20cda68f60c7c58c361a5efb7e2c37c3e0284d3875006a02c05a6ad03"
+  },
+  "openapi": {
+    "path": "artifacts/openapi.json",
+    "sha256": "59f73d548351657eb6bb26fef14f08063078e790f7f0f0ef7d8364703dff2f40"
+  },
+  "report": {
+    "path": "report.md",
+    "sha256": "808657e8b2c191be8a98e1c64841c91a35fe964325a29e31ff445020fc35a58b"
+  },
+  "result": "passed",
+  "rollback": {
+    "artifact": "artifacts/rollback.json",
+    "disposable_database": true,
+    "result": "passed",
+    "sha256": "7e5c34b70a15a34a8220b7039aac78f39f85cc1a376ff66fe4efdd2f32a97745",
+    "temp_worktree": true
+  },
+  "route_profile": "current-release",
+  "run_id": "20260730T075903Z-f978c945",
+  "schema_version": 1,
+  "stage": "C1",
+  "supersedes_manifest_sha256": null,
+  "validated_head": "c561866ef0a1347c7df91230c41492b8fc2a93b5"
+}

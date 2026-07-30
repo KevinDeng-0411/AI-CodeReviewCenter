@@ -1,0 +1,12 @@
+{
+  "assertions": [
+    "safe fixture snapshot reached LLM prompt",
+    "version/hash/latest and path rejection verified"
+  ],
+  "check_id": "C1-E",
+  "source_commands": [
+    "c1-total-demo",
+    "backend-full"
+  ],
+  "status": "passed"
+}

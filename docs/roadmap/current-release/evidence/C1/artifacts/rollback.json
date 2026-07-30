@@ -1,0 +1,17 @@
+{
+  "development_resources_unchanged": true,
+  "disposable_database": true,
+  "implementation_commit": "2a0a4e948e20e3d9ff5dbc24ca9d7a1c5b009231",
+  "implementation_parent": "b683425c9af7c5cd24d44e8a7d88764bd0590406",
+  "migration_chain": [
+    "0004",
+    "0003",
+    "0002",
+    "base",
+    "head"
+  ],
+  "result": "passed",
+  "source_command": "rollback",
+  "temp_worktree": true,
+  "worktree_removed": true
+}

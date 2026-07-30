@@ -1,0 +1,13 @@
+{
+  "assertions": [
+    "fresh dual database bootstrap verified",
+    "readiness degradation and recovery verified"
+  ],
+  "check_id": "C1-D",
+  "source_commands": [
+    "c1-total-demo",
+    "backend-full",
+    "rollback"
+  ],
+  "status": "passed"
+}

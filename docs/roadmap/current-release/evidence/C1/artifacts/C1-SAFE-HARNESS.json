@@ -1,0 +1,14 @@
+{
+  "assertions": [
+    "temporary PG/Redis identity verified",
+    "development and forged targets rejected",
+    "exact cleanup completed"
+  ],
+  "check_id": "C1-SAFE-HARNESS",
+  "source_commands": [
+    "c1-total-demo",
+    "backend-full",
+    "rollback"
+  ],
+  "status": "passed"
+}

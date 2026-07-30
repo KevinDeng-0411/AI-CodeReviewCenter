@@ -1,0 +1,12 @@
+{
+  "assertions": [
+    "multipart contract verified",
+    "uploaded document recalled by knowledge search"
+  ],
+  "check_id": "C1-C",
+  "source_commands": [
+    "c1-total-demo",
+    "backend-full"
+  ],
+  "status": "passed"
+}

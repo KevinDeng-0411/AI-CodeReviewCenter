@@ -1,0 +1,21 @@
+........................................................................ [ 34%]
+........................................................................ [ 68%]
+.................................................................        [100%]
+209 passed, 1 deselected in 4.77s
+[safe-runner] stack_id=49d48b152d720489 pg=127.0.0.1:53044 redis=127.0.0.1:53045
+[safe-runner] test_db=codeaware_test_49d48b152d720489 mig_db=codeaware_migtest_49d48b152d720489 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-49d48b152d720489
+ Network codeaware-test-49d48b152d720489_default Creating 
+ Network codeaware-test-49d48b152d720489_default Created 
+ Volume codeaware-test-49d48b152d720489_pgdata Creating 
+ Volume codeaware-test-49d48b152d720489_pgdata Created 
+ Volume codeaware-test-49d48b152d720489_redisdata Creating 
+ Volume codeaware-test-49d48b152d720489_redisdata Created 
+ Container codeaware-test-49d48b152d720489-redis-1 Creating 
+ Container codeaware-test-49d48b152d720489-pg-1 Creating 
+ Container codeaware-test-49d48b152d720489-pg-1 Created 
+ Container codeaware-test-49d48b152d720489-redis-1 Created 
+ Container codeaware-test-49d48b152d720489-pg-1 Starting 
+ Container codeaware-test-49d48b152d720489-redis-1 Starting 
+ Container codeaware-test-49d48b152d720489-redis-1 Started 
+ Container codeaware-test-49d48b152d720489-pg-1 Started 

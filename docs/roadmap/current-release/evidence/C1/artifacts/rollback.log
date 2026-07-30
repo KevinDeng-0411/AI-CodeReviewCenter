@@ -1,0 +1,50 @@
+[C1 ROLLBACK] verify current migration downgrade/upgrade chain
+.                                                                        [100%]
+1 passed in 0.51s
+[safe-runner] stack_id=2f9702793b8bdbb2 pg=127.0.0.1:53621 redis=127.0.0.1:53622
+[safe-runner] test_db=codeaware_test_2f9702793b8bdbb2 mig_db=codeaware_migtest_2f9702793b8bdbb2 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-2f9702793b8bdbb2
+[C1 ROLLBACK] create detached parent worktree commit=b683425c9af7c5cd24d44e8a7d88764bd0590406
+HEAD is now at b683425 fix(C1-C): close multipart knowledge upload
+[C1 ROLLBACK] verify parent C1-A/C1-B/C1-C baseline in disposable stack
+......................................................................   [100%]
+70 passed in 5.64s
+[safe-runner] stack_id=f3ade5f2 pg=127.0.0.1:53685 redis=127.0.0.1:53686
+[safe-runner] test_db=codeaware_test_f3ade5f2 mig_db=codeaware_migtest_f3ade5f2
+[safe-runner] 已精确清理 project codeaware-test-f3ade5f2
+[C1 ROLLBACK] PASS worktree_removed=true stacks_removed=true main_unchanged=true
+ Network codeaware-test-2f9702793b8bdbb2_default Creating 
+ Network codeaware-test-2f9702793b8bdbb2_default Created 
+ Volume codeaware-test-2f9702793b8bdbb2_pgdata Creating 
+ Volume codeaware-test-2f9702793b8bdbb2_pgdata Created 
+ Volume codeaware-test-2f9702793b8bdbb2_redisdata Creating 
+ Volume codeaware-test-2f9702793b8bdbb2_redisdata Created 
+ Container codeaware-test-2f9702793b8bdbb2-pg-1 Creating 
+ Container codeaware-test-2f9702793b8bdbb2-redis-1 Creating 
+ Container codeaware-test-2f9702793b8bdbb2-pg-1 Created 
+ Container codeaware-test-2f9702793b8bdbb2-redis-1 Created 
+ Container codeaware-test-2f9702793b8bdbb2-redis-1 Starting 
+ Container codeaware-test-2f9702793b8bdbb2-pg-1 Starting 
+ Container codeaware-test-2f9702793b8bdbb2-redis-1 Started 
+ Container codeaware-test-2f9702793b8bdbb2-pg-1 Started 
+Preparing worktree (detached HEAD b683425)
+warning: `VIRTUAL_ENV=<repo_root>/codeaware-py/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Using CPython 3.12.13
+Creating virtual environment at: .venv
+   Building codeaware @ file://<temp_path>
+      Built codeaware @ file://<temp_path>
+Installed 116 packages in 190ms
+ Network codeaware-test-f3ade5f2_default Creating 
+ Network codeaware-test-f3ade5f2_default Created 
+ Volume codeaware-test-f3ade5f2_pgdata Creating 
+ Volume codeaware-test-f3ade5f2_pgdata Created 
+ Volume codeaware-test-f3ade5f2_redisdata Creating 
+ Volume codeaware-test-f3ade5f2_redisdata Created 
+ Container codeaware-test-f3ade5f2-redis-1 Creating 
+ Container codeaware-test-f3ade5f2-pg-1 Creating 
+ Container codeaware-test-f3ade5f2-pg-1 Created 
+ Container codeaware-test-f3ade5f2-redis-1 Created 
+ Container codeaware-test-f3ade5f2-pg-1 Starting 
+ Container codeaware-test-f3ade5f2-redis-1 Starting 
+ Container codeaware-test-f3ade5f2-redis-1 Started 
+ Container codeaware-test-f3ade5f2-pg-1 Started 
