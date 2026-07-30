@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { readApiErrorMessage } from "./client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiError, knowledge, readApiErrorMessage } from "./client";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("readApiErrorMessage", () => {
   it("保留统一错误 envelope 的稳定业务消息", async () => {
@@ -38,5 +42,53 @@ describe("readApiErrorMessage", () => {
         json: async () => ({ detail: "not the unified envelope" }),
       }),
     ).resolves.toBe("HTTP 500");
+  });
+});
+
+describe("knowledge.uploadFile", () => {
+  it("使用 FormData 且不手工设置 multipart Content-Type", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        code: 1,
+        msg: "success",
+        data: { id: 7, title: "README.md" },
+      }),
+    } as Response);
+    const file = new File(["# Upload"], "README.md", { type: "text/markdown" });
+
+    await expect(knowledge.uploadFile(file, "demo-project")).resolves.toEqual({
+      id: 7,
+      title: "README.md",
+    });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/knowledge/upload-file");
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toBeUndefined();
+    expect(init?.body).toBeInstanceOf(FormData);
+    const form = init?.body as FormData;
+    expect(form.get("project_name")).toBe("demo-project");
+    const uploaded = form.get("file") as File;
+    expect(uploaded.name).toBe("README.md");
+    expect(uploaded.type).toBe("text/markdown");
+  });
+
+  it("保留后端稳定文件上传错误码", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        code: 0,
+        msg: "KNOWLEDGE_FILE_TYPE_UNSUPPORTED",
+        data: null,
+      }),
+    } as Response);
+    const file = new File(["bad"], "bad.exe", { type: "application/octet-stream" });
+
+    await expect(knowledge.uploadFile(file)).rejects.toEqual(
+      new ApiError("KNOWLEDGE_FILE_TYPE_UNSUPPORTED"),
+    );
   });
 });

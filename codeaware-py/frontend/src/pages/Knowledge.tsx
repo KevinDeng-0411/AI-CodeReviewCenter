@@ -119,12 +119,12 @@ export default function KnowledgePage() {
             <input
               ref={fileRef}
               type="file"
-              accept=".pdf,.docx,.html,.md,.txt"
+              accept=".pdf,.docx,.html,.htm,.md,.markdown,.txt"
               className="hidden"
               onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])}
             />
             <Button variant="ghost" onClick={() => fileRef.current?.click()} className="w-full justify-center">
-              <FileUp className="w-4 h-4" /> 上传文件 (PDF/Word/MD)
+              <FileUp className="w-4 h-4" /> 上传文件 (PDF/DOCX/HTML/MD/TXT · 最大 5 MiB)
             </Button>
           </div>
         </div>

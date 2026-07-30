@@ -19,7 +19,9 @@ dependencies = [
     "langchain-openai>=0.2",
     "langchain-ollama>=0.2",
     "redis>=5.0",
-    "unstructured>=0.16",
+    "unstructured[docx]>=0.16",
+    "pypdf>=6.6.2",
+    "python-multipart>=0.0.20",
     "markdown>=3.5",
 ]
 

@@ -138,6 +138,7 @@ export const knowledge = {
     fd.append("file", file);
     if (project_name) fd.append("project_name", project_name);
     const res = await fetch(`${BASE}/api/knowledge/upload-file`, { method: "POST", body: fd });
+    if (!res.ok) throw new ApiError(await readApiErrorMessage(res));
     const body = (await res.json()) as Envelope<{ id: number; title: string }>;
     if (body.code !== 1) throw new ApiError(body.msg);
     return body.data;
