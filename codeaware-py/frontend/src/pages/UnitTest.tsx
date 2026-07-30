@@ -25,7 +25,7 @@ export default function UnitTestPage() {
   const [project, setProject] = useState("demo");
   const [file, setFile] = useState("Calc.java");
   const [code, setCode] = useState(SAMPLE);
-  const [framework, setFramework] = useState("JUnit5");
+  const framework = "JUnit5";
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<UnitTestVO | null>(null);
   const [copied, setCopied] = useState(false);
@@ -65,7 +65,10 @@ export default function UnitTestPage() {
             <Input value={file} onChange={(e) => setFile(e.target.value)} />
           </Field>
           <Field label="测试框架">
-            <Input value={framework} onChange={(e) => setFramework(e.target.value)} />
+            <Input value={framework} disabled aria-describedby="unit-test-scope" />
+            <p id="unit-test-scope" className="mt-1 font-mono text-2xs text-mute">
+              当前仅支持 JUnit5；只生成并保存测试代码，不会在项目中执行。
+            </p>
           </Field>
           <Field label="源代码">
             <Textarea value={code} onChange={(e) => setCode(e.target.value)} rows={14} />
