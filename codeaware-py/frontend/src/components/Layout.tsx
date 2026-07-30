@@ -46,9 +46,9 @@ export default function Layout({
       try {
         const r = await fetch("/health");
         const b = await r.json();
-        alive && setUp(b.code === 1);
+        if (alive) setUp(b.code === 1);
       } catch {
-        alive && setUp(false);
+        if (alive) setUp(false);
       }
     };
     poll();

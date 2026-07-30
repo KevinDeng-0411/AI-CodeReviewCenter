@@ -11,7 +11,9 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
+import urllib.request
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -156,6 +158,153 @@ def _raise_interrupted(signum: int, _frame) -> None:
     raise RunnerInterrupted(f"received signal {signum}")
 
 
+def _wait_http(url: str, timeout: float = 30.0) -> None:
+    deadline = time.monotonic() + timeout
+    last: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=2) as response:
+                if response.status == 200:
+                    return
+        except Exception as exc:  # noqa: BLE001
+            last = exc
+            time.sleep(0.25)
+    raise RuntimeError(
+        f"HTTP 服务未在 {timeout}s 内就绪: {type(last).__name__}"
+    )
+
+
+def _stop_process(process: subprocess.Popen | None, label: str) -> bool:
+    if process is None or process.poll() is not None:
+        return True
+    process.terminate()
+    try:
+        process.wait(timeout=10)
+        return True
+    except subprocess.TimeoutExpired:
+        process.kill()
+        try:
+            process.wait(timeout=5)
+            return True
+        except subprocess.TimeoutExpired:
+            print(
+                f"[safe-runner] !! {label} cleanup failed",
+                file=sys.stderr,
+            )
+            return False
+
+
+def _run_browser_e2e(test_env: dict[str, str]) -> int:
+    """Run real FastAPI + Vite + Playwright against the disposable stack."""
+    backend: subprocess.Popen | None = None
+    frontend: subprocess.Popen | None = None
+    cleanup_ok = True
+    frontend_root = APP_ROOT / "frontend"
+    with tempfile.TemporaryDirectory(prefix="codeaware-browser-e2e-") as tmp:
+        allowed_root = Path(tmp) / "allowed"
+        project = allowed_root / "fixture-project"
+        project.mkdir(parents=True)
+        (project / "README.md").write_text(
+            "# Browser Fixture\n\nA safe project used only by C2 browser E2E.\n",
+            encoding="utf-8",
+        )
+        (project / "pyproject.toml").write_text(
+            '[project]\nname = "browser-fixture"\nversion = "1.0.0"\n',
+            encoding="utf-8",
+        )
+        (project / "main.py").write_text(
+            'print("browser-entrypoint")\n',
+            encoding="utf-8",
+        )
+
+        browser_env = test_env.copy()
+        browser_env.update(
+            {
+                "CODEAWARE_BROWSER_E2E": "1",
+                "CODEAWARE_BROWSER_E2E_PROJECT_ROOT": str(allowed_root),
+            }
+        )
+        migration = subprocess.run(
+            [sys.executable, "-m", "alembic", "upgrade", "head"],
+            env=browser_env,
+            cwd=str(APP_ROOT),
+        )
+        if migration.returncode != 0:
+            return migration.returncode
+
+        backend_port = _free_port()
+        frontend_port = _free_port()
+        base_url = f"http://127.0.0.1:{frontend_port}"
+        try:
+            backend = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "uvicorn",
+                    "app.main:app",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(backend_port),
+                ],
+                env=browser_env,
+                cwd=str(APP_ROOT),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            _wait_http(f"http://127.0.0.1:{backend_port}/health/live")
+
+            frontend_env = browser_env.copy()
+            frontend_env["CODEAWARE_API_BASE_URL"] = (
+                f"http://127.0.0.1:{backend_port}"
+            )
+            frontend = subprocess.Popen(
+                [
+                    "npm",
+                    "run",
+                    "dev",
+                    "--",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(frontend_port),
+                    "--strictPort",
+                ],
+                env=frontend_env,
+                cwd=str(frontend_root),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            _wait_http(base_url)
+
+            playwright_env = frontend_env.copy()
+            playwright_env.update(
+                {
+                    "CI": "1",
+                    "CODEAWARE_BROWSER_BASE_URL": base_url,
+                    "CODEAWARE_E2E_PROJECT_PATH": str(project),
+                }
+            )
+            chrome = Path(
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            )
+            if chrome.is_file():
+                playwright_env["PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"] = str(
+                    chrome
+                )
+            result = subprocess.run(
+                ["npm", "run", "test:e2e"],
+                env=playwright_env,
+                cwd=str(frontend_root),
+            )
+            return result.returncode
+        finally:
+            cleanup_ok = _stop_process(frontend, "frontend") and cleanup_ok
+            cleanup_ok = _stop_process(backend, "backend") and cleanup_ok
+            if not cleanup_ok:
+                raise RuntimeError("browser E2E process cleanup failed")
+
+
 def run(pytest_args: list[str]) -> int:
     stack_id = secrets.token_hex(8)
     auth = secrets.token_hex(16)
@@ -220,12 +369,15 @@ def run(pytest_args: list[str]) -> int:
                 "CODEAWARE_TESTING": "1",
             }
         )
-        process = subprocess.run(
-            [sys.executable, "-m", "pytest", *pytest_args],
-            env=test_env,
-            cwd=str(APP_ROOT),
-        )
-        rc = process.returncode
+        if pytest_args == ["--browser-e2e"]:
+            rc = _run_browser_e2e(test_env)
+        else:
+            process = subprocess.run(
+                [sys.executable, "-m", "pytest", *pytest_args],
+                env=test_env,
+                cwd=str(APP_ROOT),
+            )
+            rc = process.returncode
     except RunnerInterrupted as exc:
         print(f"[safe-runner] interrupted: {exc}", file=sys.stderr)
         rc = 130

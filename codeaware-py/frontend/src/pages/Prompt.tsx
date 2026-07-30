@@ -78,7 +78,8 @@ export default function PromptPage() {
   const activate = async (t: PromptTemplateItem) => {
     setActivating(true);
     try {
-      await prompt.activate(t.id);
+      const activated = await prompt.activate(t.id);
+      setSelected(activated);
       await refresh();
     } catch (e) {
       toast.show(e);

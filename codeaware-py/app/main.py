@@ -5,6 +5,7 @@ P5+：CORS（前端开发）+ 静态托管 frontend/dist（生产单进程）。
 """
 
 import os
+import re
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -49,6 +50,21 @@ app.include_router(knowledge_router)
 app.include_router(memory_router)
 app.include_router(prompt_router)
 app.include_router(system_health_router)
+
+if os.environ.get("CODEAWARE_BROWSER_E2E") == "1":
+    stack_id = os.environ.get("CODEWARE_TEST_STACK_ID", "")
+    auth = os.environ.get("CODEWARE_TEST_AUTH", "")
+    project_root = os.environ.get("CODEAWARE_BROWSER_E2E_PROJECT_ROOT", "")
+    if (
+        os.environ.get("CODEAWARE_TESTING") != "1"
+        or re.fullmatch(r"[0-9a-f]{16}", stack_id) is None
+        or len(auth) < 16
+        or not project_root
+    ):
+        raise RuntimeError("browser E2E adapter requires a disposable safe-runner stack")
+    from app.testing.browser_e2e import install_browser_e2e_overrides
+
+    install_browser_e2e_overrides(app)
 
 
 @app.get("/health", tags=["系统"])

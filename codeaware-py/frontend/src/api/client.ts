@@ -182,7 +182,7 @@ export const prompt = {
       `/api/prompts/${id}/preview?sample_code=${encodeURIComponent(sampleCode)}`,
     ),
   activate: (id: number) =>
-    call<{ id: number; version: number; is_active: boolean }>(`/api/prompts/${id}/activate`, {
+    call<PromptTemplateItem>(`/api/prompts/${id}/activate`, {
       method: "POST",
     }),
 };
