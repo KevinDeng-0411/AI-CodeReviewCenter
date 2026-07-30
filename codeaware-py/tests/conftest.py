@@ -1,16 +1,15 @@
 """pytest 公共 fixtures。
 
-PG_DB=ai_center_test 必须在导入 app.* 之前设置，使 settings 指向测试库。
-集成测试用 Base.metadata.create_all 建表（验证模型）；test_migration 单独经子进程
-在 ai_center_migtest 上验证 alembic up/down。
+连接信息（PG/Redis）由 scripts/run_tests_safe.py 注入；不再 setdefault 固定库名。
+任何 destructive 操作（drop_all / flushdb）前经 _safeguard.assert_safe_targets()
+二次校验：目标必须属于本次一次性 stack（含 stack_id 后缀、不在开发库黑名单）。
+集成测试用 Base.metadata.create_all 建表；test_migration 在 stack_id mig 库上验证 up/down。
 """
 
 import hashlib
 import os
 
-os.environ.setdefault("PG_DB", "ai_center_test")
-os.environ.setdefault("REDIS_DB", "15")
-# 测试态标记：main.py 据此跳过前端静态挂载（避免 Mount("/") 拦截运行时加的测试路由）
+# 行为标记（非 DB 目标）：main.py 据此跳过前端静态挂载。PG/Redis 目标由 runner 注入，不在此 setdefault。
 os.environ.setdefault("CODEAWARE_TESTING", "1")
 
 import httpx
@@ -26,6 +25,8 @@ from app.core.config import settings
 from app.db.session import AsyncSessionLocal, engine
 from app.main import app
 import redis.asyncio as aioredis
+
+from _safeguard import assert_safe_targets  # fail-closed 目标守卫
 
 
 class FakeEmbedder:
@@ -47,7 +48,8 @@ class FakeLLM:
 
 @pytest.fixture(scope="session")
 async def setup_db():
-    """会话级：建扩展 + 建表；会话结束 drop。"""
+    """会话级：建扩展 + 建表；会话结束 drop。destructive 前先 fail-closed 校验目标。"""
+    assert_safe_targets()  # 拒绝开发库/未授权裸跑
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
@@ -84,7 +86,8 @@ def vector_recall(mock_embedder) -> VectorRecallService:
 
 @pytest.fixture
 async def redis_client():
-    """测试用 Redis（db=15）。fixture 内创建以绑定 session loop，每测试 flush 隔离。"""
+    """测试用 Redis。fixture 内创建以绑定 session loop，每测试 flush 隔离；flush 前校验目标。"""
+    assert_safe_targets()
     client = aioredis.from_url(settings.redis_url, decode_responses=True)
     await client.flushdb()
     yield client

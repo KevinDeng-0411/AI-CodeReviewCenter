@@ -1,0 +1,35 @@
+# 一次性测试栈 - 由 scripts/run_tests_safe.py 以唯一 project 名调用。
+# 无固定容器名/端口、ephemeral volume、不含 Ollama（CI 用 fake embedder）。
+# 端口由 runner 经 CODEWARE_TEST_PG_PORT / CODEWARE_TEST_REDIS_PORT 注入。
+services:
+  pg:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: aicenter
+      POSTGRES_PASSWORD: aicenter123
+      POSTGRES_DB: codeaware_seed
+    ports:
+      - "${CODEWARE_TEST_PG_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aicenter -d codeaware_seed"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${CODEWARE_TEST_REDIS_PORT}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata:
+  redisdata:
