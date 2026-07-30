@@ -1,0 +1,62 @@
+[C3 HANDOFF] release=0.1.0 commit=3f95543c1fb31e630e233332c1bfed850e855c21
+✓ stage C1 (current-release) manifest 校验通过
+✓ stage C2 (current-release) manifest 校验通过
+OpenAPI snapshot matches current app
+[release-hygiene] PASS tracked_files=373 text_files=372 secrets=0 host_path_leaks=0
+...[C3 METRICS] {"chat": {"first_token_ms": {"p50": 0.047, "p95": 0.066}, "full_response_ms": {"p50": 0.372, "p95": 0.548}, "samples": 20, "sse_fidelity": 1.0}, "retrieval": {"cases": 30, "categories": {"chinese_compound": 10, "rare_identifier": 10, "semantic_paraphrase": 10}, "pg_trgm": {"mrr@10": 0.3333, "ndcg@10": 0.3333, "recall@5": 0.3333}, "rrf": {"mrr@10": 0.7494, "ndcg@10": 0.8096, "recall@5": 1.0}, "vector": {"mrr@10": 1.0, "ndcg@10": 1.0, "recall@5": 1.0}}, "sample_type": "deterministic_fake_not_load_test"}
+.
+4 passed in 0.45s
+[safe-runner] stack_id=bc5cc04d5b4c336b pg=127.0.0.1:60578 redis=127.0.0.1:60579
+[safe-runner] test_db=codeaware_test_bc5cc04d5b4c336b mig_db=codeaware_migtest_bc5cc04d5b4c336b redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-bc5cc04d5b4c336b
+[C2 MOCKED] route-level seven-domain closure
+C2-B demo: {'review_id': 1, 'critical_count': 1, 'unit_test_id': 2, 'framework': 'JUnit5', 'review_records': 1}
+.C2-C demo: {'created_version': 2, 'preview_resolved': True, 'rollback_version': 1, 'history_preserved': True}
+.C2-D demo: {'document_id': 1, 'knowledge_match_types': ['vector'], 'memory_id': 1, 'memory_recalled': True}
+.C2-E demo: {'conversation_id': '8d1d331da9984562a4b9e95f483d92c8', 'chat_reply_preserved': True, 'snapshot_version': 1, 'snapshot_files': 3, 'absolute_path_hidden': True}
+.
+4 passed in 0.64s
+[safe-runner] stack_id=eb6279587ef2a116 pg=127.0.0.1:60607 redis=127.0.0.1:60608
+[safe-runner] test_db=codeaware_test_eb6279587ef2a116 mig_db=codeaware_migtest_eb6279587ef2a116 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-eb6279587ef2a116
+[PASS] Code Review: result + record + filter/detail
+[PASS] Unit Test: result + record + filter/detail
+[PASS] AIReadMe: snapshot + version + latest
+[PASS] Chat: typed SSE + cid + summary/continuation regression
+[PASS] Knowledge: text/file + hybrid search + cascade delete
+[PASS] Memory: manual/automatic + recall + delete
+[PASS] Prompt: create v2 + preview + rollback
+[C2 MOCKED] PASS repository_status_unchanged=true development_resources_unchanged=true
+[C3 HANDOFF] PASS fresh command=./codeaware-py/scripts/verify_current_release.sh
+[C3 HANDOFF] PASS rollback command=./codeaware-py/scripts/verify_c3_rollback.sh
+[C3 HANDOFF] PASS C2 committed live-smoke evidence hash revalidated
+[C3 HANDOFF] LIMIT local-first single-worker no-auth no-agent current-lexical=pg_trgm
+[C3 HANDOFF] PASS repository_status_unchanged=true development_resources_unchanged=true
+ Network codeaware-test-bc5cc04d5b4c336b_default Creating
+ Network codeaware-test-bc5cc04d5b4c336b_default Created
+ Volume codeaware-test-bc5cc04d5b4c336b_pgdata Creating
+ Volume codeaware-test-bc5cc04d5b4c336b_pgdata Created
+ Volume codeaware-test-bc5cc04d5b4c336b_redisdata Creating
+ Volume codeaware-test-bc5cc04d5b4c336b_redisdata Created
+ Container codeaware-test-bc5cc04d5b4c336b-redis-1 Creating
+ Container codeaware-test-bc5cc04d5b4c336b-pg-1 Creating
+ Container codeaware-test-bc5cc04d5b4c336b-pg-1 Created
+ Container codeaware-test-bc5cc04d5b4c336b-redis-1 Created
+ Container codeaware-test-bc5cc04d5b4c336b-redis-1 Starting
+ Container codeaware-test-bc5cc04d5b4c336b-pg-1 Starting
+ Container codeaware-test-bc5cc04d5b4c336b-pg-1 Started
+ Container codeaware-test-bc5cc04d5b4c336b-redis-1 Started
+ Network codeaware-test-eb6279587ef2a116_default Creating
+ Network codeaware-test-eb6279587ef2a116_default Created
+ Volume codeaware-test-eb6279587ef2a116_redisdata Creating
+ Volume codeaware-test-eb6279587ef2a116_redisdata Created
+ Volume codeaware-test-eb6279587ef2a116_pgdata Creating
+ Volume codeaware-test-eb6279587ef2a116_pgdata Created
+ Container codeaware-test-eb6279587ef2a116-redis-1 Creating
+ Container codeaware-test-eb6279587ef2a116-pg-1 Creating
+ Container codeaware-test-eb6279587ef2a116-pg-1 Created
+ Container codeaware-test-eb6279587ef2a116-redis-1 Created
+ Container codeaware-test-eb6279587ef2a116-redis-1 Starting
+ Container codeaware-test-eb6279587ef2a116-pg-1 Starting
+ Container codeaware-test-eb6279587ef2a116-pg-1 Started
+ Container codeaware-test-eb6279587ef2a116-redis-1 Started

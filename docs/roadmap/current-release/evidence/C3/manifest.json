@@ -1,0 +1,156 @@
+{
+  "authorization": null,
+  "baseline_commit": "c54459885e2461e3453eed249846adf76ac296b2",
+  "checks": [
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/fresh-bootstrap.json",
+          "sha256": "bf6f2f91934305bb4ba282e8a7805af5714706a630f6a99d1f3df242fc2026e4"
+        }
+      ],
+      "id": "fresh-bootstrap",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/docs-contract.json",
+          "sha256": "1e64a3721e675adccdd2bf3c35dbd9a40062d3d4d76c328b3be2446e846f6a5d"
+        }
+      ],
+      "id": "docs-contract",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/rollback.json",
+          "sha256": "56fb1b3ff17176a1befd27808384458dbdbfaeacf4d71f541183bc03ee555bac"
+        }
+      ],
+      "id": "rollback",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/freeze-handoff.json",
+          "sha256": "ced1bdf1505eb111f8956e450fdbdd609e005ccecda18cf9c806945a9b67b829"
+        },
+        {
+          "path": "artifacts/metrics.json",
+          "sha256": "a711312877303fe44509381a199eb5ce51e96cd6aadb9ba79a008c5cd4922303"
+        },
+        {
+          "path": "artifacts/c2-live-reference.json",
+          "sha256": "25a75e3df373d0695c0c176560f539779e9e0f870241cb151112242f7dd55179"
+        }
+      ],
+      "id": "freeze-handoff",
+      "status": "passed"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "./codeaware-py/scripts/verify_current_release.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T13:40:50Z",
+      "id": "current-release-verify",
+      "required": true,
+      "sha256": "c78ffc147544fe1d3e54bc134428d5df7e908d91d99f627a2ec444f6fa9c8dcf",
+      "started_at": "2026-07-30T13:37:50Z",
+      "stdout": "artifacts/current-release-verify.log"
+    },
+    {
+      "argv": [
+        "./codeaware-py/scripts/demo_c3_handoff.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T13:41:02Z",
+      "id": "handoff-demo",
+      "required": true,
+      "sha256": "08c46a5aaf3e09e472f37686817cb57de9f8ae53403eda70efe9016d4aaf042c",
+      "started_at": "2026-07-30T13:40:50Z",
+      "stdout": "artifacts/handoff-demo.log"
+    },
+    {
+      "argv": [
+        "./codeaware-py/scripts/verify_c3_rollback.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T13:41:30Z",
+      "id": "rollback",
+      "required": true,
+      "sha256": "520d3d42b792590adad5d264123c060943a54db62aff8d274868d606aad230fd",
+      "started_at": "2026-07-30T13:41:02Z",
+      "stdout": "artifacts/rollback.log"
+    }
+  ],
+  "dependencies": [
+    {
+      "manifest_sha256": "5d20fa529315e37a1424fe92785e9c6086604421fdcea8b9f374aa527b5aa6e3",
+      "stage": "C2",
+      "validated_commit": "3f521ea69cf01c8a2971f6d58be60bb96582391a"
+    }
+  ],
+  "environment": {
+    "mode": "disposable",
+    "postgres_database": "codeaware_test_b3debcc325b0e057",
+    "redis_database": 1,
+    "sandbox_or_compose_profile": "test"
+  },
+  "gate": {
+    "agent_implementation_authorized": false,
+    "agent_review_allowed": false,
+    "current_release_complete": true,
+    "default_route_profile": "personal-local-readonly",
+    "next_stage": "C4"
+  },
+  "implementation_commit": "7b9bcc838a126bf2796f62f61275eb2c00da5edb",
+  "implementation_parent": "9bb1b63c0da8ffedb3d30f185cc1560a79cddc04",
+  "limitations": [
+    "deterministic fake latency is a comparison baseline, not a production SLA",
+    "C2 committed live smoke was hash-verified and not rerun",
+    "local single-worker conversation guard",
+    "current lexical retrieval is pg_trgm, not BM25",
+    "frontend bundle size remains an optimization opportunity"
+  ],
+  "migration": {
+    "current": [
+      "0005"
+    ],
+    "heads": [
+      "0005"
+    ],
+    "log": "artifacts/migration.json",
+    "sha256": "1d370e07a20e3c5f11c0c19821c51bdc1e59fa4bc2375577e15b307637dc236e"
+  },
+  "openapi": {
+    "path": "artifacts/openapi.json",
+    "sha256": "cebe4968e6fb75832d5ff5669910b155c5f416887cf10ea63397cc5e9dc0285e"
+  },
+  "report": {
+    "path": "report.md",
+    "sha256": "636e17cad1513010fa984ec06f14521eadc173ecdf5cab8a674aeab0c657cd70"
+  },
+  "result": "passed",
+  "rollback": {
+    "artifact": "artifacts/rollback.json",
+    "disposable_database": true,
+    "result": "passed",
+    "sha256": "56fb1b3ff17176a1befd27808384458dbdbfaeacf4d71f541183bc03ee555bac",
+    "temp_worktree": true
+  },
+  "route_profile": "current-release",
+  "run_id": "20260730T133750Z-403b409b",
+  "schema_version": 1,
+  "stage": "C3",
+  "supersedes_manifest_sha256": null,
+  "validated_head": "3f95543c1fb31e630e233332c1bfed850e855c21"
+}

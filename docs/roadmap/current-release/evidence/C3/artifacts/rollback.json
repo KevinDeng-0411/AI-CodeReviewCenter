@@ -1,0 +1,12 @@
+{
+  "development_resources_unchanged": true,
+  "disposable_database": true,
+  "freeze_commit": "3f95543c1fb31e630e233332c1bfed850e855c21",
+  "logical_backup_restore": true,
+  "migration_head": "0005",
+  "result": "passed",
+  "rollback_commit": "c54459885e2461e3453eed249846adf76ac296b2",
+  "source_command": "rollback",
+  "temp_worktree": true,
+  "worktree_removed": true
+}

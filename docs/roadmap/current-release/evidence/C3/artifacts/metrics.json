@@ -1,0 +1,38 @@
+{
+  "chat": {
+    "first_token_ms": {
+      "p50": 0.047,
+      "p95": 0.066
+    },
+    "full_response_ms": {
+      "p50": 0.372,
+      "p95": 0.548
+    },
+    "samples": 20,
+    "sse_fidelity": 1.0
+  },
+  "retrieval": {
+    "cases": 30,
+    "categories": {
+      "chinese_compound": 10,
+      "rare_identifier": 10,
+      "semantic_paraphrase": 10
+    },
+    "pg_trgm": {
+      "mrr@10": 0.3333,
+      "ndcg@10": 0.3333,
+      "recall@5": 0.3333
+    },
+    "rrf": {
+      "mrr@10": 0.7494,
+      "ndcg@10": 0.8096,
+      "recall@5": 1.0
+    },
+    "vector": {
+      "mrr@10": 1.0,
+      "ndcg@10": 1.0,
+      "recall@5": 1.0
+    }
+  },
+  "sample_type": "deterministic_fake_not_load_test"
+}

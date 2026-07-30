@@ -1,0 +1,55 @@
+{
+  "c2_manifest_sha256": "5d20fa529315e37a1424fe92785e9c6086604421fdcea8b9f374aa527b5aa6e3",
+  "c2_validated_commit": "3f521ea69cf01c8a2971f6d58be60bb96582391a",
+  "live_command_sha256": "4603532ea16882f40a65cc5c3c81493596fe7b1b1cab286c17356d1afef57f5f",
+  "live_metrics": {
+    "ai_readme": {
+      "content_chars": 114,
+      "content_sha256_prefix": "8ab6757ac9c3027f",
+      "elapsed_ms": 1452,
+      "snapshot_files": 2,
+      "snapshot_hash_prefix": "665ff7ecc8d604d4",
+      "version": 1
+    },
+    "chat": {
+      "elapsed_ms": 1206,
+      "output_chars": 13,
+      "output_sha256_prefix": "a2542670074ea3e0",
+      "token_usage": {
+        "input_tokens": 17,
+        "output_tokens": 59,
+        "total_tokens": 76
+      }
+    },
+    "cost": {
+      "amount": null,
+      "basis": "provider response exposes token usage but not billed amount; no unverified price table is hard-coded",
+      "currency": "USD",
+      "metered_tokens": 76,
+      "real_llm_calls": 3
+    },
+    "embedding": {
+      "dimension": 1024,
+      "elapsed_ms": 2113
+    },
+    "embedding_model": "bge-m3",
+    "knowledge": {
+      "chunk_count": 1,
+      "document_persisted": true,
+      "elapsed_ms": 815,
+      "hit_count": 1,
+      "match_types": [
+        "both"
+      ]
+    },
+    "llm_model": "deepseek-v4-flash",
+    "structured_output": {
+      "elapsed_ms": 947,
+      "schema": "_LiveStructuredCheck",
+      "valid": true
+    },
+    "timestamp_utc": "2026-07-30T12:49:40.823614+00:00"
+  },
+  "live_metrics_sha256": "1bf723e1a11e20d275fad742100ba72ab1363f663b4150585449a2c0096b658a",
+  "reused_without_new_provider_call": true
+}

@@ -1,0 +1,14 @@
+{
+  "agent_implementation_authorized": false,
+  "backend_coverage_percent": 90,
+  "backend_passed": 264,
+  "browser_domains_passed": 7,
+  "c2_live_reference_sha256": "25a75e3df373d0695c0c176560f539779e9e0f870241cb151112242f7dd55179",
+  "c2_live_reused_without_new_provider_call": true,
+  "frontend_tests_passed": 34,
+  "metrics_sha256": "a711312877303fe44509381a199eb5ce51e96cd6aadb9ba79a008c5cd4922303",
+  "next_stage": "C4",
+  "release": "0.1.0",
+  "result": "passed",
+  "validated_head": "3f95543c1fb31e630e233332c1bfed850e855c21"
+}

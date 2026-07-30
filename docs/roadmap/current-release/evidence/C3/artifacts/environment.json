@@ -1,0 +1,10 @@
+{
+  "development_resources_unchanged": true,
+  "exact_cleanup": true,
+  "fresh_bootstrap_seconds": 17,
+  "mode": "disposable",
+  "postgres_database": "codeaware_test_b3debcc325b0e057",
+  "redis_database": 1,
+  "sandbox_or_compose_profile": "test",
+  "total_verify_seconds": 180
+}
