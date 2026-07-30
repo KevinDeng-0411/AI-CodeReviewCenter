@@ -1,0 +1,398 @@
+[C3 VERIFY] release=0.1.0 commit=8504518dc0f042da80578b751e901b2870e51004
+[C3 VERIFY] START dependency-lock
+[C3 VERIFY] PASS dependency-lock exit=0 seconds=0
+[C3 VERIFY] START compose-config
+[C3 VERIFY] PASS compose-config exit=0 seconds=0
+[C3 VERIFY] START openapi-contract
+OpenAPI snapshot matches current app
+[C3 VERIFY] PASS openapi-contract exit=0 seconds=2
+[C3 VERIFY] START c1-evidence
+✓ stage C1 (current-release) manifest 校验通过
+[C3 VERIFY] PASS c1-evidence exit=0 seconds=0
+[C3 VERIFY] START c2-evidence
+✓ stage C2 (current-release) manifest 校验通过
+[C3 VERIFY] PASS c2-evidence exit=0 seconds=0
+[C3 VERIFY] START release-hygiene
+[release-hygiene] PASS tracked_files=368 text_files=367 secrets=0 host_path_leaks=0
+[C3 VERIFY] PASS release-hygiene exit=0 seconds=0
+[C3 VERIFY] START fresh-bootstrap
+[fresh-bootstrap] project=codeaware-bootstrap-071c0ce242feb128
+[fresh-bootstrap] pg=127.0.0.1:56606 redis=127.0.0.1:56607 ollama=127.0.0.1:56608 api=127.0.0.1:56609
+[fresh-bootstrap] databases ready: ai_center owner=aicenter, ai_center_py owner=aicenter
+[ensure-python-db] ai_center_py already exists owner=aicenter
+[ensure-python-db] ready database=ai_center_py owner=aicenter
+[fresh-bootstrap] existing-volume database helper is idempotent
+[fresh-bootstrap] Alembic current=0005 (head)
+[fresh-bootstrap] active prompts: AI_README=1 CHAT=1 CODE_REVIEW=1 UNIT_TEST=1
+[fresh-bootstrap] HTTP /health=200 /health/live=200 /health/ready=200 /docs=200
+[fresh-bootstrap] Redis stopped: liveness=200 readiness=503 redis=down
+[fresh-bootstrap] Redis restored: readiness=200
+..........................................                               [100%]
+42 passed in 1.99s
+[safe-runner] stack_id=d1fa9d4be1bf4107 pg=127.0.0.1:56663 redis=127.0.0.1:56664
+[safe-runner] test_db=codeaware_test_d1fa9d4be1bf4107 mig_db=codeaware_migtest_d1fa9d4be1bf4107 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-d1fa9d4be1bf4107
+[fresh-bootstrap] guard allow/refuse, validator, health, migration roundtrip passed
+[fresh-bootstrap] exact cleanup complete project=codeaware-bootstrap-071c0ce242feb128
+[fresh-bootstrap] development resource fingerprint unchanged
+[C3 VERIFY] PASS fresh-bootstrap exit=0 seconds=17
+[C3 VERIFY] START backend-full
+........................................................................ [ 27%]
+........................................................................ [ 54%]
+........................................................................ [ 82%]
+..............................................                           [100%]
+262 passed, 2 deselected in 6.56s
+[safe-runner] stack_id=c4da572820b00fc7 pg=127.0.0.1:56763 redis=127.0.0.1:56764
+[safe-runner] test_db=codeaware_test_c4da572820b00fc7 mig_db=codeaware_migtest_c4da572820b00fc7 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-c4da572820b00fc7
+[C3 VERIFY] PASS backend-full exit=0 seconds=11
+[C3 VERIFY] START backend-coverage
+........................................................................ [ 27%]
+........................................................................ [ 54%]
+........................................................................ [ 82%]
+..............................................                           [100%]
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.12.13-final-0 _______________
+
+Name                                  Stmts   Miss  Cover   Missing
+-------------------------------------------------------------------
+app/__init__.py                           4      0   100%
+app/ai/__init__.py                        0      0   100%
+app/ai/config.py                         14      0   100%
+app/ai/infra/__init__.py                  0      0   100%
+app/ai/infra/vector_recall.py            54      0   100%
+app/ai/memory/__init__.py                 0      0   100%
+app/ai/memory/long_term.py               63      1    98%   97
+app/ai/memory/short_term.py             177     22    88%   79-80, 86-87, 106-113, 163, 178, 219, 229, 238, 295, 305, 314, 316, 324
+app/ai/prompt/__init__.py                 0      0   100%
+app/ai/prompt/template_manager.py        62      5    92%   113-119, 127
+app/ai/rag/__init__.py                    0      0   100%
+app/ai/rag/hybrid_retriever.py           19      0   100%
+app/ai/rag/query_rewriter.py             40      2    95%   66-67
+app/ai/rag/semantic_chunker.py           13      0   100%
+app/ai/services/__init__.py               0      0   100%
+app/ai/services/ai_readme.py             59      4    93%   78, 123, 131, 133
+app/ai/services/chat.py                  32      6    81%   23-26, 30, 33-36, 43
+app/ai/services/code_review.py           47      4    91%   98-104
+app/ai/services/document_parser.py       40      0   100%
+app/ai/services/project_snapshot.py     281     28    90%   209, 226, 229-230, 232, 296-297, 331, 352, 355, 357-360, 371, 373, 375-378, 380, 385-386, 431, 459, 463, 483, 485
+app/ai/services/prompt.py                44      1    98%   73
+app/ai/services/rag.py                   57      0   100%
+app/ai/services/turn_coordinator.py     398     32    92%   177-183, 207, 324-341, 427, 457-462, 518-519, 539-540, 561-562, 573-574, 605-614, 623-631, 662-668, 720
+app/ai/services/unit_test.py             42      3    93%   63, 71, 73
+app/api/__init__.py                       0      0   100%
+app/api/v1/__init__.py                    0      0   100%
+app/api/v1/ai_health.py                  27      8    70%   28-29, 35-36, 40-44
+app/api/v1/ai_readme.py                  24      1    96%   18
+app/api/v1/chat.py                       93     11    88%   184-185, 222-224, 230, 251-257
+app/api/v1/code_review.py                35      9    74%   23, 38-46, 54-56
+app/api/v1/deps.py                       14      0   100%
+app/api/v1/knowledge.py                  88     14    84%   66, 69, 82-86, 103-107, 173-174
+app/api/v1/memory.py                     38     11    71%   29-30, 44, 58-60, 78-82
+app/api/v1/prompt.py                     30      2    93%   27, 54
+app/api/v1/system_health.py              40      6    85%   22-23, 27, 31-33
+app/api/v1/unit_test.py                  35      8    77%   44-52, 60-62
+app/core/__init__.py                      0      0   100%
+app/core/config.py                       42      0   100%
+app/core/enums.py                        14      0   100%
+app/core/exceptions.py                   34      6    82%   45, 68, 72-79
+app/core/response.py                     18      0   100%
+app/core/version.py                       1      0   100%
+app/db/__init__.py                        0      0   100%
+app/db/base.py                            3      0   100%
+app/db/redis.py                           5      0   100%
+app/db/session.py                        12      0   100%
+app/main.py                              45      8    82%   56-68, 81
+app/models/__init__.py                    9      0   100%
+app/models/ai_operation_record.py        17      0   100%
+app/models/ai_readme_document.py         17      0   100%
+app/models/conversation.py               13      0   100%
+app/models/document.py                   13      0   100%
+app/models/knowledge_chunk.py            15      0   100%
+app/models/long_term_memory.py           16      0   100%
+app/models/message.py                    14      0   100%
+app/models/prompt_template.py            17      0   100%
+app/repositories/__init__.py              2      0   100%
+app/repositories/base.py                 22      2    91%   37-38
+app/schemas/__init__.py                   2      0   100%
+app/schemas/ai_readme.py                 29      1    97%   16
+app/schemas/chat.py                      38      2    95%   19, 26
+app/schemas/chat_events.py               36      0   100%
+app/schemas/code_review.py               56      3    95%   21, 71, 73
+app/schemas/entities.py                  79      0   100%
+app/schemas/knowledge.py                 39      3    92%   18, 21, 28
+app/schemas/memory.py                    26      1    96%   20
+app/schemas/project_snapshot.py          23      0   100%
+app/schemas/prompt.py                    32      1    97%   31
+app/schemas/unit_test.py                 30      2    93%   26, 33
+app/testing/__init__.py                   0      0   100%
+app/testing/browser_e2e.py               57     57     0%   7-111
+-------------------------------------------------------------------
+TOTAL                                  2646    264    90%
+262 passed, 2 deselected in 13.59s
+[safe-runner] stack_id=67f0587bc4e202f8 pg=127.0.0.1:57052 redis=127.0.0.1:57053
+[safe-runner] test_db=codeaware_test_67f0587bc4e202f8 mig_db=codeaware_migtest_67f0587bc4e202f8 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-67f0587bc4e202f8
+[C3 VERIFY] PASS backend-coverage exit=0 seconds=19
+[C3 VERIFY] START api-e2e
+.........................................                                [100%]
+41 passed in 1.21s
+[safe-runner] stack_id=ada2ae830a829649 pg=127.0.0.1:57374 redis=127.0.0.1:57375
+[safe-runner] test_db=codeaware_test_ada2ae830a829649 mig_db=codeaware_migtest_ada2ae830a829649 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-ada2ae830a829649
+[C3 VERIFY] PASS api-e2e exit=0 seconds=5
+[C3 VERIFY] START release-metrics
+[C3 METRICS] {"chat": {"first_token_ms": {"p50": 0.045, "p95": 0.065}, "full_response_ms": {"p50": 0.357, "p95": 0.529}, "samples": 20, "sse_fidelity": 1.0}, "retrieval": {"cases": 30, "categories": {"chinese_compound": 10, "rare_identifier": 10, "semantic_paraphrase": 10}, "pg_trgm": {"mrr@10": 0.3333, "ndcg@10": 0.3333, "recall@5": 0.3333}, "rrf": {"mrr@10": 0.7494, "ndcg@10": 0.8096, "recall@5": 1.0}, "vector": {"mrr@10": 1.0, "ndcg@10": 1.0, "recall@5": 1.0}}, "sample_type": "deterministic_fake_not_load_test"}
+.
+1 passed in 0.42s
+[safe-runner] stack_id=8b2c4aa5c2f1d0f1 pg=127.0.0.1:57427 redis=127.0.0.1:57428
+[safe-runner] test_db=codeaware_test_8b2c4aa5c2f1d0f1 mig_db=codeaware_migtest_8b2c4aa5c2f1d0f1 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-8b2c4aa5c2f1d0f1
+[C3 VERIFY] PASS release-metrics exit=0 seconds=4
+[C3 VERIFY] START c2-mocked-demo
+[C2 MOCKED] route-level seven-domain closure
+C2-B demo: {'review_id': 1, 'critical_count': 1, 'unit_test_id': 2, 'framework': 'JUnit5', 'review_records': 1}
+.C2-C demo: {'created_version': 2, 'preview_resolved': True, 'rollback_version': 1, 'history_preserved': True}
+.C2-D demo: {'document_id': 1, 'knowledge_match_types': ['vector'], 'memory_id': 1, 'memory_recalled': True}
+.C2-E demo: {'conversation_id': '3207e44c74c54c7881d1d721b7118644', 'chat_reply_preserved': True, 'snapshot_version': 1, 'snapshot_files': 3, 'absolute_path_hidden': True}
+.
+4 passed in 0.62s
+[safe-runner] stack_id=5acbb00c15dd0671 pg=127.0.0.1:57461 redis=127.0.0.1:57462
+[safe-runner] test_db=codeaware_test_5acbb00c15dd0671 mig_db=codeaware_migtest_5acbb00c15dd0671 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-5acbb00c15dd0671
+[PASS] Code Review: result + record + filter/detail
+[PASS] Unit Test: result + record + filter/detail
+[PASS] AIReadMe: snapshot + version + latest
+[PASS] Chat: typed SSE + cid + summary/continuation regression
+[PASS] Knowledge: text/file + hybrid search + cascade delete
+[PASS] Memory: manual/automatic + recall + delete
+[PASS] Prompt: create v2 + preview + rollback
+[C2 MOCKED] PASS repository_status_unchanged=true development_resources_unchanged=true
+[C3 VERIFY] PASS c2-mocked-demo exit=0 seconds=5
+[C3 VERIFY] START frontend-install
+
+added 251 packages, and audited 252 packages in 1m
+
+126 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+[C3 VERIFY] PASS frontend-install exit=0 seconds=69
+[C3 VERIFY] START frontend-test
+
+> frontend@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 <repo_root>/codeaware-py/frontend
+
+
+ Test Files  3 passed (3)
+      Tests  34 passed (34)
+   Start at  21:34:22
+   Duration  217ms (transform 73ms, setup 0ms, import 95ms, tests 24ms, environment 0ms)
+
+[C3 VERIFY] PASS frontend-test exit=0 seconds=1
+[C3 VERIFY] START frontend-lint
+
+> frontend@0.1.0 lint
+> oxlint
+
+[C3 VERIFY] PASS frontend-lint exit=0 seconds=1
+[C3 VERIFY] START frontend-build
+
+> frontend@0.1.0 build
+> tsc -b && vite build
+
+vite v8.1.5 building client environment for production...
+[2K
+transforming...✓ 2652 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     0.73 kB │ gzip:   0.43 kB
+dist/assets/index-pBlkC_Hu.css     14.96 kB │ gzip:   4.18 kB
+dist/assets/index-CdMs-Vol.js   1,023.33 kB │ gzip: 347.71 kB
+
+✓ built in 591ms
+[C3 VERIFY] PASS frontend-build exit=0 seconds=2
+[C3 VERIFY] START browser-e2e
+
+> frontend@0.1.0 test:e2e
+> playwright test
+
+
+Running 7 tests using 1 worker
+
+  ✓  1 [chromium] › e2e/current-release.e2e.ts:12:3 › C2 current-release seven-domain browser closure › Code Review: structured result and visible stable failure (1.7s)
+  ✓  2 [chromium] › e2e/current-release.e2e.ts:24:3 › C2 current-release seven-domain browser closure › Unit Test: generated JUnit5 code without execution claim (1.1s)
+  ✓  3 [chromium] › e2e/current-release.e2e.ts:35:3 › C2 current-release seven-domain browser closure › AIReadMe: allowlisted snapshot metadata is visible (1.1s)
+  ✓  4 [chromium] › e2e/current-release.e2e.ts:48:3 › C2 current-release seven-domain browser closure › Chat: typed stream persists and reloads by real cid (1.5s)
+  ✓  5 [chromium] › e2e/current-release.e2e.ts:67:3 › C2 current-release seven-domain browser closure › Knowledge: text/file upload, hybrid search, and delete (2.1s)
+  ✓  6 [chromium] › e2e/current-release.e2e.ts:96:3 › C2 current-release seven-domain browser closure › Memory: REFERENCE save, semantic recall, and delete (1.1s)
+  ✓  7 [chromium] › e2e/current-release.e2e.ts:115:3 › C2 current-release seven-domain browser closure › Prompt: create v2, preview, and rollback to v1 (1.1s)
+
+  7 passed (11.8s)
+[safe-runner] stack_id=b0f972d378f15eee pg=127.0.0.1:57761 redis=127.0.0.1:57762
+[safe-runner] test_db=codeaware_test_b0f972d378f15eee mig_db=codeaware_migtest_b0f972d378f15eee redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-b0f972d378f15eee
+[C3 VERIFY] PASS browser-e2e exit=0 seconds=18
+[C3 VERIFY] PASS release=0.1.0 total_seconds=155 browser_domains=7
+[C3 VERIFY] exact cleanup confirmed repository_status_unchanged=true development_resources_unchanged=true
+Resolved 118 packages in 2ms
+ Network codeaware-bootstrap-071c0ce242feb128_default Creating
+ Network codeaware-bootstrap-071c0ce242feb128_default Created
+ Volume codeaware-bootstrap-071c0ce242feb128_ollamadata Creating
+ Volume codeaware-bootstrap-071c0ce242feb128_ollamadata Created
+ Volume codeaware-bootstrap-071c0ce242feb128_pgdata Creating
+ Volume codeaware-bootstrap-071c0ce242feb128_pgdata Created
+ Volume codeaware-bootstrap-071c0ce242feb128_redisdata Creating
+ Volume codeaware-bootstrap-071c0ce242feb128_redisdata Created
+ Container codeaware-bootstrap-071c0ce242feb128-redis Creating
+ Container codeaware-bootstrap-071c0ce242feb128-ollama Creating
+ Container codeaware-bootstrap-071c0ce242feb128-postgres Creating
+ Container codeaware-bootstrap-071c0ce242feb128-ollama Created
+ Container codeaware-bootstrap-071c0ce242feb128-postgres Created
+ Container codeaware-bootstrap-071c0ce242feb128-redis Created
+ Container codeaware-bootstrap-071c0ce242feb128-ollama Starting
+ Container codeaware-bootstrap-071c0ce242feb128-postgres Starting
+ Container codeaware-bootstrap-071c0ce242feb128-redis Starting
+ Container codeaware-bootstrap-071c0ce242feb128-redis Started
+ Container codeaware-bootstrap-071c0ce242feb128-ollama Started
+ Container codeaware-bootstrap-071c0ce242feb128-postgres Started
+ Container codeaware-bootstrap-071c0ce242feb128-redis Waiting
+ Container codeaware-bootstrap-071c0ce242feb128-ollama Waiting
+ Container codeaware-bootstrap-071c0ce242feb128-postgres Waiting
+ Container codeaware-bootstrap-071c0ce242feb128-redis Healthy
+ Container codeaware-bootstrap-071c0ce242feb128-postgres Healthy
+ Container codeaware-bootstrap-071c0ce242feb128-ollama Healthy
+ Container codeaware-bootstrap-071c0ce242feb128-postgres Running
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001, initial schema - 8 tables
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002, seed CHAT / UNIT_TEST / AI_README prompt templates
+INFO  [alembic.runtime.migration] Running upgrade 0002 -> 0003, add summary message watermark
+INFO  [alembic.runtime.migration] Running upgrade 0003 -> 0004, add AIReadMe snapshot metadata and per-project versions
+INFO  [alembic.runtime.migration] Running upgrade 0004 -> 0005, add C2 prompt version and memory type constraints
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+ Container codeaware-bootstrap-071c0ce242feb128-redis Stopping
+ Container codeaware-bootstrap-071c0ce242feb128-redis Stopped
+ Container codeaware-bootstrap-071c0ce242feb128-redis Starting
+ Container codeaware-bootstrap-071c0ce242feb128-redis Started
+ Network codeaware-test-d1fa9d4be1bf4107_default Creating
+ Network codeaware-test-d1fa9d4be1bf4107_default Created
+ Volume codeaware-test-d1fa9d4be1bf4107_redisdata Creating
+ Volume codeaware-test-d1fa9d4be1bf4107_redisdata Created
+ Volume codeaware-test-d1fa9d4be1bf4107_pgdata Creating
+ Volume codeaware-test-d1fa9d4be1bf4107_pgdata Created
+ Container codeaware-test-d1fa9d4be1bf4107-pg-1 Creating
+ Container codeaware-test-d1fa9d4be1bf4107-redis-1 Creating
+ Container codeaware-test-d1fa9d4be1bf4107-pg-1 Created
+ Container codeaware-test-d1fa9d4be1bf4107-redis-1 Created
+ Container codeaware-test-d1fa9d4be1bf4107-pg-1 Starting
+ Container codeaware-test-d1fa9d4be1bf4107-redis-1 Starting
+ Container codeaware-test-d1fa9d4be1bf4107-pg-1 Started
+ Container codeaware-test-d1fa9d4be1bf4107-redis-1 Started
+ Network codeaware-test-c4da572820b00fc7_default Creating
+ Network codeaware-test-c4da572820b00fc7_default Created
+ Volume codeaware-test-c4da572820b00fc7_redisdata Creating
+ Volume codeaware-test-c4da572820b00fc7_redisdata Created
+ Volume codeaware-test-c4da572820b00fc7_pgdata Creating
+ Volume codeaware-test-c4da572820b00fc7_pgdata Created
+ Container codeaware-test-c4da572820b00fc7-redis-1 Creating
+ Container codeaware-test-c4da572820b00fc7-pg-1 Creating
+ Container codeaware-test-c4da572820b00fc7-redis-1 Created
+ Container codeaware-test-c4da572820b00fc7-pg-1 Created
+ Container codeaware-test-c4da572820b00fc7-pg-1 Starting
+ Container codeaware-test-c4da572820b00fc7-redis-1 Starting
+ Container codeaware-test-c4da572820b00fc7-redis-1 Started
+ Container codeaware-test-c4da572820b00fc7-pg-1 Started
+ Network codeaware-test-67f0587bc4e202f8_default Creating
+ Network codeaware-test-67f0587bc4e202f8_default Created
+ Volume codeaware-test-67f0587bc4e202f8_pgdata Creating
+ Volume codeaware-test-67f0587bc4e202f8_pgdata Created
+ Volume codeaware-test-67f0587bc4e202f8_redisdata Creating
+ Volume codeaware-test-67f0587bc4e202f8_redisdata Created
+ Container codeaware-test-67f0587bc4e202f8-redis-1 Creating
+ Container codeaware-test-67f0587bc4e202f8-pg-1 Creating
+ Container codeaware-test-67f0587bc4e202f8-pg-1 Created
+ Container codeaware-test-67f0587bc4e202f8-redis-1 Created
+ Container codeaware-test-67f0587bc4e202f8-pg-1 Starting
+ Container codeaware-test-67f0587bc4e202f8-redis-1 Starting
+ Container codeaware-test-67f0587bc4e202f8-pg-1 Started
+ Container codeaware-test-67f0587bc4e202f8-redis-1 Started
+ Network codeaware-test-ada2ae830a829649_default Creating
+ Network codeaware-test-ada2ae830a829649_default Created
+ Volume codeaware-test-ada2ae830a829649_pgdata Creating
+ Volume codeaware-test-ada2ae830a829649_pgdata Created
+ Volume codeaware-test-ada2ae830a829649_redisdata Creating
+ Volume codeaware-test-ada2ae830a829649_redisdata Created
+ Container codeaware-test-ada2ae830a829649-redis-1 Creating
+ Container codeaware-test-ada2ae830a829649-pg-1 Creating
+ Container codeaware-test-ada2ae830a829649-pg-1 Created
+ Container codeaware-test-ada2ae830a829649-redis-1 Created
+ Container codeaware-test-ada2ae830a829649-redis-1 Starting
+ Container codeaware-test-ada2ae830a829649-pg-1 Starting
+ Container codeaware-test-ada2ae830a829649-redis-1 Started
+ Container codeaware-test-ada2ae830a829649-pg-1 Started
+ Network codeaware-test-8b2c4aa5c2f1d0f1_default Creating
+ Network codeaware-test-8b2c4aa5c2f1d0f1_default Created
+ Volume codeaware-test-8b2c4aa5c2f1d0f1_pgdata Creating
+ Volume codeaware-test-8b2c4aa5c2f1d0f1_pgdata Created
+ Volume codeaware-test-8b2c4aa5c2f1d0f1_redisdata Creating
+ Volume codeaware-test-8b2c4aa5c2f1d0f1_redisdata Created
+ Container codeaware-test-8b2c4aa5c2f1d0f1-redis-1 Creating
+ Container codeaware-test-8b2c4aa5c2f1d0f1-pg-1 Creating
+ Container codeaware-test-8b2c4aa5c2f1d0f1-pg-1 Created
+ Container codeaware-test-8b2c4aa5c2f1d0f1-redis-1 Created
+ Container codeaware-test-8b2c4aa5c2f1d0f1-pg-1 Starting
+ Container codeaware-test-8b2c4aa5c2f1d0f1-redis-1 Starting
+ Container codeaware-test-8b2c4aa5c2f1d0f1-pg-1 Started
+ Container codeaware-test-8b2c4aa5c2f1d0f1-redis-1 Started
+ Network codeaware-test-5acbb00c15dd0671_default Creating
+ Network codeaware-test-5acbb00c15dd0671_default Created
+ Volume codeaware-test-5acbb00c15dd0671_pgdata Creating
+ Volume codeaware-test-5acbb00c15dd0671_pgdata Created
+ Volume codeaware-test-5acbb00c15dd0671_redisdata Creating
+ Volume codeaware-test-5acbb00c15dd0671_redisdata Created
+ Container codeaware-test-5acbb00c15dd0671-redis-1 Creating
+ Container codeaware-test-5acbb00c15dd0671-pg-1 Creating
+ Container codeaware-test-5acbb00c15dd0671-pg-1 Created
+ Container codeaware-test-5acbb00c15dd0671-redis-1 Created
+ Container codeaware-test-5acbb00c15dd0671-redis-1 Starting
+ Container codeaware-test-5acbb00c15dd0671-pg-1 Starting
+ Container codeaware-test-5acbb00c15dd0671-redis-1 Started
+ Container codeaware-test-5acbb00c15dd0671-pg-1 Started
+npm notice
+npm notice New major version of npm available! 11.12.1 -> 12.0.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+npm notice To update run: npm install -g npm@12.0.2
+npm notice
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+ Network codeaware-test-b0f972d378f15eee_default Creating
+ Network codeaware-test-b0f972d378f15eee_default Created
+ Volume codeaware-test-b0f972d378f15eee_redisdata Creating
+ Volume codeaware-test-b0f972d378f15eee_redisdata Created
+ Volume codeaware-test-b0f972d378f15eee_pgdata Creating
+ Volume codeaware-test-b0f972d378f15eee_pgdata Created
+ Container codeaware-test-b0f972d378f15eee-redis-1 Creating
+ Container codeaware-test-b0f972d378f15eee-pg-1 Creating
+ Container codeaware-test-b0f972d378f15eee-pg-1 Created
+ Container codeaware-test-b0f972d378f15eee-redis-1 Created
+ Container codeaware-test-b0f972d378f15eee-redis-1 Starting
+ Container codeaware-test-b0f972d378f15eee-pg-1 Starting
+ Container codeaware-test-b0f972d378f15eee-redis-1 Started
+ Container codeaware-test-b0f972d378f15eee-pg-1 Started
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001, initial schema - 8 tables
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002, seed CHAT / UNIT_TEST / AI_README prompt templates
+INFO  [alembic.runtime.migration] Running upgrade 0002 -> 0003, add summary message watermark
+INFO  [alembic.runtime.migration] Running upgrade 0003 -> 0004, add AIReadMe snapshot metadata and per-project versions
+INFO  [alembic.runtime.migration] Running upgrade 0004 -> 0005, add C2 prompt version and memory type constraints
+(node:9380) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

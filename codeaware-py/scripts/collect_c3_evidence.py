@@ -101,7 +101,8 @@ def redact(text: str) -> str:
         "<redacted-connection>",
         value,
     )
-    return value
+    normalized = "\n".join(line.rstrip() for line in value.splitlines())
+    return normalized + ("\n" if value.endswith(("\n", "\r")) else "")
 
 
 def clean_command_environment() -> dict[str, str]:
@@ -194,7 +195,8 @@ def section(text: str, label: str) -> str:
 
 
 def extract_metrics(text: str) -> dict:
-    match = re.search(r"^\[C3 METRICS\] (\{.*\})$", text, re.MULTILINE)
+    # pytest -s can prefix captured print output with progress dots.
+    match = re.search(r"^[^\r\n]*\[C3 METRICS\] (\{.*\})$", text, re.MULTILINE)
     if not match:
         raise EvidenceFailure("C3 metrics JSON missing")
     try:
