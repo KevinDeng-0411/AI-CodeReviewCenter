@@ -1,0 +1,9 @@
+{
+  "browser_exact_cleanup": true,
+  "exact_cleanup": true,
+  "live_exact_cleanup": true,
+  "mode": "disposable",
+  "postgres_database": "codeaware_test_a20ee16b2527b50f",
+  "redis_database": 1,
+  "sandbox_or_compose_profile": "test"
+}

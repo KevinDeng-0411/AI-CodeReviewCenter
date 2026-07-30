@@ -1,0 +1,20 @@
+{
+  "baseline_commit": "094ede8b24ee396b860461f62e34ea5a31cee96c",
+  "development_resources_unchanged": true,
+  "disposable_database": true,
+  "implementation_commit": "cd217c8817ed81ddb19fc8268d350300e57cae91",
+  "implementation_parent": "2aaf35f7c75088bd84f37afc7be5f14feab72bc3",
+  "migration_chain": [
+    "0005",
+    "0004",
+    "0005",
+    "0002",
+    "0005",
+    "base",
+    "head"
+  ],
+  "result": "passed",
+  "source_command": "rollback",
+  "temp_worktree": true,
+  "worktree_removed": true
+}

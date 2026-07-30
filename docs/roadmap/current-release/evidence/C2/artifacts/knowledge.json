@@ -1,0 +1,14 @@
+{
+  "assertions": [
+    "text/file upload, chunks, pg_trgm+pgvector RRF, cascade",
+    "real bge-m3 hybrid retrieval returned both"
+  ],
+  "check_id": "knowledge",
+  "source_commands": [
+    "c2-mocked-demo",
+    "api-e2e",
+    "browser-e2e",
+    "live-smoke"
+  ],
+  "status": "passed"
+}

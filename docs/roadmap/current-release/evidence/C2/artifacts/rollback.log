@@ -1,0 +1,51 @@
+[C2 ROLLBACK] verify 0005 downgrade/upgrade chain in disposable database
+.                                                                        [100%]
+1 passed in 0.75s
+[safe-runner] stack_id=3f1faec4dd89ade6 pg=127.0.0.1:63404 redis=127.0.0.1:63405
+[safe-runner] test_db=codeaware_test_3f1faec4dd89ade6 mig_db=codeaware_migtest_3f1faec4dd89ade6 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-3f1faec4dd89ade6
+[C2 ROLLBACK] create detached C1 baseline worktree commit=094ede8b24ee396b860461f62e34ea5a31cee96c
+HEAD is now at 094ede8 docs: refresh Chat and RAG interview guide
+[C2 ROLLBACK] verify C1 evidence and representative baseline behavior
+✓ stage C1 (current-release) manifest 校验通过
+........................................................................ [ 75%]
+.......................                                                  [100%]
+95 passed in 18.68s
+[safe-runner] stack_id=ac8d3921077ae6b8 pg=127.0.0.1:63491 redis=127.0.0.1:63492
+[safe-runner] test_db=codeaware_test_ac8d3921077ae6b8 mig_db=codeaware_migtest_ac8d3921077ae6b8 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-ac8d3921077ae6b8
+[C2 ROLLBACK] PASS worktree_removed=true stacks_removed=true main_unchanged=true
+ Network codeaware-test-3f1faec4dd89ade6_default Creating 
+ Network codeaware-test-3f1faec4dd89ade6_default Created 
+ Volume codeaware-test-3f1faec4dd89ade6_pgdata Creating 
+ Volume codeaware-test-3f1faec4dd89ade6_pgdata Created 
+ Volume codeaware-test-3f1faec4dd89ade6_redisdata Creating 
+ Volume codeaware-test-3f1faec4dd89ade6_redisdata Created 
+ Container codeaware-test-3f1faec4dd89ade6-redis-1 Creating 
+ Container codeaware-test-3f1faec4dd89ade6-pg-1 Creating 
+ Container codeaware-test-3f1faec4dd89ade6-redis-1 Created 
+ Container codeaware-test-3f1faec4dd89ade6-pg-1 Created 
+ Container codeaware-test-3f1faec4dd89ade6-redis-1 Starting 
+ Container codeaware-test-3f1faec4dd89ade6-pg-1 Starting 
+ Container codeaware-test-3f1faec4dd89ade6-pg-1 Started 
+ Container codeaware-test-3f1faec4dd89ade6-redis-1 Started 
+Preparing worktree (detached HEAD 094ede8)
+Using CPython 3.12.13
+Creating virtual environment at: .venv
+   Building codeaware @ file://<temp_path>
+      Built codeaware @ file://<temp_path>
+Installed 117 packages in 296ms
+ Network codeaware-test-ac8d3921077ae6b8_default Creating 
+ Network codeaware-test-ac8d3921077ae6b8_default Created 
+ Volume codeaware-test-ac8d3921077ae6b8_redisdata Creating 
+ Volume codeaware-test-ac8d3921077ae6b8_redisdata Created 
+ Volume codeaware-test-ac8d3921077ae6b8_pgdata Creating 
+ Volume codeaware-test-ac8d3921077ae6b8_pgdata Created 
+ Container codeaware-test-ac8d3921077ae6b8-pg-1 Creating 
+ Container codeaware-test-ac8d3921077ae6b8-redis-1 Creating 
+ Container codeaware-test-ac8d3921077ae6b8-pg-1 Created 
+ Container codeaware-test-ac8d3921077ae6b8-redis-1 Created 
+ Container codeaware-test-ac8d3921077ae6b8-pg-1 Starting 
+ Container codeaware-test-ac8d3921077ae6b8-redis-1 Starting 
+ Container codeaware-test-ac8d3921077ae6b8-redis-1 Started 
+ Container codeaware-test-ac8d3921077ae6b8-pg-1 Started 

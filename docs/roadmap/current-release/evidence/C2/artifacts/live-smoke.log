@@ -1,0 +1,22 @@
+[C2 LIVE] starting guarded release smoke
+[C2 LIVE] {"ai_readme": {"content_chars": 114, "content_sha256_prefix": "8ab6757ac9c3027f", "elapsed_ms": 1452, "snapshot_files": 2, "snapshot_hash_prefix": "665ff7ecc8d604d4", "version": 1}, "chat": {"elapsed_ms": 1206, "output_chars": 13, "output_sha256_prefix": "a2542670074ea3e0", "token_usage": {"input_tokens": 17, "output_tokens": 59, "total_tokens": 76}}, "cost": {"amount": null, "basis": "provider response exposes token usage but not billed amount; no unverified price table is hard-coded", "currency": "USD", "metered_tokens": 76, "real_llm_calls": 3}, "embedding": {"dimension": 1024, "elapsed_ms": 2113}, "embedding_model": "bge-m3", "knowledge": {"chunk_count": 1, "document_persisted": true, "elapsed_ms": 815, "hit_count": 1, "match_types": ["both"]}, "llm_model": "deepseek-v4-flash", "structured_output": {"elapsed_ms": 947, "schema": "_LiveStructuredCheck", "valid": true}, "timestamp_utc": "2026-07-30T12:49:40.823614+00:00"}
+.
+1 passed in 7.02s
+[safe-runner] stack_id=744844429ee41227 pg=127.0.0.1:63342 redis=127.0.0.1:63343
+[safe-runner] test_db=codeaware_test_744844429ee41227 mig_db=codeaware_migtest_744844429ee41227 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-744844429ee41227
+[C2 LIVE] PASS
+ Network codeaware-test-744844429ee41227_default Creating 
+ Network codeaware-test-744844429ee41227_default Created 
+ Volume codeaware-test-744844429ee41227_redisdata Creating 
+ Volume codeaware-test-744844429ee41227_redisdata Created 
+ Volume codeaware-test-744844429ee41227_pgdata Creating 
+ Volume codeaware-test-744844429ee41227_pgdata Created 
+ Container codeaware-test-744844429ee41227-redis-1 Creating 
+ Container codeaware-test-744844429ee41227-pg-1 Creating 
+ Container codeaware-test-744844429ee41227-pg-1 Created 
+ Container codeaware-test-744844429ee41227-redis-1 Created 
+ Container codeaware-test-744844429ee41227-pg-1 Starting 
+ Container codeaware-test-744844429ee41227-redis-1 Starting 
+ Container codeaware-test-744844429ee41227-pg-1 Started 
+ Container codeaware-test-744844429ee41227-redis-1 Started 

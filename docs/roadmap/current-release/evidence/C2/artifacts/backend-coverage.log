@@ -1,0 +1,99 @@
+........................................................................ [ 28%]
+........................................................................ [ 57%]
+........................................................................ [ 86%]
+...................................                                      [100%]
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.12.13-final-0 _______________
+
+Name                                  Stmts   Miss  Cover   Missing
+-------------------------------------------------------------------
+app/__init__.py                           4      0   100%
+app/ai/__init__.py                        0      0   100%
+app/ai/config.py                         14      0   100%
+app/ai/infra/__init__.py                  0      0   100%
+app/ai/infra/vector_recall.py            54      0   100%
+app/ai/memory/__init__.py                 0      0   100%
+app/ai/memory/long_term.py               63      1    98%   97
+app/ai/memory/short_term.py             177     22    88%   79-80, 86-87, 106-113, 163, 178, 219, 229, 238, 295, 305, 314, 316, 324
+app/ai/prompt/__init__.py                 0      0   100%
+app/ai/prompt/template_manager.py        62      5    92%   113-119, 127
+app/ai/rag/__init__.py                    0      0   100%
+app/ai/rag/hybrid_retriever.py           19      0   100%
+app/ai/rag/query_rewriter.py             40      2    95%   66-67
+app/ai/rag/semantic_chunker.py           13      0   100%
+app/ai/services/__init__.py               0      0   100%
+app/ai/services/ai_readme.py             59      4    93%   78, 123, 131, 133
+app/ai/services/chat.py                  32      6    81%   23-26, 30, 33-36, 43
+app/ai/services/code_review.py           47      4    91%   98-104
+app/ai/services/document_parser.py       40      0   100%
+app/ai/services/project_snapshot.py     281     28    90%   209, 226, 229-230, 232, 296-297, 331, 352, 355, 357-360, 371, 373, 375-378, 380, 385-386, 431, 459, 463, 483, 485
+app/ai/services/prompt.py                44      1    98%   73
+app/ai/services/rag.py                   57      0   100%
+app/ai/services/turn_coordinator.py     398     32    92%   177-183, 207, 324-341, 427, 457-462, 518-519, 539-540, 561-562, 573-574, 605-614, 623-631, 662-668, 720
+app/ai/services/unit_test.py             42      3    93%   63, 71, 73
+app/api/__init__.py                       0      0   100%
+app/api/v1/__init__.py                    0      0   100%
+app/api/v1/ai_health.py                  27      8    70%   28-29, 35-36, 40-44
+app/api/v1/ai_readme.py                  24      1    96%   18
+app/api/v1/chat.py                       93     11    88%   184-185, 222-224, 230, 251-257
+app/api/v1/code_review.py                35      9    74%   23, 38-46, 54-56
+app/api/v1/deps.py                       14      0   100%
+app/api/v1/knowledge.py                  88     14    84%   66, 69, 82-86, 103-107, 173-174
+app/api/v1/memory.py                     38     11    71%   29-30, 44, 58-60, 78-82
+app/api/v1/prompt.py                     30      2    93%   27, 54
+app/api/v1/system_health.py              40      6    85%   22-23, 27, 31-33
+app/api/v1/unit_test.py                  35      8    77%   44-52, 60-62
+app/core/__init__.py                      0      0   100%
+app/core/config.py                       46      0   100%
+app/core/enums.py                        14      0   100%
+app/core/exceptions.py                   34      6    82%   45, 68, 72-79
+app/core/response.py                     18      0   100%
+app/db/__init__.py                        0      0   100%
+app/db/base.py                            3      0   100%
+app/db/redis.py                           5      0   100%
+app/db/session.py                        12      0   100%
+app/main.py                              44      8    82%   55-67, 80
+app/models/__init__.py                    9      0   100%
+app/models/ai_operation_record.py        17      0   100%
+app/models/ai_readme_document.py         17      0   100%
+app/models/conversation.py               13      0   100%
+app/models/document.py                   13      0   100%
+app/models/knowledge_chunk.py            15      0   100%
+app/models/long_term_memory.py           16      0   100%
+app/models/message.py                    14      0   100%
+app/models/prompt_template.py            17      0   100%
+app/repositories/__init__.py              2      0   100%
+app/repositories/base.py                 22      2    91%   37-38
+app/schemas/__init__.py                   2      0   100%
+app/schemas/ai_readme.py                 29      1    97%   16
+app/schemas/chat.py                      38      2    95%   19, 26
+app/schemas/chat_events.py               36      0   100%
+app/schemas/code_review.py               56      3    95%   21, 71, 73
+app/schemas/entities.py                  79      0   100%
+app/schemas/knowledge.py                 39      3    92%   18, 21, 28
+app/schemas/memory.py                    26      1    96%   20
+app/schemas/project_snapshot.py          23      0   100%
+app/schemas/prompt.py                    32      1    97%   31
+app/schemas/unit_test.py                 30      2    93%   26, 33
+app/testing/__init__.py                   0      0   100%
+app/testing/browser_e2e.py               57     57     0%   7-111
+-------------------------------------------------------------------
+TOTAL                                  2648    264    90%
+251 passed, 2 deselected in 12.82s
+[safe-runner] stack_id=5a094d48efe1acd9 pg=127.0.0.1:62580 redis=127.0.0.1:62581
+[safe-runner] test_db=codeaware_test_5a094d48efe1acd9 mig_db=codeaware_migtest_5a094d48efe1acd9 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-5a094d48efe1acd9
+ Network codeaware-test-5a094d48efe1acd9_default Creating 
+ Network codeaware-test-5a094d48efe1acd9_default Created 
+ Volume codeaware-test-5a094d48efe1acd9_redisdata Creating 
+ Volume codeaware-test-5a094d48efe1acd9_redisdata Created 
+ Volume codeaware-test-5a094d48efe1acd9_pgdata Creating 
+ Volume codeaware-test-5a094d48efe1acd9_pgdata Created 
+ Container codeaware-test-5a094d48efe1acd9-redis-1 Creating 
+ Container codeaware-test-5a094d48efe1acd9-pg-1 Creating 
+ Container codeaware-test-5a094d48efe1acd9-pg-1 Created 
+ Container codeaware-test-5a094d48efe1acd9-redis-1 Created 
+ Container codeaware-test-5a094d48efe1acd9-redis-1 Starting 
+ Container codeaware-test-5a094d48efe1acd9-pg-1 Starting 
+ Container codeaware-test-5a094d48efe1acd9-redis-1 Started 
+ Container codeaware-test-5a094d48efe1acd9-pg-1 Started 

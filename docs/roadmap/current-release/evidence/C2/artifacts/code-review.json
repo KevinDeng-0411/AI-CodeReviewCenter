@@ -1,0 +1,14 @@
+{
+  "assertions": [
+    "selected/active template and structured record closure",
+    "project filter, detail type, stable model failures"
+  ],
+  "check_id": "code-review",
+  "source_commands": [
+    "c2-mocked-demo",
+    "api-e2e",
+    "browser-e2e",
+    "live-smoke"
+  ],
+  "status": "passed"
+}

@@ -1,0 +1,22 @@
+........................................................................ [ 28%]
+........................................................................ [ 57%]
+........................................................................ [ 86%]
+...................................                                      [100%]
+251 passed, 2 deselected in 6.23s
+[safe-runner] stack_id=a20ee16b2527b50f pg=127.0.0.1:62304 redis=127.0.0.1:62305
+[safe-runner] test_db=codeaware_test_a20ee16b2527b50f mig_db=codeaware_migtest_a20ee16b2527b50f redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-a20ee16b2527b50f
+ Network codeaware-test-a20ee16b2527b50f_default Creating 
+ Network codeaware-test-a20ee16b2527b50f_default Created 
+ Volume codeaware-test-a20ee16b2527b50f_redisdata Creating 
+ Volume codeaware-test-a20ee16b2527b50f_redisdata Created 
+ Volume codeaware-test-a20ee16b2527b50f_pgdata Creating 
+ Volume codeaware-test-a20ee16b2527b50f_pgdata Created 
+ Container codeaware-test-a20ee16b2527b50f-pg-1 Creating 
+ Container codeaware-test-a20ee16b2527b50f-redis-1 Creating 
+ Container codeaware-test-a20ee16b2527b50f-pg-1 Created 
+ Container codeaware-test-a20ee16b2527b50f-redis-1 Created 
+ Container codeaware-test-a20ee16b2527b50f-pg-1 Starting 
+ Container codeaware-test-a20ee16b2527b50f-redis-1 Starting 
+ Container codeaware-test-a20ee16b2527b50f-pg-1 Started 
+ Container codeaware-test-a20ee16b2527b50f-redis-1 Started 

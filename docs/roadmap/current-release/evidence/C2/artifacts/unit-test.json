@@ -1,0 +1,13 @@
+{
+  "assertions": [
+    "JUnit5 structured generation and record closure",
+    "UI states generation only and does not claim execution"
+  ],
+  "check_id": "unit-test",
+  "source_commands": [
+    "c2-mocked-demo",
+    "api-e2e",
+    "browser-e2e"
+  ],
+  "status": "passed"
+}

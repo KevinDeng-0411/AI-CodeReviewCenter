@@ -1,0 +1,14 @@
+{
+  "assertions": [
+    "typed stream, persistence, reload, context, summary, FACT, delete",
+    "real DeepSeek chat connectivity succeeded"
+  ],
+  "check_id": "chat",
+  "source_commands": [
+    "c2-mocked-demo",
+    "api-e2e",
+    "browser-e2e",
+    "live-smoke"
+  ],
+  "status": "passed"
+}

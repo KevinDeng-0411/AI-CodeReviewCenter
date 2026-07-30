@@ -1,0 +1,14 @@
+{
+  "assertions": [
+    "allowlisted safe snapshot, versions, latest, and rejection",
+    "real model snapshot generation succeeded"
+  ],
+  "check_id": "ai-readme",
+  "source_commands": [
+    "c2-mocked-demo",
+    "api-e2e",
+    "browser-e2e",
+    "live-smoke"
+  ],
+  "status": "passed"
+}

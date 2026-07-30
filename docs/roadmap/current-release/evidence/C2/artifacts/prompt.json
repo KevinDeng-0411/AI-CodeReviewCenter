@@ -1,0 +1,14 @@
+{
+  "assertions": [
+    "create v2, type-aware preview, rollback, one-active invariant",
+    "concurrent create/activate and migration constraints passed"
+  ],
+  "check_id": "prompt",
+  "source_commands": [
+    "c2-mocked-demo",
+    "api-e2e",
+    "browser-e2e",
+    "rollback"
+  ],
+  "status": "passed"
+}

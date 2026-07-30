@@ -1,0 +1,32 @@
+[C2 MOCKED] route-level seven-domain closure
+C2-B demo: {'review_id': 1, 'critical_count': 1, 'unit_test_id': 2, 'framework': 'JUnit5', 'review_records': 1}
+.C2-C demo: {'created_version': 2, 'preview_resolved': True, 'rollback_version': 1, 'history_preserved': True}
+.C2-D demo: {'document_id': 1, 'knowledge_match_types': ['vector'], 'memory_id': 1, 'memory_recalled': True}
+.C2-E demo: {'conversation_id': '2d4f3c9ebf234fffa1dd141f23f843d1', 'chat_reply_preserved': True, 'snapshot_version': 1, 'snapshot_files': 3, 'absolute_path_hidden': True}
+.
+4 passed in 0.66s
+[safe-runner] stack_id=77fd4c91a0a3c15a pg=127.0.0.1:62254 redis=127.0.0.1:62255
+[safe-runner] test_db=codeaware_test_77fd4c91a0a3c15a mig_db=codeaware_migtest_77fd4c91a0a3c15a redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-77fd4c91a0a3c15a
+[PASS] Code Review: result + record + filter/detail
+[PASS] Unit Test: result + record + filter/detail
+[PASS] AIReadMe: snapshot + version + latest
+[PASS] Chat: typed SSE + cid + summary/continuation regression
+[PASS] Knowledge: text/file + hybrid search + cascade delete
+[PASS] Memory: manual/automatic + recall + delete
+[PASS] Prompt: create v2 + preview + rollback
+[C2 MOCKED] PASS repository_status_unchanged=true development_resources_unchanged=true
+ Network codeaware-test-77fd4c91a0a3c15a_default Creating 
+ Network codeaware-test-77fd4c91a0a3c15a_default Created 
+ Volume codeaware-test-77fd4c91a0a3c15a_redisdata Creating 
+ Volume codeaware-test-77fd4c91a0a3c15a_redisdata Created 
+ Volume codeaware-test-77fd4c91a0a3c15a_pgdata Creating 
+ Volume codeaware-test-77fd4c91a0a3c15a_pgdata Created 
+ Container codeaware-test-77fd4c91a0a3c15a-pg-1 Creating 
+ Container codeaware-test-77fd4c91a0a3c15a-redis-1 Creating 
+ Container codeaware-test-77fd4c91a0a3c15a-pg-1 Created 
+ Container codeaware-test-77fd4c91a0a3c15a-redis-1 Created 
+ Container codeaware-test-77fd4c91a0a3c15a-redis-1 Starting 
+ Container codeaware-test-77fd4c91a0a3c15a-pg-1 Starting 
+ Container codeaware-test-77fd4c91a0a3c15a-redis-1 Started 
+ Container codeaware-test-77fd4c91a0a3c15a-pg-1 Started 

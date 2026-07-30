@@ -1,0 +1,19 @@
+......................................                                   [100%]
+38 passed in 1.30s
+[safe-runner] stack_id=282ad2e3ae3e9c9a pg=127.0.0.1:62930 redis=127.0.0.1:62931
+[safe-runner] test_db=codeaware_test_282ad2e3ae3e9c9a mig_db=codeaware_migtest_282ad2e3ae3e9c9a redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-282ad2e3ae3e9c9a
+ Network codeaware-test-282ad2e3ae3e9c9a_default Creating 
+ Network codeaware-test-282ad2e3ae3e9c9a_default Created 
+ Volume codeaware-test-282ad2e3ae3e9c9a_pgdata Creating 
+ Volume codeaware-test-282ad2e3ae3e9c9a_pgdata Created 
+ Volume codeaware-test-282ad2e3ae3e9c9a_redisdata Creating 
+ Volume codeaware-test-282ad2e3ae3e9c9a_redisdata Created 
+ Container codeaware-test-282ad2e3ae3e9c9a-redis-1 Creating 
+ Container codeaware-test-282ad2e3ae3e9c9a-pg-1 Creating 
+ Container codeaware-test-282ad2e3ae3e9c9a-pg-1 Created 
+ Container codeaware-test-282ad2e3ae3e9c9a-redis-1 Created 
+ Container codeaware-test-282ad2e3ae3e9c9a-redis-1 Starting 
+ Container codeaware-test-282ad2e3ae3e9c9a-pg-1 Starting 
+ Container codeaware-test-282ad2e3ae3e9c9a-redis-1 Started 
+ Container codeaware-test-282ad2e3ae3e9c9a-pg-1 Started 

@@ -1,0 +1,348 @@
+{
+  "authorization": null,
+  "baseline_commit": "094ede8b24ee396b860461f62e34ea5a31cee96c",
+  "checks": [
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/code-review.json",
+          "sha256": "aa958d4c745286caf71e3b44045b333dc440bc24e54871e058e29f9962265ba3"
+        },
+        {
+          "path": "artifacts/live-smoke.json",
+          "sha256": "1bf723e1a11e20d275fad742100ba72ab1363f663b4150585449a2c0096b658a"
+        }
+      ],
+      "id": "code-review",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/unit-test.json",
+          "sha256": "0df8db3540599b07fa13f47f8006dddce6f3f4a4650b10c5ce0c8265d1bdac6e"
+        }
+      ],
+      "id": "unit-test",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/ai-readme.json",
+          "sha256": "8d181a6f59254374315525c3521bfa6b1de7d83b2793ac9449efc086db24d1ee"
+        },
+        {
+          "path": "artifacts/live-smoke.json",
+          "sha256": "1bf723e1a11e20d275fad742100ba72ab1363f663b4150585449a2c0096b658a"
+        }
+      ],
+      "id": "ai-readme",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/chat.json",
+          "sha256": "f8056846df18303376c96908e630ddfcfe704987b6a521a8d60d7754ab304e73"
+        },
+        {
+          "path": "artifacts/live-smoke.json",
+          "sha256": "1bf723e1a11e20d275fad742100ba72ab1363f663b4150585449a2c0096b658a"
+        }
+      ],
+      "id": "chat",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/knowledge.json",
+          "sha256": "22fc54892854ce5894858a289b77b463408b14efea6b6c976c57dc9484416c16"
+        },
+        {
+          "path": "artifacts/live-smoke.json",
+          "sha256": "1bf723e1a11e20d275fad742100ba72ab1363f663b4150585449a2c0096b658a"
+        }
+      ],
+      "id": "knowledge",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/memory.json",
+          "sha256": "c3e7e68c05094b11ce8857f53708b533f377e0b3442b01c14641ed920c0093df"
+        }
+      ],
+      "id": "memory",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/prompt.json",
+          "sha256": "5087705c19c34122530bb5710f75515b7293ae9f61b3ee37b368572093e6e2d0"
+        }
+      ],
+      "id": "prompt",
+      "status": "passed"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "uv",
+        "lock",
+        "--check"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:48:01Z",
+      "id": "dependency-lock",
+      "required": true,
+      "sha256": "5321339c73c6402dee13c3a5dd7b266f5bfb9c0dafc59bf9016558d0bfb7c670",
+      "started_at": "2026-07-30T12:48:01Z",
+      "stdout": "artifacts/dependency-lock.log"
+    },
+    {
+      "argv": [
+        "docker",
+        "compose",
+        "config",
+        "--quiet"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:48:01Z",
+      "id": "compose-config",
+      "required": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "started_at": "2026-07-30T12:48:01Z",
+      "stdout": "artifacts/compose-config.log"
+    },
+    {
+      "argv": [
+        "./codeaware-py/scripts/demo_c2_mocked.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:48:07Z",
+      "id": "c2-mocked-demo",
+      "required": true,
+      "sha256": "98b1a7434f6d6b2e6f70e3178c05de8b99b949c859ecf9679eea87fbea837a93",
+      "started_at": "2026-07-30T12:48:01Z",
+      "stdout": "artifacts/c2-mocked-demo.log"
+    },
+    {
+      "argv": [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_tests_safe.py",
+        "-q"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:48:17Z",
+      "id": "backend-full",
+      "required": true,
+      "sha256": "a2becbe2a7936995227e8e7e980a6da71121bac1ba029868c1f07fc600878e3e",
+      "started_at": "2026-07-30T12:48:07Z",
+      "stdout": "artifacts/backend-full.log"
+    },
+    {
+      "argv": [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_tests_safe.py",
+        "--cov=app",
+        "--cov-report=term-missing",
+        "-q"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:48:36Z",
+      "id": "backend-coverage",
+      "required": true,
+      "sha256": "66feb427da4204b00c65fcb371e79470f88b9bcbe016e3d5df9679106bb840a6",
+      "started_at": "2026-07-30T12:48:17Z",
+      "stdout": "artifacts/backend-coverage.log"
+    },
+    {
+      "argv": [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_tests_safe.py",
+        "tests/contracts",
+        "tests/e2e",
+        "-q"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:48:41Z",
+      "id": "api-e2e",
+      "required": true,
+      "sha256": "1ba50215ec0d587d4e2ac3e25df06ef50d043c198da64f8233a3040b23ebf769",
+      "started_at": "2026-07-30T12:48:36Z",
+      "stdout": "artifacts/api-e2e.log"
+    },
+    {
+      "argv": [
+        "npm",
+        "ci"
+      ],
+      "cwd": "codeaware-py/frontend",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:49:12Z",
+      "id": "frontend-install",
+      "required": true,
+      "sha256": "cdca58e30174759e8bd34e1fdda566d0e95a3b23c01544f7d93ae77e6a338e3c",
+      "started_at": "2026-07-30T12:48:41Z",
+      "stdout": "artifacts/frontend-install.log"
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "test"
+      ],
+      "cwd": "codeaware-py/frontend",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:49:13Z",
+      "id": "frontend-test",
+      "required": true,
+      "sha256": "04d229520324b8a3e24bbd5bc5e057a3bded91ca1bfcb54c45ec8dfbcc57039c",
+      "started_at": "2026-07-30T12:49:12Z",
+      "stdout": "artifacts/frontend-test.log"
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "cwd": "codeaware-py/frontend",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:49:14Z",
+      "id": "frontend-lint",
+      "required": true,
+      "sha256": "a158119ae505ca8b2400122fd9341710f7cf751fe0d558c8cb5049990f44ffce",
+      "started_at": "2026-07-30T12:49:13Z",
+      "stdout": "artifacts/frontend-lint.log"
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "codeaware-py/frontend",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:49:15Z",
+      "id": "frontend-build",
+      "required": true,
+      "sha256": "99c96773f2a7fecaf11b587444d163c965610d0a3eb9df76d825fbc8b5bfbdf8",
+      "started_at": "2026-07-30T12:49:14Z",
+      "stdout": "artifacts/frontend-build.log"
+    },
+    {
+      "argv": [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_tests_safe.py",
+        "--browser-e2e"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:49:37Z",
+      "id": "browser-e2e",
+      "required": true,
+      "sha256": "41a6b8732c6a6fe2a65d32919a7dbf100aa876ce97064c46da3aff501821e6b2",
+      "started_at": "2026-07-30T12:49:15Z",
+      "stdout": "artifacts/browser-e2e.log"
+    },
+    {
+      "argv": [
+        "./codeaware-py/scripts/demo_c2_live.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:49:48Z",
+      "id": "live-smoke",
+      "required": true,
+      "sha256": "4603532ea16882f40a65cc5c3c81493596fe7b1b1cab286c17356d1afef57f5f",
+      "started_at": "2026-07-30T12:49:37Z",
+      "stdout": "artifacts/live-smoke.log"
+    },
+    {
+      "argv": [
+        "./codeaware-py/scripts/verify_c2_rollback.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-07-30T12:50:31Z",
+      "id": "rollback",
+      "required": true,
+      "sha256": "ac16ab1139008269adcef1cdb402023720472e7bee445a6edd7d4d32e30174b2",
+      "started_at": "2026-07-30T12:49:48Z",
+      "stdout": "artifacts/rollback.log"
+    }
+  ],
+  "dependencies": [
+    {
+      "manifest_sha256": "15161eaa91897cfb74506385f1da292340e54b11e4b9b65753eb4f3a575e1fef",
+      "stage": "C1",
+      "validated_commit": "c561866ef0a1347c7df91230c41492b8fc2a93b5"
+    }
+  ],
+  "environment": {
+    "mode": "disposable",
+    "postgres_database": "codeaware_test_a20ee16b2527b50f",
+    "redis_database": 1,
+    "sandbox_or_compose_profile": "test"
+  },
+  "implementation_commit": "cd217c8817ed81ddb19fc8268d350300e57cae91",
+  "implementation_parent": "2aaf35f7c75088bd84f37afc7be5f14feab72bc3",
+  "limitations": [
+    "live smoke records hashes and token usage, not verbatim model output",
+    "provider billed amount was not exposed; no unverified price is hard-coded",
+    "browser E2E uses guarded fake model adapters on real application routes",
+    "local single-worker conversation guard"
+  ],
+  "migration": {
+    "current": [
+      "0005"
+    ],
+    "heads": [
+      "0005"
+    ],
+    "log": "artifacts/migration.json",
+    "sha256": "1ef929a841097d054121e90af9206d96b1e2173b38fc527013d62091848672e2"
+  },
+  "openapi": {
+    "path": "artifacts/openapi.json",
+    "sha256": "cebe4968e6fb75832d5ff5669910b155c5f416887cf10ea63397cc5e9dc0285e"
+  },
+  "report": {
+    "path": "report.md",
+    "sha256": "3e426904383d51bdc30701996f8757839c79208be33295ed94b74afa7f790f00"
+  },
+  "result": "passed",
+  "rollback": {
+    "artifact": "artifacts/rollback.json",
+    "disposable_database": true,
+    "result": "passed",
+    "sha256": "1a3bfcb4b0656fb146d351366ed988f0de8056065dad6c1ff6076adf0f89ca38",
+    "temp_worktree": true
+  },
+  "route_profile": "current-release",
+  "run_id": "20260730T124801Z-2fada115",
+  "schema_version": 1,
+  "stage": "C2",
+  "supersedes_manifest_sha256": null,
+  "validated_head": "3f521ea69cf01c8a2971f6d58be60bb96582391a"
+}

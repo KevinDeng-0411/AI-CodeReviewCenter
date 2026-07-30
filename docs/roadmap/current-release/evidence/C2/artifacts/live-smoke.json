@@ -1,0 +1,48 @@
+{
+  "ai_readme": {
+    "content_chars": 114,
+    "content_sha256_prefix": "8ab6757ac9c3027f",
+    "elapsed_ms": 1452,
+    "snapshot_files": 2,
+    "snapshot_hash_prefix": "665ff7ecc8d604d4",
+    "version": 1
+  },
+  "chat": {
+    "elapsed_ms": 1206,
+    "output_chars": 13,
+    "output_sha256_prefix": "a2542670074ea3e0",
+    "token_usage": {
+      "input_tokens": 17,
+      "output_tokens": 59,
+      "total_tokens": 76
+    }
+  },
+  "cost": {
+    "amount": null,
+    "basis": "provider response exposes token usage but not billed amount; no unverified price table is hard-coded",
+    "currency": "USD",
+    "metered_tokens": 76,
+    "real_llm_calls": 3
+  },
+  "embedding": {
+    "dimension": 1024,
+    "elapsed_ms": 2113
+  },
+  "embedding_model": "bge-m3",
+  "knowledge": {
+    "chunk_count": 1,
+    "document_persisted": true,
+    "elapsed_ms": 815,
+    "hit_count": 1,
+    "match_types": [
+      "both"
+    ]
+  },
+  "llm_model": "deepseek-v4-flash",
+  "structured_output": {
+    "elapsed_ms": 947,
+    "schema": "_LiveStructuredCheck",
+    "valid": true
+  },
+  "timestamp_utc": "2026-07-30T12:49:40.823614+00:00"
+}
