@@ -7,12 +7,13 @@
 
 ## Python 重构版（codeaware-py）
 
-**当前状态**：Java → Python 的 P0–P5 结构迁移已完成；C1-A 至 C1-E、总演示、
-fresh bootstrap、安全测试与回退演练均已形成并通过机器可校验的
-[C1 Evidence](docs/roadmap/current-release/evidence/C1/report.md)。下一阶段只能按
-[C1–C3 当前版本收尾](docs/roadmap/current-release/README.md)实施 C2；C3 与 Agent
-仍锁定。Agent 只是一条[个人项目未来路线](docs/roadmap/chat-to-agent/personal/README.md)，
-默认止于本机只读仓库 Agent。
+**当前状态**：Java → Python 的 P0–P5 结构迁移已完成；C1 真实缺口修复与 C2 七域
+API/持久化/UI 闭环均已形成并通过机器可校验的
+[Evidence](docs/roadmap/current-release/evidence/C2/report.md)。下一阶段只能按
+[C1–C3 当前版本收尾](docs/roadmap/current-release/README.md)实施 C3 版本冻结与交接；
+Agent 仍锁定。Agent 只是一条
+[个人项目未来路线](docs/roadmap/chat-to-agent/personal/README.md)，默认止于本机只读仓库
+Agent。
 
 > 安全提示：后端测试禁止直接运行 pytest。统一使用 `codeaware-py/scripts/run_tests_safe.py`；它只允许随机一次性 PG/Redis 目标并在结束时精确清理。
 
@@ -70,7 +71,9 @@ docker compose exec ollama ollama pull bge-m3
 - C1 手动真实启动联调：[docs/roadmap/current-release/C1-手动可视化联调.md](docs/roadmap/current-release/C1-手动可视化联调.md)
 - 后续个人项目 Chat → Agent 路线：[docs/roadmap/chat-to-agent/personal/README.md](docs/roadmap/chat-to-agent/personal/README.md)
 
-> **API 契约状态**：目标仍是 Python 版 22 端点与下文示例及 OpenAPI 对齐；当前已知差异由 C1/C2 收口，不能再用“只有 `session_id` → `conversation_id` 一项差异”作为验收结论。端口 Java 8080 / Python 8000。
+> **API 契约状态**：C2 已用规范化 OpenAPI、API contract/e2e 和七域 browser E2E
+> 冻结当前 Python 契约；根 README 中仍以 Java 8080 为前缀的 legacy 示例将在 C3
+> 统一校准。Python 端口为 8000。
 
 ---
 

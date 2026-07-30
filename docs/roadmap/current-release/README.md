@@ -3,8 +3,9 @@
 > 这是当前应优先实施的计划。目标是把已承诺的 Python Chat 应用真正闭环；Agent 仅存在于另一目录的未来方向文档中。
 
 - 制定日期：2026-07-29
-- 当前证据基线：C1 `209 passed, 1 deselected`、后端覆盖率 `92%`、前端
-  `31 passed`，lint/build 通过；见 [C1 Evidence](evidence/C1/report.md)
+- 当前证据基线：C2 后端 `251 passed, 2 deselected`、覆盖率 `90%`、API
+  contract/e2e `38 passed`、七域 browser E2E 与真实 DeepSeek/Ollama smoke 通过；
+  见 [C2 Evidence](evidence/C2/report.md)
 - 当前产品边界：FastAPI + LangChain + DeepSeek 的 Chat/RAG/Memory 与四类薄工具
 - 完成原则：修复真实链路，不以 mock 单测或文档中的 `[x]` 代替可运行演示
 
@@ -13,8 +14,8 @@
 | 阶段 | 当前交付 | 状态 | 实施卡 |
 |---|---|---|---|
 | C1 | 修复已确认的真实链路缺口 | **已完成**（[manifest](evidence/C1/manifest.json) 已验证） | [01-当前缺口修复](01-当前缺口修复.md) |
-| C2 | 现有功能全链路闭环验收 | **下一阶段，未开始** | [02-现有功能闭环验收](02-现有功能闭环验收.md) |
-| C3 | 文档、启动方式和版本基线冻结 | 未开始，等待 C2 | [03-版本冻结与交接](03-版本冻结与交接.md) |
+| C2 | 现有功能全链路闭环验收 | **已完成**（[manifest](evidence/C2/manifest.json) 已验证） | [02-现有功能闭环验收](02-现有功能闭环验收.md) |
+| C3 | 文档、启动方式和版本基线冻结 | **下一阶段，未开始** | [03-版本冻结与交接](03-版本冻结与交接.md) |
 
 依赖关系：
 
