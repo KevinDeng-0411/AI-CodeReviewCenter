@@ -1,0 +1,105 @@
+[C1 DEMO] fresh bootstrap and safe harness
+[fresh-bootstrap] project=codeaware-bootstrap-f7ba20b0b01bcba1
+[fresh-bootstrap] pg=127.0.0.1:50840 redis=127.0.0.1:50841 ollama=127.0.0.1:50842 api=127.0.0.1:50843
+[fresh-bootstrap] databases ready: ai_center owner=aicenter, ai_center_py owner=aicenter
+[ensure-python-db] ai_center_py already exists owner=aicenter
+[ensure-python-db] ready database=ai_center_py owner=aicenter
+[fresh-bootstrap] existing-volume database helper is idempotent
+[fresh-bootstrap] Alembic current=0004 (head)
+[fresh-bootstrap] active prompts: AI_README=1 CHAT=1 CODE_REVIEW=1 UNIT_TEST=1
+[fresh-bootstrap] HTTP /health=200 /health/live=200 /health/ready=200 /docs=200
+[fresh-bootstrap] Redis stopped: liveness=200 readiness=503 redis=down
+[fresh-bootstrap] Redis restored: readiness=200
+......................................                                   [100%]
+38 passed in 1.33s
+[safe-runner] stack_id=dcde8e7fa9a5e435 pg=127.0.0.1:50887 redis=127.0.0.1:50888
+[safe-runner] test_db=codeaware_test_dcde8e7fa9a5e435 mig_db=codeaware_migtest_dcde8e7fa9a5e435 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-dcde8e7fa9a5e435
+[fresh-bootstrap] guard allow/refuse, validator, health, migration roundtrip passed
+[fresh-bootstrap] exact cleanup complete project=codeaware-bootstrap-f7ba20b0b01bcba1
+[fresh-bootstrap] development resource fingerprint unchanged
+[C1 DEMO] route-level C1-A/C1-B/C1-C/C1-E closure
+[C1-A DEMO] conversation_id=227a5d9e08c34189a0c9205f3b270563 events=['ChatStarted', 'TokenDelta', 'TokenDelta', 'TokenDelta', 'ChatCompleted'] reconstructed=" hello\n```python\nprint('ok')\n```" redis_warning_codes=['REDIS_UNAVAILABLE', 'REDIS_UNAVAILABLE', 'REDIS_UNAVAILABLE', 'REDIS_UNAVAILABLE'] redis_pg_roles=['USER', 'ASSISTANT'] abort_pg_roles=['USER'] abort_guard_released=true same_cid_conflict=CHAT_TURN_IN_PROGRESS parallel_new_cids_distinct=true
+.C1-B demo: conversation_id=0b106388878e40b2b4d6270b3e5dd91a message_count=10 summary_message_count=10 pg_redis_summary_equal=true next_prompt_contains_summary=true
+.C1-B Redis degradation demo: warning=summary_cache/REDIS_UNAVAILABLE pg_summary_retained=true terminal=chat.completed
+.C1-C demo: multipart_status=200 document_id=1 project_name=c1c-demo content_chars=20 chunk_count=1 search_hits=1 uploaded_document_recalled=true openapi=multipart/form-data failure_code=KNOWLEDGE_FILE_TYPE_UNSUPPORTED
+.[C1-E DEMO] relative_files=['README.md', 'pyproject.toml', 'app/main.py']
+[C1-E DEMO] excluded=[('.env', 'denied'), ('.gitignore', 'unsupported'), ('binary.py', 'binary'), ('ignored.py', 'gitignored')]
+[C1-E DEMO] prompt_contains=README:True,manifest:True
+[C1-E DEMO] versions=1/2 same_hash=True
+[C1-E DEMO] latest_version=2 latest_id=2
+[C1-E DEMO] rejected=outside:AI_README_PROJECT_OUTSIDE_ALLOWED_ROOTS,symlink:AI_README_SYMLINK_NOT_ALLOWED
+[C1-E DEMO] successful_records=2
+.
+5 passed in 0.76s
+[safe-runner] stack_id=cbe35a07be11a259 pg=127.0.0.1:50951 redis=127.0.0.1:50952
+[safe-runner] test_db=codeaware_test_cbe35a07be11a259 mig_db=codeaware_migtest_cbe35a07be11a259 redis_db=1 guard_db=15
+[safe-runner] exact cleanup complete project=codeaware-test-cbe35a07be11a259
+[C1 DEMO] PASS repository_status_unchanged=true development_resources_unchanged=true
+ Network codeaware-bootstrap-f7ba20b0b01bcba1_default Creating 
+ Network codeaware-bootstrap-f7ba20b0b01bcba1_default Created 
+ Volume codeaware-bootstrap-f7ba20b0b01bcba1_redisdata Creating 
+ Volume codeaware-bootstrap-f7ba20b0b01bcba1_redisdata Created 
+ Volume codeaware-bootstrap-f7ba20b0b01bcba1_ollamadata Creating 
+ Volume codeaware-bootstrap-f7ba20b0b01bcba1_ollamadata Created 
+ Volume codeaware-bootstrap-f7ba20b0b01bcba1_pgdata Creating 
+ Volume codeaware-bootstrap-f7ba20b0b01bcba1_pgdata Created 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-postgres Creating 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Creating 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-ollama Creating 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-ollama Created 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-postgres Created 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Created 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-postgres Starting 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Starting 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-ollama Starting 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-ollama Started 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Started 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-postgres Started 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-postgres Waiting 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Waiting 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-ollama Waiting 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Healthy 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-postgres Healthy 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-ollama Healthy 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-postgres Running 
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001, initial schema - 8 tables
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002, seed CHAT / UNIT_TEST / AI_README prompt templates
+INFO  [alembic.runtime.migration] Running upgrade 0002 -> 0003, add summary message watermark
+INFO  [alembic.runtime.migration] Running upgrade 0003 -> 0004, add AIReadMe snapshot metadata and per-project versions
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Stopping 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Stopped 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Starting 
+ Container codeaware-bootstrap-f7ba20b0b01bcba1-redis Started 
+ Network codeaware-test-dcde8e7fa9a5e435_default Creating 
+ Network codeaware-test-dcde8e7fa9a5e435_default Created 
+ Volume codeaware-test-dcde8e7fa9a5e435_redisdata Creating 
+ Volume codeaware-test-dcde8e7fa9a5e435_redisdata Created 
+ Volume codeaware-test-dcde8e7fa9a5e435_pgdata Creating 
+ Volume codeaware-test-dcde8e7fa9a5e435_pgdata Created 
+ Container codeaware-test-dcde8e7fa9a5e435-pg-1 Creating 
+ Container codeaware-test-dcde8e7fa9a5e435-redis-1 Creating 
+ Container codeaware-test-dcde8e7fa9a5e435-pg-1 Created 
+ Container codeaware-test-dcde8e7fa9a5e435-redis-1 Created 
+ Container codeaware-test-dcde8e7fa9a5e435-redis-1 Starting 
+ Container codeaware-test-dcde8e7fa9a5e435-pg-1 Starting 
+ Container codeaware-test-dcde8e7fa9a5e435-pg-1 Started 
+ Container codeaware-test-dcde8e7fa9a5e435-redis-1 Started 
+ Network codeaware-test-cbe35a07be11a259_default Creating 
+ Network codeaware-test-cbe35a07be11a259_default Created 
+ Volume codeaware-test-cbe35a07be11a259_pgdata Creating 
+ Volume codeaware-test-cbe35a07be11a259_pgdata Created 
+ Volume codeaware-test-cbe35a07be11a259_redisdata Creating 
+ Volume codeaware-test-cbe35a07be11a259_redisdata Created 
+ Container codeaware-test-cbe35a07be11a259-pg-1 Creating 
+ Container codeaware-test-cbe35a07be11a259-redis-1 Creating 
+ Container codeaware-test-cbe35a07be11a259-redis-1 Created 
+ Container codeaware-test-cbe35a07be11a259-pg-1 Created 
+ Container codeaware-test-cbe35a07be11a259-redis-1 Starting 
+ Container codeaware-test-cbe35a07be11a259-pg-1 Starting 
+ Container codeaware-test-cbe35a07be11a259-pg-1 Started 
+ Container codeaware-test-cbe35a07be11a259-redis-1 Started 

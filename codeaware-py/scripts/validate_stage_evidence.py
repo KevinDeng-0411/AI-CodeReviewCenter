@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -58,15 +60,22 @@ REQUIRED_KEYS = [
     "schema_version",
     "stage",
     "route_profile",
+    "run_id",
     "baseline_commit",
     "implementation_commit",
     "implementation_parent",
     "validated_head",
+    "supersedes_manifest_sha256",
     "dependencies",
+    "authorization",
     "report",
+    "environment",
+    "migration",
+    "openapi",
     "commands",
     "checks",
     "rollback",
+    "limitations",
     "result",
 ]
 REQUIRED_COMMAND_KEYS = {
@@ -80,6 +89,26 @@ REQUIRED_COMMAND_KEYS = {
     "sha256",
     "required",
 }
+C1_REQUIRED_COMMANDS = {
+    "dependency-lock",
+    "compose-config",
+    "c1-total-demo",
+    "backend-full",
+    "backend-coverage",
+    "frontend-test",
+    "frontend-lint",
+    "frontend-build",
+    "rollback",
+}
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+RUN_ID_PATTERN = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$")
+SENSITIVE_TEXT_PATTERNS = (
+    re.compile(r"(?i)\b(?:postgresql|redis)://\S+"),
+    re.compile(r"(?i)\b(?:LLM_API_KEY|PG_PASSWORD|CODEWARE_TEST_AUTH)\s*="),
+    re.compile(r"\bsk-[A-Za-z0-9_-]{8,}"),
+    re.compile(r"(?:^|[\s\"'])/(?:Users|home)/[^/\s\"']+/"),
+)
 
 
 def manifest_path_for(stage: str) -> Path:
@@ -128,10 +157,32 @@ def _validate_hashed_file(
     except ValueError:
         errors.append(f"{label} 路径逃逸: {rel}")
         return
+    if not SHA256_PATTERN.fullmatch(expected):
+        errors.append(f"{label} sha256 格式错误")
+        return
     if not path.is_file():
         errors.append(f"{label} 不存在: {rel}")
     elif sha256_file(path) != expected:
         errors.append(f"{label} sha256 不符")
+    else:
+        _validate_artifact_text(path, label, errors)
+
+
+def _validate_artifact_text(path: Path, label: str, errors: list[str]) -> None:
+    if path.suffix.lower() not in {".json", ".log", ".md", ".txt"}:
+        return
+    try:
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        errors.append(f"{label} 不是可读 UTF-8 文本")
+        return
+    repo_root_text = str(REPO_ROOT.resolve())
+    if repo_root_text and repo_root_text in content:
+        errors.append(f"{label} 含仓库绝对路径")
+    for pattern in SENSITIVE_TEXT_PATTERNS:
+        if pattern.search(content):
+            errors.append(f"{label} 含宿主路径、凭据或完整连接串")
+            break
 
 
 def _validate_repo_cwd(cwd: Any, label: str, errors: list[str]) -> None:
@@ -143,6 +194,95 @@ def _validate_repo_cwd(cwd: Any, label: str, errors: list[str]) -> None:
         path.relative_to(REPO_ROOT.resolve())
     except ValueError:
         errors.append(f"{label} cwd 路径逃逸: {cwd}")
+        return
+    if not path.is_dir():
+        errors.append(f"{label} cwd 不存在: {cwd}")
+
+
+def _parse_rfc3339(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _validate_commit(value: Any, label: str, errors: list[str]) -> None:
+    if not isinstance(value, str) or not COMMIT_PATTERN.fullmatch(value):
+        errors.append(f"{label} 必须是 40 位 commit")
+        return
+    if _git(["cat-file", "-e", f"{value}^{{commit}}"]).returncode != 0:
+        errors.append(f"{label} commit 不存在: {value}")
+
+
+def _validate_environment(environment: Any, errors: list[str]) -> None:
+    if not isinstance(environment, dict):
+        errors.append("environment 必须是对象")
+        return
+    if environment.get("mode") != "disposable":
+        errors.append("environment.mode 必须为 disposable")
+    database = environment.get("postgres_database")
+    if not isinstance(database, str) or not database.startswith("codeaware_test_"):
+        errors.append("environment.postgres_database 必须是一次性 codeaware_test_*")
+    redis_database = environment.get("redis_database")
+    if not isinstance(redis_database, int) or redis_database == 0:
+        errors.append("environment.redis_database 必须是非 0 整数")
+    if environment.get("sandbox_or_compose_profile") != "test":
+        errors.append("environment.sandbox_or_compose_profile 必须为 test")
+
+
+def _validate_migration(
+    migration: Any,
+    manifest_dir: Path,
+    errors: list[str],
+) -> None:
+    if not isinstance(migration, dict):
+        errors.append("migration 必须是对象")
+        return
+    heads = migration.get("heads")
+    current = migration.get("current")
+    if heads != ["0004"] or current != ["0004"] or heads != current:
+        errors.append("migration heads/current 必须唯一且均为 ['0004']")
+    artifact = {
+        "path": migration.get("log"),
+        "sha256": migration.get("sha256"),
+    }
+    _validate_hashed_file(manifest_dir, artifact, "migration.log", errors)
+    path = manifest_dir / str(migration.get("log", ""))
+    if path.is_file():
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            errors.append("migration.log 必须是 JSON")
+        else:
+            if payload.get("heads") != heads or payload.get("current") != current:
+                errors.append("migration.log 与 manifest heads/current 不一致")
+
+
+def _validate_rollback(
+    rollback: Any,
+    manifest_dir: Path,
+    errors: list[str],
+) -> None:
+    if not isinstance(rollback, dict):
+        errors.append("rollback 必须是对象")
+        return
+    if rollback.get("temp_worktree") is not True:
+        errors.append("rollback.temp_worktree 必须为 true")
+    if rollback.get("disposable_database") is not True:
+        errors.append("rollback.disposable_database 必须为 true")
+    if rollback.get("result") != "passed":
+        errors.append("rollback 未通过")
+    _validate_hashed_file(
+        manifest_dir,
+        {
+            "path": rollback.get("artifact"),
+            "sha256": rollback.get("sha256"),
+        },
+        "rollback.artifact",
+        errors,
+    )
 
 
 def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
@@ -157,6 +297,17 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
             errors.append(f"缺字段: {key}")
     if manifest.get("schema_version") != 1:
         errors.append("schema_version 必须为 1")
+    if not isinstance(manifest.get("run_id"), str) or not RUN_ID_PATTERN.fullmatch(
+        manifest.get("run_id", "")
+    ):
+        errors.append("run_id 格式必须为 YYYYMMDDTHHMMSSZ-8hex")
+    supersedes = manifest.get("supersedes_manifest_sha256")
+    if supersedes is not None and (
+        not isinstance(supersedes, str) or not SHA256_PATTERN.fullmatch(supersedes)
+    ):
+        errors.append("supersedes_manifest_sha256 必须为 null 或 SHA-256")
+    if not isinstance(manifest.get("limitations"), list):
+        errors.append("limitations 必须是数组")
 
     if manifest.get("stage") != stage:
         errors.append(f"stage 不匹配: manifest={manifest.get('stage')!r} arg={stage!r}")
@@ -206,6 +357,10 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
     baseline = manifest.get("baseline_commit")
     parent = manifest.get("implementation_parent")
     head = manifest.get("validated_head")
+    _validate_commit(baseline, "baseline_commit", errors)
+    _validate_commit(implementation, "implementation_commit", errors)
+    _validate_commit(parent, "implementation_parent", errors)
+    _validate_commit(head, "validated_head", errors)
     if baseline and implementation and not _is_ancestor(baseline, implementation):
         errors.append(f"baseline {baseline} 不是 implementation {implementation} 的祖先")
     if parent and implementation:
@@ -214,11 +369,21 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
             errors.append(f"implementation_parent {parent} != 实际父 {actual_parent}")
     if implementation and head and not _is_ancestor(implementation, head):
         errors.append(f"implementation {implementation} 不在 validated_head {head} 祖先链")
+    if stage.startswith("C") and manifest.get("authorization") is not None:
+        errors.append(f"{stage} authorization 必须为 null")
 
     report = manifest.get("report")
     if not isinstance(report, dict) or report.get("path") != "report.md":
         errors.append("report.path 必须为 report.md")
     _validate_hashed_file(manifest_dir, report, "report", errors)
+    _validate_environment(manifest.get("environment"), errors)
+    _validate_migration(manifest.get("migration"), manifest_dir, errors)
+    _validate_hashed_file(
+        manifest_dir,
+        manifest.get("openapi"),
+        "openapi",
+        errors,
+    )
 
     commands = manifest.get("commands")
     if not isinstance(commands, list) or not commands:
@@ -240,12 +405,21 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
             errors.append(f"命令 {command_id} exit_code={command.get('exit_code')} (应 0)")
         if command.get("required") and not isinstance(command.get("argv"), list):
             errors.append(f"命令 {command_id} argv 必须是数组")
+        started = _parse_rfc3339(command.get("started_at"))
+        finished = _parse_rfc3339(command.get("finished_at"))
+        if started is None or finished is None or finished < started:
+            errors.append(f"命令 {command_id} 时间格式或顺序错误")
         _validate_repo_cwd(command.get("cwd"), f"命令 {command_id}", errors)
         _validate_hashed_file(
             manifest_dir,
             {"path": command.get("stdout"), "sha256": command.get("sha256")},
             f"命令 {command_id} stdout",
             errors,
+        )
+    if stage == "C1" and command_ids != C1_REQUIRED_COMMANDS:
+        errors.append(
+            "C1 commands 必须精确为 "
+            f"{sorted(C1_REQUIRED_COMMANDS)}，实为 {sorted(command_ids)}"
         )
 
     checks = manifest.get("checks")
@@ -261,6 +435,11 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
         if check_id in check_map:
             errors.append(f"check id 重复: {check_id}")
         check_map[check_id] = check
+    expected_checks = set(REQUIRED_CHECKS[stage])
+    if set(check_map) != expected_checks:
+        errors.append(
+            f"checks 必须精确为 {sorted(expected_checks)}，实为 {sorted(check_map)}"
+        )
     for required_check in REQUIRED_CHECKS[stage]:
         check = check_map.get(required_check)
         if check is None:
@@ -280,10 +459,34 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
                 errors,
             )
 
-    if (manifest.get("rollback") or {}).get("result") != "passed":
-        errors.append("rollback 未通过")
+    _validate_rollback(manifest.get("rollback"), manifest_dir, errors)
     if manifest.get("result") != "passed":
         errors.append(f"result={manifest.get('result')!r} (应 'passed')")
+    return errors
+
+
+def validate_evidence_commit(
+    manifest_path: Path,
+    manifest: dict,
+) -> list[str]:
+    """Require the current manifest contents to be committed after validated_head."""
+    errors: list[str] = []
+    relative = manifest_path.relative_to(REPO_ROOT).as_posix()
+    status = _git(["status", "--porcelain=v1", "--", relative])
+    if status.returncode != 0 or status.stdout.strip():
+        errors.append("manifest 必须先提交，且不能有未提交修改")
+        return errors
+    evidence_commit = _git(["log", "-1", "--format=%H", "--", relative])
+    commit = evidence_commit.stdout.strip()
+    if evidence_commit.returncode != 0 or not COMMIT_PATTERN.fullmatch(commit):
+        errors.append("无法定位当前 manifest 的 evidence commit")
+        return errors
+    if not _is_ancestor(commit, "HEAD"):
+        errors.append("evidence commit 不在当前 HEAD 祖先链")
+    parent = _git(["rev-parse", f"{commit}^"]).stdout.strip()
+    validated_head = manifest.get("validated_head")
+    if not isinstance(validated_head, str) or not _is_ancestor(validated_head, parent):
+        errors.append("evidence commit 的父链不包含 validated_head")
     return errors
 
 
@@ -306,6 +509,7 @@ def main() -> int:
         print(f"✗ manifest JSON 解析失败: {exc}", file=sys.stderr)
         return 1
     errors = validate(stage, manifest, manifest_path.parent)
+    errors.extend(validate_evidence_commit(manifest_path, manifest))
     if errors:
         print(
             f"✗ stage {stage} ({STAGE_PROFILE[stage]}) manifest 校验失败 "

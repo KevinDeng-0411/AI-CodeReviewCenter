@@ -236,6 +236,13 @@ async def test_c1c_demo_multipart_success_and_stable_failure(
         .select_from(KnowledgeChunk)
         .where(KnowledgeChunk.document_id == document_id)
     )
+    search = await client.post(
+        "/api/knowledge/search",
+        json={"query": "multipart demo", "top_k": 3},
+    )
+    assert search.status_code == 200
+    hits = search.json()["data"]
+    assert any(hit["document_id"] == document_id for hit in hits)
 
     failure = await client.post(
         "/api/knowledge/upload-file",
@@ -253,6 +260,8 @@ async def test_c1c_demo_multipart_success_and_stable_failure(
         f"project_name={document.project_name}",
         f"content_chars={len(document.content)}",
         f"chunk_count={chunk_count}",
+        f"search_hits={len(hits)}",
+        "uploaded_document_recalled=true",
         "openapi=multipart/form-data",
         f"failure_code={FILE_TYPE_UNSUPPORTED}",
     )

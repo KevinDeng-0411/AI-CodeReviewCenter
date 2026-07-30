@@ -1,0 +1,6 @@
+
+> frontend@0.0.0 lint
+> oxlint
+
+src/components/Layout.tsx:49:9: warning eslint(no-unused-expressions): Expected expression to be used help: Consider using this expression or removing it
+src/components/Layout.tsx:51:9: warning eslint(no-unused-expressions): Expected expression to be used help: Consider using this expression or removing it

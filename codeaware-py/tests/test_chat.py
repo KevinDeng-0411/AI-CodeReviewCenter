@@ -1435,3 +1435,117 @@ async def test_completed_frame_send_failure_is_recorded_as_disconnect(
 
     assert cid not in TurnCoordinator._active
     assert "client_disconnected" in caplog.text
+
+
+async def test_c1a_demo_typed_sse_degradation_abort_and_concurrency(
+    db_session,
+    redis_client,
+    vector_recall,
+    chunker,
+):
+    """Deterministic C1-A closure output used by the repository-level demo."""
+    coordinator = _coord(
+        redis_client,
+        vector_recall,
+        chunker,
+        _StreamLLM([" hello", "\n```python\n", "print('ok')\n```"]),
+    )
+    events = await _events(coordinator, None, "C1-A demo question")
+    conversation_id = events[0].conversation_id
+    reconstructed = "".join(
+        event.delta for event in events if isinstance(event, TokenDelta)
+    )
+    assert isinstance(events[0], ChatStarted)
+    assert isinstance(events[-1], ChatCompleted)
+    assert reconstructed == " hello\n```python\nprint('ok')\n```"
+    assert [event.sequence for event in events] == list(range(1, len(events) + 1))
+
+    degraded = _coord(
+        _FailingRedis(redis_client),
+        vector_recall,
+        chunker,
+        _StreamLLM(["degraded reply"]),
+    )
+    degraded_events = await _events(degraded, None, "C1-A Redis degradation")
+    degraded_cid = degraded_events[0].conversation_id
+    degraded_roles = list(
+        (
+            await db_session.scalars(
+                select(Message.role)
+                .where(Message.conversation_id == degraded_cid)
+                .order_by(Message.id)
+            )
+        ).all()
+    )
+    warning_codes = [
+        event.code
+        for event in degraded_events
+        if isinstance(event, (ContextWarning, PostTurnWarning))
+    ]
+    assert degraded_roles == ["USER", "ASSISTANT"]
+    assert "REDIS_UNAVAILABLE" in warning_codes
+    assert isinstance(degraded_events[-1], ChatCompleted)
+
+    abort_llm = _AbortAwareLLM(["partial", " answer"])
+    abort_coordinator = _coord(redis_client, vector_recall, chunker, abort_llm)
+    prepared = await abort_coordinator.prepare_turn(None, "C1-A abort demo")
+    event_generator = abort_coordinator.run(prepared, "C1-A abort demo")
+    response = _ClosingStreamingResponse(
+        _format_sse(event_generator),
+        event_gen=event_generator,
+        on_close=lambda: abort_coordinator.release_turn(prepared.conversation_id),
+    )
+    sent_payloads: list[dict] = []
+
+    async def disconnect_after_tokens(message):
+        if message["type"] != "http.response.body" or not message.get("body"):
+            return
+        sent_payloads.append(_frame_payload(message["body"].decode()))
+        if len(sent_payloads) == 3:
+            raise OSError("demo client disconnected")
+
+    with pytest.raises(OSError, match="demo client disconnected"):
+        await response.stream_response(disconnect_after_tokens)
+    abort_cid = sent_payloads[0]["conversation_id"]
+    abort_roles = list(
+        (
+            await db_session.scalars(
+                select(Message.role)
+                .where(Message.conversation_id == abort_cid)
+                .order_by(Message.id)
+            )
+        ).all()
+    )
+    assert abort_roles == ["USER"]
+    assert abort_llm.abort_observed is True
+    assert abort_cid not in TurnCoordinator._active
+
+    coordinator.acquire_turn(conversation_id)
+    try:
+        with pytest.raises(ChatTurnInProgress):
+            coordinator.acquire_turn(conversation_id)
+    finally:
+        coordinator.release_turn(conversation_id)
+
+    parallel_one, parallel_two = await asyncio.gather(
+        coordinator.prepare_turn(None, "parallel-one"),
+        coordinator.prepare_turn(None, "parallel-two"),
+    )
+    try:
+        assert parallel_one.conversation_id != parallel_two.conversation_id
+    finally:
+        coordinator.release_turn(parallel_one.conversation_id)
+        coordinator.release_turn(parallel_two.conversation_id)
+
+    print(
+        "[C1-A DEMO]",
+        f"conversation_id={conversation_id}",
+        f"events={[type(event).__name__ for event in events]}",
+        f"reconstructed={reconstructed!r}",
+        f"redis_warning_codes={warning_codes}",
+        f"redis_pg_roles={degraded_roles}",
+        f"abort_pg_roles={abort_roles}",
+        "abort_guard_released=true",
+        "same_cid_conflict=CHAT_TURN_IN_PROGRESS",
+        "parallel_new_cids_distinct=true",
+    )

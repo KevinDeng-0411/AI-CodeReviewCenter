@@ -1,0 +1,13 @@
+
+> frontend@0.0.0 test
+> vitest run
+
+
+ RUN  v4.1.10 <repo_root>/codeaware-py/frontend
+
+
+ Test Files  3 passed (3)
+      Tests  31 passed (31)
+   Start at  15:55:14
+   Duration  228ms (transform 75ms, setup 0ms, import 97ms, tests 23ms, environment 0ms)
+
