@@ -44,9 +44,10 @@ asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = [".", "scripts"]  # app + scripts/validate_stage_evidence 可在测试中导入
 python_files = ["test_*.py", "*_test.py", "e2e_*.py"]
-addopts = "-m 'not integration'"
+addopts = "-m 'not integration and not live_eval'"
 markers = [
     "integration: 真实外部 API(Ollama/DeepSeek)测试，默认跳过；-m integration 单独跑",
+    "live_eval: C2 release smoke，调用真实 DeepSeek/Ollama，仅由安全执行器显式运行",
 ]
 
 [tool.ruff]

@@ -371,6 +371,22 @@ def run(pytest_args: list[str]) -> int:
         )
         if pytest_args == ["--browser-e2e"]:
             rc = _run_browser_e2e(test_env)
+        elif pytest_args == ["--live-eval"]:
+            process = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    "-m",
+                    "live_eval",
+                    "tests/integration/test_current_release_live.py",
+                    "-q",
+                    "-s",
+                ],
+                env=test_env,
+                cwd=str(APP_ROOT),
+            )
+            rc = process.returncode
         else:
             process = subprocess.run(
                 [sys.executable, "-m", "pytest", *pytest_args],
