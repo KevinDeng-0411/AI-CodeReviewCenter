@@ -176,6 +176,21 @@ C2_COMMAND_CONTRACTS = {
     "live-smoke": (".", ["./codeaware-py/scripts/demo_c2_live.sh"]),
     "rollback": (".", ["./codeaware-py/scripts/verify_c2_rollback.sh"]),
 }
+C3_COMMAND_CONTRACTS = {
+    "current-release-verify": (
+        ".",
+        ["./codeaware-py/scripts/verify_current_release.sh"],
+    ),
+    "handoff-demo": (
+        ".",
+        ["./codeaware-py/scripts/demo_c3_handoff.sh"],
+    ),
+    "rollback": (
+        ".",
+        ["./codeaware-py/scripts/verify_c3_rollback.sh"],
+    ),
+}
+C3_REQUIRED_COMMANDS = set(C3_COMMAND_CONTRACTS)
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 RUN_ID_PATTERN = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$")
@@ -579,6 +594,74 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
                     errors.append(
                         f"C2 命令 {command_id} 日志缺少标记: {marker}"
                     )
+    if stage == "C3":
+        if command_ids != C3_REQUIRED_COMMANDS:
+            errors.append(
+                "C3 commands 必须精确为 "
+                f"{sorted(C3_REQUIRED_COMMANDS)}，实为 {sorted(command_ids)}"
+            )
+        command_map = {
+            command.get("id"): command
+            for command in commands
+            if isinstance(command, dict)
+        }
+        for command_id, (expected_cwd, expected_argv) in C3_COMMAND_CONTRACTS.items():
+            command = command_map.get(command_id)
+            if command is None:
+                continue
+            if command.get("cwd") != expected_cwd:
+                errors.append(
+                    f"C3 命令 {command_id} cwd 必须为 {expected_cwd!r}"
+                )
+            if command.get("argv") != expected_argv:
+                errors.append(
+                    f"C3 命令 {command_id} argv 与冻结契约不一致"
+                )
+        required_markers = {
+            "current-release-verify": [
+                "[C3 VERIFY] PASS fresh-bootstrap exit=0",
+                "[C3 VERIFY] PASS backend-full exit=0",
+                "[C3 VERIFY] PASS backend-coverage exit=0",
+                "[C3 VERIFY] PASS release-metrics exit=0",
+                "[C3 VERIFY] PASS browser-e2e exit=0",
+                "[C3 VERIFY] PASS release=0.1.0",
+                "repository_status_unchanged=true",
+                "development_resources_unchanged=true",
+            ],
+            "handoff-demo": [
+                "[C3 METRICS]",
+                "[PASS] Code Review",
+                "[PASS] Prompt",
+                "[C3 HANDOFF] PASS C2 committed live-smoke evidence hash revalidated",
+                "[C3 HANDOFF] PASS repository_status_unchanged=true",
+            ],
+            "rollback": [
+                "[C3 BACKUP] PASS",
+                "[C3 ROLLBACK] PASS worktree_removed=true",
+                "backup_restore=true",
+                "main_unchanged=true",
+            ],
+        }
+        for command_id, markers in required_markers.items():
+            command = command_map.get(command_id)
+            if command is None:
+                continue
+            output = _artifact_text(manifest_dir, command.get("stdout"))
+            for marker in markers:
+                if marker not in output:
+                    errors.append(
+                        f"C3 命令 {command_id} 日志缺少标记: {marker}"
+                    )
+
+        expected_gate = {
+            "current_release_complete": True,
+            "agent_review_allowed": False,
+            "agent_implementation_authorized": False,
+            "next_stage": "C4",
+            "default_route_profile": "personal-local-readonly",
+        }
+        if manifest.get("gate") != expected_gate:
+            errors.append("C3 gate 必须精确锁定 Agent 并只解锁 C4")
 
     checks = manifest.get("checks")
     if not isinstance(checks, list):

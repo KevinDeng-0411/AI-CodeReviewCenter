@@ -8,6 +8,8 @@ from validate_stage_evidence import (
     C1_REQUIRED_COMMANDS,
     C2_COMMAND_CONTRACTS,
     C2_REQUIRED_COMMANDS,
+    C3_COMMAND_CONTRACTS,
+    C3_REQUIRED_COMMANDS,
     DAG,
     manifest_path_for,
     REQUIRED_CHECKS,
@@ -197,12 +199,104 @@ def _base_c2_manifest(tmp_path) -> dict:
     return manifest
 
 
+def _base_c3_manifest(tmp_path) -> dict:
+    manifest = _base_c2_manifest(tmp_path)
+    c2_path = manifest_path_for("C2")
+    c2_manifest = json.loads(c2_path.read_text(encoding="utf-8"))
+    command_log = tmp_path / "backend.log"
+    command_log.write_text(
+        "\n".join(
+            [
+                "[C3 VERIFY] PASS fresh-bootstrap exit=0",
+                "[C3 VERIFY] PASS backend-full exit=0",
+                "[C3 VERIFY] PASS backend-coverage exit=0",
+                "[C3 VERIFY] PASS release-metrics exit=0",
+                "[C3 VERIFY] PASS browser-e2e exit=0",
+                "[C3 VERIFY] PASS release=0.1.0",
+                "repository_status_unchanged=true",
+                "development_resources_unchanged=true",
+                "[C3 METRICS]",
+                "[PASS] Code Review",
+                "[PASS] Prompt",
+                "[C3 HANDOFF] PASS C2 committed live-smoke evidence hash revalidated",
+                "[C3 HANDOFF] PASS repository_status_unchanged=true",
+                "[C3 BACKUP] PASS",
+                "[C3 ROLLBACK] PASS worktree_removed=true backup_restore=true main_unchanged=true",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    manifest.update(
+        {
+            "stage": "C3",
+            "dependencies": [
+                {
+                    "stage": "C2",
+                    "manifest_sha256": sha256_file(c2_path),
+                    "validated_commit": c2_manifest["validated_head"],
+                }
+            ],
+            "commands": [
+                {
+                    "id": command_id,
+                    "argv": argv,
+                    "cwd": cwd,
+                    "exit_code": 0,
+                    "started_at": "2026-07-30T00:00:00Z",
+                    "finished_at": "2026-07-30T00:01:00Z",
+                    "stdout": "backend.log",
+                    "sha256": _hash(command_log),
+                    "required": True,
+                }
+                for command_id, (cwd, argv) in sorted(
+                    C3_COMMAND_CONTRACTS.items()
+                )
+            ],
+            "checks": [
+                {
+                    "id": check_id,
+                    "status": "passed",
+                    "artifacts": [
+                        {
+                            "path": "check.log",
+                            "sha256": _hash(tmp_path / "check.log"),
+                        }
+                    ],
+                }
+                for check_id in REQUIRED_CHECKS["C3"]
+            ],
+            "gate": {
+                "current_release_complete": True,
+                "agent_review_allowed": False,
+                "agent_implementation_authorized": False,
+                "next_stage": "C4",
+                "default_route_profile": "personal-local-readonly",
+            },
+        }
+    )
+    assert set(C3_REQUIRED_COMMANDS) == set(C3_COMMAND_CONTRACTS)
+    return manifest
+
+
 def test_accepts_well_formed_c1(tmp_path):
     assert validate("C1", _base_c1_manifest(tmp_path), tmp_path) == []
 
 
 def test_accepts_well_formed_c2_with_live_and_browser_logs(tmp_path):
     assert validate("C2", _base_c2_manifest(tmp_path), tmp_path) == []
+
+
+def test_accepts_well_formed_c3_with_locked_agent_gate(tmp_path):
+    assert validate("C3", _base_c3_manifest(tmp_path), tmp_path) == []
+
+
+def test_rejects_c3_wrong_command_or_agent_gate(tmp_path):
+    manifest = _base_c3_manifest(tmp_path)
+    manifest["commands"][0]["argv"] = ["pytest"]
+    manifest["gate"]["agent_implementation_authorized"] = True
+    errors = validate("C3", manifest, tmp_path)
+    assert any("argv 与冻结契约不一致" in error for error in errors)
+    assert any("只解锁 C4" in error for error in errors)
 
 
 def test_rejects_c2_missing_live_marker_or_wrong_browser_command(tmp_path):
