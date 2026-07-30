@@ -49,7 +49,17 @@ export interface AiReadmeVO {
   project_name: string;
   title: string;
   content: string;
+  version: number;
+  snapshot_hash: string | null;
+  snapshot_file_count: number | null;
+  snapshot_generated_at: string | null;
+  snapshot_truncated: boolean | null;
   ai_model?: string;
+}
+
+export interface AiReadmeCapability {
+  enabled: boolean;
+  reason: "available" | "disabled" | "roots_unavailable";
 }
 
 // ---------- Chat ----------

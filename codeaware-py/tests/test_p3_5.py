@@ -5,6 +5,7 @@ import pytest
 from app.ai.prompt.template_manager import PromptTemplateManager
 from app.ai.services.ai_readme import AiReadmeService
 from app.ai.services.document_parser import DocumentParserService
+from app.ai.services.project_snapshot import ProjectSnapshotService
 from app.ai.services.prompt import PromptService
 from app.ai.services.unit_test import UnitTestService
 from app.core.enums import PromptType
@@ -77,12 +78,31 @@ async def readme_template(db_session):
     )
 
 
-async def test_ai_readme_generate_and_get(db_session, readme_template):
+async def test_ai_readme_generate_and_get(db_session, readme_template, tmp_path):
+    project = tmp_path / "my-project"
+    project.mkdir()
+    (project / "README.md").write_text("# my-project\n", encoding="utf-8")
     llm = FakeStructuredLLM(AiReadmeResult(content="# my-project\n\nREADME content"))
-    svc = AiReadmeService(db_session, llm, PromptTemplateManager(db_session))
-    vo = await svc.generate("my-project", "/path/to/proj")
+    snapshot_service = ProjectSnapshotService(
+        enabled=True,
+        allowed_roots=[tmp_path],
+        max_files=20,
+        max_file_bytes=10_000,
+        max_total_bytes=50_000,
+        max_prompt_chars=20_000,
+        timeout_seconds=2,
+    )
+    svc = AiReadmeService(
+        db_session,
+        llm,
+        PromptTemplateManager(db_session),
+        snapshot_service,
+    )
+    vo = await svc.generate("my-project", str(project))
     assert vo.id is not None
     assert vo.project_name == "my-project"
+    assert vo.version == 1
+    assert vo.snapshot_hash
     got = await svc.get("my-project")
     assert got is not None
     assert got.id == vo.id

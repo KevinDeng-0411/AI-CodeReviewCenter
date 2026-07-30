@@ -1,21 +1,52 @@
 // AI ReadMe - 项目信息 -> 6 章节 Markdown 文档（渲染 / 源码切换）
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BookOpen, FileText, Eye, Code2 } from "lucide-react";
 import { aiReadme } from "../api/client";
-import type { AiReadmeVO } from "../api/types";
+import type { AiReadmeCapability, AiReadmeVO } from "../api/types";
 import { Button, EmptyState, Field, Input, SignalTrace, ToastBar, useToast } from "../components/ui";
 import PageHeader from "../components/PageHeader";
 import Markdown from "../components/Markdown";
 
+function formatGeneratedAt(value: string | null): string {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
+}
+
 export default function AiReadmePage() {
   const toast = useToast();
   const [project, setProject] = useState("demo");
-  const [path, setPath] = useState("/home/demo");
+  const [path, setPath] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiReadmeVO | null>(null);
   const [view, setView] = useState<"render" | "source">("render");
+  const [capability, setCapability] = useState<AiReadmeCapability | null>(null);
+  const [capabilityLoading, setCapabilityLoading] = useState(true);
+  const [capabilityError, setCapabilityError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    aiReadme
+      .capabilities()
+      .then((value) => {
+        if (active) setCapability(value);
+      })
+      .catch(() => {
+        if (active) setCapabilityError(true);
+      })
+      .finally(() => {
+        if (active) setCapabilityLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const snapshotAvailable =
+    capability?.enabled === true && capability.reason === "available" && !capabilityError;
 
   const run = async () => {
+    if (!snapshotAvailable) return;
     setLoading(true);
     setResult(null);
     try {
@@ -37,11 +68,31 @@ export default function AiReadmePage() {
             <Input value={project} onChange={(e) => setProject(e.target.value)} />
           </Field>
           <Field label="项目路径">
-            <Input value={path} onChange={(e) => setPath(e.target.value)} />
+            <Input
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              placeholder="/absolute/path/to/project"
+              disabled={!snapshotAvailable || loading}
+            />
           </Field>
-          <Button onClick={run} loading={loading} className="w-full justify-center">
+          <Button
+            onClick={run}
+            loading={loading}
+            disabled={!snapshotAvailable || !project.trim() || !path.trim()}
+            className="w-full justify-center"
+          >
             <BookOpen className="w-4 h-4" /> 生成文档
           </Button>
+          {capabilityLoading ? (
+            <p className="text-2xs text-mute">正在检查本地项目快照能力…</p>
+          ) : !snapshotAvailable ? (
+            <p className="text-2xs text-amber">
+              仅支持服务端允许的本地项目目录
+              {capabilityError ? "（能力检查失败）" : ""}
+            </p>
+          ) : (
+            <p className="text-2xs text-teal">本地项目快照能力可用</p>
+          )}
           <div className="pt-2 border-t border-line mt-4">
             <p className="font-mono text-2xs uppercase tracking-techy text-mute mb-1.5">
               章节
@@ -72,6 +123,36 @@ export default function AiReadmePage() {
           />
         ) : (
           <div className="max-w-4xl">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mb-4 rounded border border-line bg-panel p-3 font-mono text-2xs sm:grid-cols-5">
+              <div>
+                <dt className="text-mute">版本</dt>
+                <dd className="text-ink">v{result.version}</dd>
+              </div>
+              <div>
+                <dt className="text-mute">快照 Hash</dt>
+                <dd className="text-ink" title={result.snapshot_hash ?? undefined}>
+                  {result.snapshot_hash ? `${result.snapshot_hash.slice(0, 12)}…` : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-mute">文件数</dt>
+                <dd className="text-ink">{result.snapshot_file_count ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-mute">生成时间</dt>
+                <dd className="text-ink">{formatGeneratedAt(result.snapshot_generated_at)}</dd>
+              </div>
+              <div>
+                <dt className="text-mute">截断</dt>
+                <dd className="text-ink">
+                  {result.snapshot_truncated == null
+                    ? "—"
+                    : result.snapshot_truncated
+                      ? "是"
+                      : "否"}
+                </dd>
+              </div>
+            </dl>
             <div className="flex items-center gap-1 mb-4 border-b border-line pb-2">
               <button
                 onClick={() => setView("render")}

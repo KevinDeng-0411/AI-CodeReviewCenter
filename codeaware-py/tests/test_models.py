@@ -78,3 +78,25 @@ def test_prompt_template_version_and_active():
 def test_documents_stores_full_content_once():
     cols = _cols("documents")
     assert "content" in cols  # 父表存全文一次（ADR-0002）
+
+
+def test_ai_readme_snapshot_metadata_and_project_version_uniqueness():
+    table = MD.tables["ai_readme_documents"]
+    cols = _cols("ai_readme_documents")
+    for name in [
+        "snapshot_hash",
+        "snapshot_file_count",
+        "snapshot_generated_at",
+        "snapshot_truncated",
+    ]:
+        assert name in cols
+        assert cols[name].nullable is True
+
+    assert cols["snapshot_hash"].type.length == 64
+    indexes = {index.name: index for index in table.indexes}
+    project_version = indexes["uq_ard_project_name_version"]
+    assert project_version.unique is True
+    assert [column.name for column in project_version.columns] == [
+        "project_name",
+        "version",
+    ]

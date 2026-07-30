@@ -1,5 +1,6 @@
 // API client - 解包统一响应包络，失败抛 ApiError；SSE 流式单独处理
 import type {
+  AiReadmeCapability,
   AiReadmeVO,
   ChatMessage,
   ChatResponseVO,
@@ -91,6 +92,7 @@ export const unitTest = {
 
 // ---------- AI ReadMe ----------
 export const aiReadme = {
+  capabilities: () => call<AiReadmeCapability>("/api/ai-readme/capabilities"),
   generate: (p: { project_name: string; project_path: string }) =>
     call<AiReadmeVO>("/api/ai-readme/generate", { method: "POST", body: JSON.stringify(p) }),
   get: (project_name: string) => call<AiReadmeVO | null>(`/api/ai-readme/${encodeURIComponent(project_name)}`),

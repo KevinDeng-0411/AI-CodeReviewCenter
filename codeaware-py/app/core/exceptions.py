@@ -31,6 +31,12 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def _request_validation_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        if request.url.path == "/api/ai-readme/generate":
+            # project_path 属于宿主路径；默认 422 detail 会回显 raw input。
+            return JSONResponse(
+                status_code=422,
+                content=Result.error("AI_README_REQUEST_INVALID").model_dump(),
+            )
         if request.url.path not in {"/api/chat/send", "/api/chat/send/stream"}:
             return await request_validation_exception_handler(request, exc)
         # Chat 不回显 raw input 或 Pydantic detail，统一为稳定、可冻结的错误 envelope。

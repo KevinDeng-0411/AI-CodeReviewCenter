@@ -4,17 +4,18 @@ services:
   # ============================================================
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: ai-center-postgres
+    container_name: ${CODEAWARE_POSTGRES_CONTAINER_NAME:-ai-center-postgres}
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - "${CODEAWARE_PG_HOST_PORT:-5433}:5432"
     environment:
       POSTGRES_DB: ai_center
       POSTGRES_USER: aicenter
       POSTGRES_PASSWORD: aicenter123
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./ai-center-server/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./ai-center-server/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/01-java-schema.sql:ro
+      - ./docker/postgres/init/02-create-python-db.sql:/docker-entrypoint-initdb.d/02-create-python-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aicenter -d ai_center"]
       interval: 5s
@@ -26,10 +27,10 @@ services:
   # ============================================================
   redis:
     image: redis:7-alpine
-    container_name: ai-center-redis
+    container_name: ${CODEAWARE_REDIS_CONTAINER_NAME:-ai-center-redis}
     restart: unless-stopped
     ports:
-      - "6380:6379"
+      - "${CODEAWARE_REDIS_HOST_PORT:-6380}:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -43,10 +44,10 @@ services:
   # ============================================================
   ollama:
     image: ollama/ollama:latest
-    container_name: ai-center-ollama
+    container_name: ${CODEAWARE_OLLAMA_CONTAINER_NAME:-ai-center-ollama}
     restart: unless-stopped
     ports:
-      - "11434:11434"
+      - "${CODEAWARE_OLLAMA_HOST_PORT:-11434}:11434"
     volumes:
       - ollamadata:/root/.ollama
     healthcheck:

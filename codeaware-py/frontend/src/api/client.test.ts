@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, knowledge, readApiErrorMessage } from "./client";
+import { aiReadme, ApiError, knowledge, readApiErrorMessage } from "./client";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -90,5 +90,29 @@ describe("knowledge.uploadFile", () => {
     await expect(knowledge.uploadFile(file)).rejects.toEqual(
       new ApiError("KNOWLEDGE_FILE_TYPE_UNSUPPORTED"),
     );
+  });
+});
+
+describe("aiReadme.capabilities", () => {
+  it("读取最小 capability 契约且不发送项目路径", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        code: 1,
+        msg: "success",
+        data: { enabled: false, reason: "roots_unavailable" },
+      }),
+    } as Response);
+
+    await expect(aiReadme.capabilities()).resolves.toEqual({
+      enabled: false,
+      reason: "roots_unavailable",
+    });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/ai-readme/capabilities");
+    expect(init?.method).toBeUndefined();
+    expect(init?.body).toBeUndefined();
   });
 });

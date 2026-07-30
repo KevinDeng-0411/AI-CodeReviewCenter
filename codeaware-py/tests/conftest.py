@@ -26,7 +26,7 @@ from app.db.session import AsyncSessionLocal, engine
 from app.main import app
 import redis.asyncio as aioredis
 
-from _safeguard import assert_safe_targets  # fail-closed 目标守卫
+from _safeguard import assert_safe_target_identity
 
 
 class FakeEmbedder:
@@ -49,13 +49,14 @@ class FakeLLM:
 @pytest.fixture(scope="session")
 async def setup_db():
     """会话级：建扩展 + 建表；会话结束 drop。destructive 前先 fail-closed 校验目标。"""
-    assert_safe_targets()  # 拒绝开发库/未授权裸跑
+    await assert_safe_target_identity()
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield
+    await assert_safe_target_identity()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
@@ -87,10 +88,11 @@ def vector_recall(mock_embedder) -> VectorRecallService:
 @pytest.fixture
 async def redis_client():
     """测试用 Redis。fixture 内创建以绑定 session loop，每测试 flush 隔离；flush 前校验目标。"""
-    assert_safe_targets()
+    await assert_safe_target_identity()
     client = aioredis.from_url(settings.redis_url, decode_responses=True)
     await client.flushdb()
     yield client
+    await assert_safe_target_identity()
     await client.flushdb()
     await client.aclose()
 

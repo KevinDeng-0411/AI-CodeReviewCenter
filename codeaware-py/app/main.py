@@ -18,6 +18,7 @@ from app.api.v1.code_review import router as code_review_router
 from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.memory import router as memory_router
 from app.api.v1.prompt import router as prompt_router
+from app.api.v1.system_health import router as system_health_router
 from app.api.v1.unit_test import router as unit_test_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -47,11 +48,12 @@ app.include_router(chat_router)
 app.include_router(knowledge_router)
 app.include_router(memory_router)
 app.include_router(prompt_router)
+app.include_router(system_health_router)
 
 
 @app.get("/health", tags=["系统"])
 async def health() -> Result:
-    """健康检查。"""
+    """兼容入口：仅表示应用进程存活。"""
     return Result.ok({"status": "up"})
 
 
@@ -60,4 +62,3 @@ async def health() -> Result:
 _dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 if _dist.is_dir() and not os.environ.get("CODEAWARE_TESTING"):
     app.mount("/", StaticFiles(directory=str(_dist), html=True), name="frontend")
-

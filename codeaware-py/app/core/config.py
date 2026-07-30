@@ -4,6 +4,8 @@
 P0 骨架无 LLM 调用可空启动；P2 起未配置将调用失败（明确报错）。
 """
 
+from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -53,6 +55,15 @@ class Settings(BaseSettings):
     # Knowledge 文件上传（C1-C：请求内有界解析，不启用异步索引 Worker）
     knowledge_upload_max_bytes: int = Field(default=5 * 1024 * 1024, gt=0)
     knowledge_parsed_max_chars: int = Field(default=200_000, gt=0)
+
+    # AIReadMe 本地只读项目快照（C1-E：默认关闭且无隐式宿主目录）
+    ai_readme_snapshot_enabled: bool = False
+    local_project_roots: list[Path] = Field(default_factory=list)
+    ai_readme_snapshot_max_files: int = Field(default=200, gt=0)
+    ai_readme_snapshot_max_file_bytes: int = Field(default=262_144, gt=0)
+    ai_readme_snapshot_max_total_bytes: int = Field(default=2_097_152, gt=0)
+    ai_readme_snapshot_max_prompt_chars: int = Field(default=60_000, gt=0)
+    ai_readme_snapshot_timeout_seconds: float = Field(default=5.0, gt=0)
 
     @property
     def pg_url_async(self) -> str:

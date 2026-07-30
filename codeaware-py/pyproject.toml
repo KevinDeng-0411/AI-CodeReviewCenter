@@ -23,6 +23,7 @@ dependencies = [
     "pypdf>=6.6.2",
     "python-multipart>=0.0.20",
     "markdown>=3.5",
+    "pathspec>=0.12,<1",
 ]
 
 [dependency-groups]
