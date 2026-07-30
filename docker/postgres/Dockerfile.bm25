@@ -1,0 +1,18 @@
+# C4: pgvector + ParadeDB pg_search 组合镜像
+# 基于 pgvector/pgvector:pg16 (Debian bookworm) + ParadeDB pg_search v0.25.0
+# 固定版本,不用 latest;C4-A spike 验证两者共存。
+FROM pgvector/pgvector:pg16
+
+ARG PG_SEARCH_VERSION=0.12.0
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
+    ARCH=$(dpkg --print-architecture) && \
+    curl -fsSL -o /tmp/pg_search.deb \
+      "https://github.com/paradedb/paradedb/releases/download/v${PG_SEARCH_VERSION}/postgresql-16-pg-search_${PG_SEARCH_VERSION}-1PARADEDB-bookworm_${ARCH}.deb" && \
+    dpkg -i /tmp/pg_search.deb || apt-get install -f -y && \
+    rm /tmp/pg_search.deb && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# pg_search requires shared_preload_libraries; add to initdb template
+RUN echo "shared_preload_libraries = 'pg_search'" >> /usr/share/postgresql/16/postgresql.conf.sample

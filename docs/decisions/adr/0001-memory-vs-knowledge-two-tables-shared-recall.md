@@ -3,6 +3,7 @@
 - **状态**: Accepted
 - **日期**: 2026-07-28
 - **更新**: 2026-07-29 — 「起源差异」（对话内生 vs 外部策展）落地实现：Chat 达 2 轮后自动从对话抽取原子事实写入 `long_term_memories`（`memory_type=FACT`、`conversation_id` 关联、`meta.source=conversation`）。Memory 不再仅手动录入，与 Knowledge（外部上传文档-分块）的起源分野真正可观察。
+- **更新**: 2026-07-30 - C4-A BM25 spike：词法腿当前为 pg_trgm similarity（模糊三元组，非真 BM25）。spike 验证 ParadeDB pg_search v0.12.0 + chinese_compatible tokenizer 可与 pgvector 0.8.2 共存于 PG16（自建镜像 codeaware/pgvector-pgsearch:pg16-v0.12.0）。BM25 索引 + INSERT + 中文/英文查询 + EXPLAIN 均通过；v0.25.0 因 INSERT 回归被拒。C4 成功后词法腿默认切 BM25，pg_trgm 保留为 RAG_LEXICAL_BACKEND=pg_trgm 回退。Memory 纯向量策略不受影响。
 - **关联术语**: Long-term Memory, Knowledge Document, VectorRecallService
 
 ## 背景
