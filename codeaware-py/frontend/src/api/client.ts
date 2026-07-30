@@ -11,6 +11,7 @@ import type {
   PromptTemplateItem,
   UnitTestVO,
 } from "./types";
+import { consumeChatStream, type ChatStreamHandlers } from "./sseParser";
 
 export class ApiError extends Error {
   msg: string;
@@ -75,15 +76,14 @@ export const chat = {
 };
 
 /**
- * SSE 流式对话。后端逐行发 `data: <token>\n\n`，末尾 `data: [DONE]\n\n`。
- * 用 fetch + ReadableStream 解析（EventSource 不支持 POST）。
- * onToken 收到每个 token；返回完整回复。
+ * typed SSE 流式对话（C1-A）。按事件分派；不 trim delta，不猜 cid。
+ * chat.started 立即拿到 conversation_id；chat.completed 才完成。
  */
 export async function chatStream(
   p: { conversation_id?: string; message: string },
-  onToken: (token: string) => void,
+  handlers: ChatStreamHandlers,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<void> {
   const res = await fetch(`${BASE}/api/chat/send/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -91,30 +91,7 @@ export async function chatStream(
     signal,
   });
   if (!res.ok || !res.body) throw new ApiError(`HTTP ${res.status}`);
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let full = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) continue;
-      const payload = trimmed.slice(5).trim();
-      if (payload === "[DONE]") continue;
-      if (payload) {
-        full += payload;
-        onToken(payload);
-      }
-    }
-  }
-  return full;
+  await consumeChatStream(res.body, handlers, signal);
 }
 
 // ---------- Knowledge ----------

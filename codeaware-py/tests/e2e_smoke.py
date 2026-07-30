@@ -144,7 +144,7 @@ async def test_full_chain_knowledge_rag_chat_review(client, e2e_overrides):
     data = r.json()["data"]
     cid = data["conversation_id"]
     assert cid  # 自动创建 conversation_id（ADR-0004）
-    assert data["reply"] == "pong"
+    assert data["reply"] == "hello world"  # _E2EChatModel tokens 拼接
 
     # 5. 多轮对话 - 第二轮（复用 conversation_id，短期记忆续接）
     r = await client.post(
@@ -153,14 +153,28 @@ async def test_full_chain_knowledge_rag_chat_review(client, e2e_overrides):
     assert r.status_code == 200
     assert r.json()["data"]["conversation_id"] == cid
 
-    # 6. SSE 流式（逐 token + [DONE]）
+    # 6. typed SSE 流式（chat.started / token.delta / chat.completed）
     r = await client.post(
         "/api/chat/send/stream", json={"conversation_id": cid, "message": "流式回答"}
     )
     assert r.status_code == 200
     body = r.text
-    assert "data:" in body and "[DONE]" in body
-    assert "hello world" in body.replace("\n\n", "").replace("data: ", "")
+    events = []
+    for block in body.split("\n\n"):
+        if not block.strip():
+            continue
+        ev_name, ev_data = None, None
+        for line in block.split("\n"):
+            if line.startswith("event:"):
+                ev_name = line[6:].strip()
+            elif line.startswith("data:"):
+                ev_data = line[5:].strip()
+        if ev_name and ev_data:
+            events.append((ev_name, __import__("json").loads(ev_data)))
+    deltas = "".join(d["delta"] for n, d in events if n == "token.delta")
+    assert deltas == "hello world"
+    assert any(n == "chat.started" for n, _ in events)
+    assert any(n == "chat.completed" for n, _ in events)
 
     # 7. 会话列表 + 历史 + 删除
     r = await client.get("/api/chat/conversations")

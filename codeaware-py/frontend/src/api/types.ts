@@ -56,6 +56,7 @@ export interface ChatResponseVO {
   conversation_id: string;
   reply: string;
   memory_summary?: string | null;
+  warnings: { component: string; code: string; message: string }[];
 }
 export interface ConversationItem {
   id: number;

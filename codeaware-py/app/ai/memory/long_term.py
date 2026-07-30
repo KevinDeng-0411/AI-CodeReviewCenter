@@ -66,30 +66,49 @@ class LongTermMemoryManager:
     async def extract_from_conversation(self, cid: str, chat_model) -> int:
         """从对话抽取原子事实 -> 落库（memory_type=FACT，conversation_id 关联，ADR-0001 对话内生）。
 
-        取最近 10 条消息 -> LLM 抽取 -> 每条事实 save_memory（embed+内联）。
-        返回新增事实数。
+        单 session 便捷路径（单测用）；生产 TurnCoordinator 用 read_recent_messages +
+        extract_facts_text + save_facts 分段，使 LLM 调用不持有 DB 事务。
         """
+        messages = await self.read_recent_messages(cid)
+        facts = await self.extract_facts_text(messages, chat_model)
+        return await self.save_facts(cid, facts)
+
+    async def read_recent_messages(self, cid: str) -> list[tuple[str, str]]:
+        """读最近 10 条消息（供抽取；coordinator 在短事务内读后 commit）。"""
         r = await self.session.execute(
             select(Message.role, Message.content)
             .where(Message.conversation_id == cid)
             .order_by(Message.id.desc())
             .limit(10)
         )
-        rows = list(reversed(r.all()))
-        if not rows:
-            return 0
-        convo = "\n".join(f"{role}: {content}" for role, content in rows)
+        return list(reversed(r.all()))
+
+    async def extract_facts_text(self, messages: list[tuple[str, str]], chat_model) -> list[str]:
+        """纯 LLM 抽取（不持有 DB 事务）。"""
+        if not messages:
+            return []
+        convo = "\n".join(f"{role}: {content}" for role, content in messages)
         prompt = EXTRACT_PROMPT.format(convo=convo)
         facts = await self._invoke_extract(chat_model, prompt)
+        return [f.strip() for f in facts if f.strip()]
+
+    async def save_facts(self, cid: str, facts: list[str]) -> int:
+        """落库抽取的事实（coordinator commit）。"""
         for fact in facts:
-            fact = fact.strip()
-            if not fact:
-                continue
-            await self.save_memory(
-                fact, "FACT", cid, {"source": "conversation"}
-            )
+            await self.save_memory(fact, "FACT", cid, {"source": "conversation"})
         await self.session.flush()
         return len(facts)
+
+    async def has_memories(self, cid: str) -> bool:
+        """该会话是否已有抽取记忆（coordinator 抽取前置判断）。"""
+        from sqlalchemy import func
+
+        cnt = await self.session.scalar(
+            select(func.count())
+            .select_from(LongTermMemory)
+            .where(LongTermMemory.conversation_id == cid)
+        )
+        return (cnt or 0) > 0
 
     async def _invoke_extract(self, chat_model, prompt: str) -> list[str]:
         """结构化抽取（json_mode），失败回退 ainvoke + 解析。"""

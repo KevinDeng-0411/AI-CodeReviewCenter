@@ -131,13 +131,18 @@ async def rag_service(db_session, chunker, vector_recall, mock_llm):
 
 
 @pytest.fixture
-async def chat_service(db_session, mock_llm, short_term, long_term, rag_service):
-    from app.ai.prompt.template_manager import PromptTemplateManager
+async def chat_service(db_session, redis_client):
     from app.ai.services.chat import ChatService
-    return ChatService(
-        db_session, mock_llm, short_term, long_term,
-        rag_service, PromptTemplateManager(db_session),
-    )
+    return ChatService(db_session, redis_client)
+
+
+@pytest.fixture
+async def turn_coordinator(db_session, mock_llm, redis_client, vector_recall, chunker):
+    """C1-A: TurnCoordinator（用 fake LLM/embedder，自管一次性 session 由 db_session fixture 保证安全）。"""
+    from app.ai.rag.query_rewriter import QueryRewriter
+    from app.ai.services.turn_coordinator import TurnCoordinator
+
+    return TurnCoordinator(mock_llm, redis_client, vector_recall, chunker, QueryRewriter(mock_llm))
 
 
 @pytest.fixture

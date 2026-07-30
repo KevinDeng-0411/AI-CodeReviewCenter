@@ -1,7 +1,10 @@
 """ShortTermMemoryManager - 工作记忆（ADR-0003）。
 
-PG(messages) 真相源 + Redis(滑窗+摘要) 缓存 + miss 回查 PG 重建；
-LLM 摘要 PG conversations.summary(真相)+Redis(缓存)，miss 读 PG 不重算，写入异步双写。
+C1-A：PG 是消息/摘要真相源，Redis 只做可丢弃缓存。
+- persist_message：PG 写（coordinator 拥有事务，显式 commit）
+- refresh_message_cache / refresh_summary_cache：仅在对应 PG commit 后刷新 Redis，失败由调用方转 warning
+- summarize_text：纯 LLM 调用，不持有 DB 事务（读/写由 coordinator 在短事务内完成）
+- get_messages：Redis 优先，miss 回查 PG 重建（ADR-0003 fallback）
 """
 
 from dataclasses import dataclass
@@ -36,26 +39,37 @@ class ShortTermMemoryManager:
         self.session = session
         self.chat_model = chat_model  # 摘要用；None 则不生成摘要
 
-    # ---------- 消息（PG 真相源 + Redis 缓存 + fallback）----------
-    async def save_message(self, cid: str, role: str, content: str, bg=None) -> None:
+    # ---------- 消息：PG 真相源 + Redis 缓存（post-commit） ----------
+
+    async def persist_message(self, cid: str, role: str, content: str) -> Message:
+        """PG 写消息（add + flush）。coordinator 负责显式 commit。"""
+        msg = Message(
+            conversation_id=cid, role=role, content=content, token_count=len(content) // 2
+        )
+        self.session.add(msg)
+        await self.session.flush()
+        return msg
+
+    async def refresh_message_cache(self, cid: str, role: str, content: str) -> None:
+        """PG commit 后刷新 Redis 滑窗（post-commit）。失败抛出，由调用方转 warning。"""
         key = f"msgs:{cid}"
         await self.redis.rpush(key, f"{role}{SEP}{content}")
-        await self.redis.ltrim(key, -WINDOW_SIZE, -1)  # 裁剪滑窗
+        await self.redis.ltrim(key, -WINDOW_SIZE, -1)
         await self.redis.expire(key, TTL_SECONDS)
-
-        size = await self.redis.llen(key)
-        if size >= SUMMARY_THRESHOLD and size % 5 == 0 and bg is not None and self.chat_model:
-            bg.add_task(self.generate_summary, cid)  # 真异步（Java 版实为同步）
-
-        await self._persist_message(cid, role, content)  # 真相源写 PG
 
     async def get_messages(self, cid: str) -> list[MessageEntry]:
         key = f"msgs:{cid}"
-        entries = await self.redis.lrange(key, 0, -1)
+        try:
+            entries = await self.redis.lrange(key, 0, -1)
+        except Exception:
+            entries = []  # Redis 不可用：走 PG fallback
         if not entries:  # ADR-0003 fallback：Redis miss -> 回查 PG 重建
             entries = await self._recent_from_pg(cid)
             if entries:
-                await self._refill_redis(cid, entries)
+                try:
+                    await self._refill_redis(cid, entries)  # 回填失败不阻塞返回 PG 真相
+                except Exception:
+                    pass
         return [self._parse(e) for e in entries]
 
     async def get_context_window(self, cid: str) -> str:
@@ -68,7 +82,19 @@ class ShortTermMemoryManager:
             parts.append("## 最近对话\n" + "\n".join(f"{m.role}: {m.content}" for m in msgs))
         return "\n\n".join(parts)
 
-    # ---------- 摘要（ADR-0003 决策点 4）----------
+    async def message_count(self, cid: str) -> int:
+        """PG 消息总数（不受 Redis 滑窗裁剪影响，用于摘要阈值）。"""
+        from sqlalchemy import func
+
+        return (
+            await self.session.scalar(
+                select(func.count()).select_from(Message).where(Message.conversation_id == cid)
+            )
+            or 0
+        )
+
+    # ---------- 摘要：PG 真相 + Redis 缓存 ----------
+
     async def get_summary(self, cid: str) -> str | None:
         skey = f"summary:{cid}"
         s = await self.redis.get(skey)
@@ -82,48 +108,43 @@ class ShortTermMemoryManager:
             await self.redis.set(skey, s, ex=TTL_SECONDS)  # 回填缓存
         return s
 
-    async def generate_summary(self, cid: str) -> None:
-        """异步生成/更新摘要并双写 Redis + PG。
-
-        生产环境由 BackgroundTask 调用；此处 flush（不 commit），调用方负责事务提交，
-        保证可测试性（测试 rollback 即可隔离）。
-        """
-        if self.chat_model is None:
-            return
-        msgs = await self.get_messages(cid)
-        if not msgs:
-            return
-        half = max(1, len(msgs) // 2)
-        to_summarize = msgs[:half]
+    async def summarize_text(self, messages: list[MessageEntry], existing: str | None) -> str | None:
+        """纯 LLM 摘要（不持有 DB 事务）。返回 None 表示无需生成。"""
+        if self.chat_model is None or not messages:
+            return None
+        half = max(1, len(messages) // 2)
+        to_summarize = messages[:half]
         conv = "\n".join(f"{m.role}: {m.content}" for m in to_summarize)
-        existing = await self.get_summary(cid)
         prompt = (
             f"请将以下对话历史总结为简洁摘要(200字以内),保留关键信息:\n{conv}\n\n"
             f"现有摘要(如有):{existing or '无'}\n\n请合并新旧信息输出最终摘要:"
         )
         resp = await self.chat_model.ainvoke(prompt)
-        text = resp.content if hasattr(resp, "content") else str(resp)
-        # 双写：Redis 缓存 + PG 真相
-        await self.redis.set(f"summary:{cid}", text, ex=TTL_SECONDS)
+        return resp.content if hasattr(resp, "content") else str(resp)
+
+    async def write_summary(self, cid: str, text: str) -> None:
+        """PG 写摘要（coordinator commit）。与 summary_message_count 同事务（C1-B）。"""
         await self.session.execute(
             update(Conversation).where(Conversation.conversation_id == cid).values(summary=text)
         )
         await self.session.flush()
 
+    async def refresh_summary_cache(self, cid: str, text: str) -> None:
+        """PG commit 后刷新 Redis 摘要缓存（post-commit）。"""
+        await self.redis.set(f"summary:{cid}", text, ex=TTL_SECONDS)
+
     async def clear(self, cid: str) -> None:
         """清除会话短期记忆（Redis 缓存）。"""
         await self.redis.delete(f"msgs:{cid}", f"summary:{cid}")
 
-    # ---------- PG 持久化 ----------
-    async def _persist_message(self, cid: str, role: str, content: str) -> None:
-        self.session.add(
-            Message(conversation_id=cid, role=role, content=content, token_count=len(content) // 2)
-        )
-        await self.session.flush()
+    # ---------- PG 读取辅助 ----------
 
     async def _recent_from_pg(self, cid: str) -> list[str]:
         r = await self.session.execute(
-            select(Message).where(Message.conversation_id == cid).order_by(Message.id.desc()).limit(WINDOW_SIZE)
+            select(Message)
+            .where(Message.conversation_id == cid)
+            .order_by(Message.id.desc())
+            .limit(WINDOW_SIZE)
         )
         return [f"{m.role}{SEP}{m.content}" for m in reversed(r.scalars().all())]
 

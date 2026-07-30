@@ -14,6 +14,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [loadingConv, setLoadingConv] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -69,40 +70,69 @@ export default function ChatPage() {
     if (!text || streaming) return;
     setInput("");
     setStreaming(true);
+    setWarnings([]);
     const userMsg: ChatMessage = { role: "USER", content: text };
     const aiMsg: ChatMessage = { role: "ASSISTANT", content: "" };
     setMessages((m) => [...m, userMsg, aiMsg]);
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    let cid = activeCid;
     try {
-      const full = await chatStream(
-        { conversation_id: activeCid ?? undefined, message: text },
-        (token) => {
-          setMessages((m) => {
-            const next = [...m];
-            next[next.length - 1] = { role: "ASSISTANT", content: next[next.length - 1].content + token };
-            return next;
-          });
+      await chatStream(
+        { conversation_id: cid ?? undefined, message: text },
+        {
+          onStarted: (e) => {
+            cid = e.conversation_id;
+            setActiveCid(e.conversation_id); // 立即拿到 cid，不猜最新
+          },
+          onDelta: (e) => {
+            setMessages((m) => {
+              const next = [...m];
+              next[next.length - 1] = {
+                role: "ASSISTANT",
+                content: next[next.length - 1].content + e.delta,
+              };
+              return next;
+            });
+          },
+          onContextWarning: (e) => setWarnings((w) => [...w, e.message]),
+          onPostWarning: (e) => setWarnings((w) => [...w, e.message]),
+          onFailed: (e) => {
+            setMessages((m) => {
+              const next = [...m];
+              next[next.length - 1] = {
+                role: "ASSISTANT",
+                content: `（生成失败：${e.error.message}）`,
+              };
+              return next;
+            });
+          },
+          onUnknown: () => {
+            setMessages((m) => {
+              const next = [...m];
+              next[next.length - 1] = {
+                role: "ASSISTANT",
+                content: "（协议版本不兼容，请升级前端）",
+              };
+              return next;
+            });
+          },
         },
         ctrl.signal,
       );
-      if (!full) setMessages((m) => {
-        const next = [...m];
-        next[next.length - 1] = { role: "ASSISTANT", content: "(空回复)" };
-        return next;
-      });
-      // SSE 不回传 cid：刷新列表取最新（后端按 id desc）设为当前会话
-      const latest = await chat.conversations();
-      setConvs(latest);
-      if (!activeCid && latest.length > 0) setActiveCid(latest[0].conversation_id);
+      setConvs(await chat.conversations());
     } catch (e) {
       if (e instanceof ApiError || (e instanceof Error && e.name !== "AbortError")) toast.show(e);
+      const cancelled = e instanceof Error && e.name === "AbortError";
       setMessages((m) => {
         const next = [...m];
         const last = next[next.length - 1];
         if (last && last.role === "ASSISTANT" && !last.content) {
-          next[next.length - 1] = { role: "ASSISTANT", content: "（生成中断）" };
+          next[next.length - 1] = {
+            role: "ASSISTANT",
+            content: cancelled ? "（生成已取消）" : "（生成中断）",
+          };
         }
         return next;
       });
@@ -184,6 +214,17 @@ export default function ChatPage() {
             </div>
           )}
         </div>
+
+        {/* 降级提示（非阻塞） */}
+        {warnings.length > 0 && (
+          <div className="px-5 py-2 border-t border-amber/20 bg-amber/5 flex flex-wrap gap-x-4 gap-y-1">
+            {warnings.map((w, i) => (
+              <span key={i} className="font-mono text-2xs text-amber tracking-techy">
+                ⚠ {w}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* 输入器 */}
         <div className="px-5 py-3 border-t border-line bg-panel">

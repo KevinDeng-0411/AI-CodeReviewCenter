@@ -12,3 +12,4 @@ class ChatResponseVO(BaseModel):
     conversation_id: str
     reply: str
     memory_summary: str | None = None
+    warnings: list[dict] = []
