@@ -3,7 +3,8 @@
 > 这是当前应优先实施的计划。目标是把已承诺的 Python Chat 应用真正闭环；Agent 仅存在于另一目录的未来方向文档中。
 
 - 制定日期：2026-07-29
-- 当前证据基线：`74 passed, 1 deselected`；前端 lint/build 可通过
+- 当前证据基线：C1 `209 passed, 1 deselected`、后端覆盖率 `92%`、前端
+  `31 passed`，lint/build 通过；见 [C1 Evidence](evidence/C1/report.md)
 - 当前产品边界：FastAPI + LangChain + DeepSeek 的 Chat/RAG/Memory 与四类薄工具
 - 完成原则：修复真实链路，不以 mock 单测或文档中的 `[x]` 代替可运行演示
 
@@ -11,9 +12,9 @@
 
 | 阶段 | 当前交付 | 状态 | 实施卡 |
 |---|---|---|---|
-| C1 | 修复已确认的真实链路缺口 | 未开始 | [01-当前缺口修复](01-当前缺口修复.md) |
-| C2 | 现有功能全链路闭环验收 | 未开始 | [02-现有功能闭环验收](02-现有功能闭环验收.md) |
-| C3 | 文档、启动方式和版本基线冻结 | 未开始 | [03-版本冻结与交接](03-版本冻结与交接.md) |
+| C1 | 修复已确认的真实链路缺口 | **已完成**（[manifest](evidence/C1/manifest.json) 已验证） | [01-当前缺口修复](01-当前缺口修复.md) |
+| C2 | 现有功能全链路闭环验收 | **下一阶段，未开始** | [02-现有功能闭环验收](02-现有功能闭环验收.md) |
+| C3 | 文档、启动方式和版本基线冻结 | 未开始，等待 C2 | [03-版本冻结与交接](03-版本冻结与交接.md) |
 
 依赖关系：
 
@@ -79,7 +80,9 @@ cd "$repo_root"
 
 ### 4.2 测试数据安全门
 
-当前测试 fixture 会执行建表/删表、Alembic downgrade 和 Redis `flushdb`。在 C1 完成安全改造前，**禁止直接运行裸 `uv run pytest`、固定测试库上的 migration roundtrip，或任何未验证目标的清理命令**。
+当前测试 fixture 会执行建表/删表、Alembic downgrade 和 Redis `flushdb`。C1 已交付并验证
+fail-closed runner；此后仍然**禁止直接运行裸 `uv run pytest`、固定测试库上的 migration
+roundtrip，或任何未验证目标的清理命令**。
 
 所有后端测试必须通过 C1 交付的 `codeaware-py/scripts/run_tests_safe.py` 执行。该入口必须在导入 `app` 或 `pytest` 前：
 

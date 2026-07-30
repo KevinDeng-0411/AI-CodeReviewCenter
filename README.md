@@ -7,7 +7,12 @@
 
 ## Python 重构版（codeaware-py）
 
-**当前状态**：Java → Python 的 P0–P5 结构迁移已完成，C1-A 至 C1-E 的 typed SSE、增量摘要、multipart、空环境启动/安全测试链路与 AIReadMe 安全快照均已实现并通过定向及全量验证；C1 总演示/evidence 收口与 C2–C3 仍须按 [C1–C3 当前版本收尾](docs/roadmap/current-release/README.md)继续。Agent 只是一条[锁定的个人项目未来路线](docs/roadmap/chat-to-agent/personal/README.md)，默认止于本机只读仓库 Agent。
+**当前状态**：Java → Python 的 P0–P5 结构迁移已完成；C1-A 至 C1-E、总演示、
+fresh bootstrap、安全测试与回退演练均已形成并通过机器可校验的
+[C1 Evidence](docs/roadmap/current-release/evidence/C1/report.md)。下一阶段只能按
+[C1–C3 当前版本收尾](docs/roadmap/current-release/README.md)实施 C2；C3 与 Agent
+仍锁定。Agent 只是一条[个人项目未来路线](docs/roadmap/chat-to-agent/personal/README.md)，
+默认止于本机只读仓库 Agent。
 
 > 安全提示：后端测试禁止直接运行 pytest。统一使用 `codeaware-py/scripts/run_tests_safe.py`；它只允许随机一次性 PG/Redis 目标并在结束时精确清理。
 
@@ -62,6 +67,7 @@ docker compose exec ollama ollama pull bge-m3
 - 面试话术：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
 - 文档索引（编码先查）：[docs/INDEX.md](docs/INDEX.md)
 - 当前版本 C1–C3：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
+- C1 手动真实启动联调：[docs/roadmap/current-release/C1-手动可视化联调.md](docs/roadmap/current-release/C1-手动可视化联调.md)
 - 后续个人项目 Chat → Agent 路线：[docs/roadmap/chat-to-agent/personal/README.md](docs/roadmap/chat-to-agent/personal/README.md)
 
 > **API 契约状态**：目标仍是 Python 版 22 端点与下文示例及 OpenAPI 对齐；当前已知差异由 C1/C2 收口，不能再用“只有 `session_id` → `conversation_id` 一项差异”作为验收结论。端口 Java 8080 / Python 8000。

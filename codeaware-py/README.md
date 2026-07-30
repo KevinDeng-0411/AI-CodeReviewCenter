@@ -1,6 +1,9 @@
 # CodeAware (Python)
 
-Java → Python 重构版。C1-A 至 C1-E 已实现并通过定向及全量验证；当前发布闭环仍须完成 C1 总演示/evidence，再按 C2、C3 继续实施。
+Java → Python 重构版。C1-A 至 C1-E、总演示、fresh bootstrap、安全测试和回退演练
+已形成并通过机器可校验的
+[C1 Evidence](../docs/roadmap/current-release/evidence/C1/report.md)；下一阶段为 C2，
+C3 与 Agent 仍锁定。
 
 > 通用编码规则见上级目录 [AGENTS.md](../AGENTS.md)；权威设计见 [ADR](../docs/decisions/adr/)、[术语表](../docs/decisions/glossary.md)，当前实施入口见[升级总入口](../docs/roadmap/README.md)。
 
@@ -52,3 +55,6 @@ docker compose exec ollama ollama pull bge-m3
 cd ..
 ./codeaware-py/scripts/verify_fresh_bootstrap.sh
 ```
+
+C1 自动 Evidence 之后的真实开发栈补充检查见
+[C1 手动可视化联调](../docs/roadmap/current-release/C1-手动可视化联调.md)。
