@@ -46,12 +46,6 @@ class Settings(BaseSettings):
     mem_summary_batch_size: int = Field(default=20, gt=0)
     mem_summary_max_chars: int = Field(default=12000, gt=0)
 
-    # RAG（对应 application.yml:95-101）
-    rag_chunk_size: int = 500
-    rag_chunk_overlap: int = 50
-    rag_bm25_weight: float = 0.3
-    rag_vector_weight: float = 0.7
-
     # Knowledge 文件上传（C1-C：请求内有界解析，不启用异步索引 Worker）
     knowledge_upload_max_bytes: int = Field(default=5 * 1024 * 1024, gt=0)
     knowledge_parsed_max_chars: int = Field(default=200_000, gt=0)

@@ -24,11 +24,12 @@ from app.api.v1.unit_test import router as unit_test_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.response import Result
+from app.core.version import APP_VERSION
 
 app = FastAPI(
     title=settings.app_name,
     description="CodeAware - AI 驱动的研发效能平台 (Python 重构)",
-    version="0.1.0",
+    version=APP_VERSION,
 )
 
 # CORS：开发时 Vite 5173 跨域访问 8000；生产同源不需要（由静态托管提供）

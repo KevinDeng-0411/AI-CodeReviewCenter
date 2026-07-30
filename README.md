@@ -1,494 +1,157 @@
-# CodeAware — AI 研发效能中台
+# CodeAware
 
-> AI 驱动的代码质量与团队知识管理平台。
-> 让 AI 理解你的代码，守护每一行质量。
+AI 驱动的研发效能平台。当前目标实现位于 `codeaware-py/`，核心域是 Chat：多轮对话、
+短期窗口与增量摘要、长期记忆、Knowledge RAG 和版本化 Prompt 在同一条问答链路中收敛。
+Code Review、Unit Test、AIReadMe 是复用同一 AI 基建的薄工具。
 
-> **双实现**：本仓库含原 **Java 版**（Spring Boot 3 + LangChain4j，见下文）与 **Python 重构版** `codeaware-py/`（FastAPI + LangChain + SQLAlchemy + pgvector）。Python 版为求职面试重构产物，经领域建模 grilling 产出 7 份 ADR，迁移中修正多处设计问题；中间件（PG/pgvector · Redis · Ollama bge-m3 · DeepSeek）双端复用不变。下方"技术栈/快速启动"为 Java 版；Python 版见本节。
+仓库中的 `ai-center-*` Java 模块是迁移前的 legacy 参考，不再作为当前 API、启动方式或
+阶段验收依据。
 
-## Python 重构版（codeaware-py）
+## 当前状态
 
-**当前状态**：Java → Python 的 P0–P5 结构迁移已完成；C1 真实缺口修复与 C2 七域
-API/持久化/UI 闭环均已形成并通过机器可校验的
-[Evidence](docs/roadmap/current-release/evidence/C2/report.md)。下一阶段只能按
-[当前版本与检索增强路线](docs/roadmap/current-release/README.md)实施 C3 版本冻结与交接，
-之后再实施 C4 BM25 检索增强；Agent 仍锁定。Agent 只是一条
-[个人项目未来路线](docs/roadmap/chat-to-agent/personal/README.md)，默认止于本机只读仓库
-Agent。
+- 当前版本：`0.1.0`
+- Python HTTP 契约：27 个 paths、29 个 operations，以
+  [OpenAPI 快照](codeaware-py/openapi/current-release.json)为准
+- C1 真实缺口修复：[Evidence](docs/roadmap/current-release/evidence/C1/report.md)
+- C2 七域 API/持久化/UI 闭环：[Evidence](docs/roadmap/current-release/evidence/C2/report.md)
+- 当前执行阶段：C3 版本冻结与交接
+- 后续阶段：C4 真实 BM25 词法召回增强
+- Agent：未来方向，尚未实现且保持锁定
 
-> 安全提示：后端测试禁止直接运行 pytest。统一使用 `codeaware-py/scripts/run_tests_safe.py`；它只允许随机一次性 PG/Redis 目标并在结束时精确清理。
+完整顺序见[当前版本与检索增强路线](docs/roadmap/current-release/README.md)。
 
-| 层级 | 技术 |
-|------|------|
-| 语言 | Python 3.12 |
-| Web | FastAPI（原生 async + 内置 /docs） |
-| AI 框架 | LangChain adapter（LangGraph 仅在出现明确编排需求后条件评审） |
-| LLM | DeepSeek（`ChatOpenAI` base_url，OpenAI 兼容） |
-| Embedding | Ollama bge-m3（1024-d，不变） |
-| 向量存储 | pgvector `Vector(1024)` **内联同表**（消除 Java 版 UUID 反查） |
-| 关键词检索 | PG `pg_trgm`（替代 Java 版内存伪 BM25） |
-| ORM | SQLAlchemy 2.0 async（asyncpg） |
-| 缓存 | redis-py async |
-| 文档解析 | unstructured `chunk_by_title` |
-| 配置/DTO | pydantic-settings + Pydantic v2 |
-| 迁移/包管理 | Alembic / uv |
+## 已实现能力
 
-**核心域 = Chat（智能问答）**：两级记忆 + RAG + prompt 编排在此收敛；CR/单测/AIReadMe 为复用基建的薄工具（ADR-0007）。
+| 领域 | 当前能力 |
+|---|---|
+| Chat | 同步/typed SSE、多轮持久化、取消/并发保护、PG 真相源与 Redis 缓存 |
+| 短期记忆 | 最近消息窗口、增量摘要、水位线、PG/Redis 一致性与 fallback |
+| 长期记忆 | FACT/REFERENCE 原子事实、bge-m3 向量召回、对话来源追踪 |
+| Knowledge / RAG | 文本与文件上传、Document/Chunk 父子表、pgvector + `pg_trgm` + RRF |
+| Prompt | 四类模板、append-only 版本、预览、激活和回滚 |
+| Code Review | 选定/active Prompt、Pydantic 结构化结果、审计记录 |
+| Unit Test | 生成并保存 JUnit5 测试代码；不执行生成代码 |
+| AIReadMe | allowlist 内有界只读快照、稳定 hash、版本递增 |
 
-### 快速启动（Python）
+当前关键词腿是 PostgreSQL `pg_trgm similarity`，属于模糊字符串召回，**不是 BM25**。
+真正的 BM25 实施边界见[C4 计划](docs/roadmap/current-release/04-BM25检索增强.md)。
 
-全新 volume 会同时创建 Java `ai_center` 与 Python `ai_center_py`；已有 volume 先执行幂等补建脚本，无需删除数据。
+## 技术栈
+
+- Python 3.12、FastAPI、Pydantic v2
+- LangChain model/embedding adapter、DeepSeek
+- SQLAlchemy 2.0 async、Alembic、asyncpg
+- PostgreSQL 16、pgvector、`pg_trgm`
+- Redis 7、Ollama bge-m3（1024 维）
+- React 19、Vite、TypeScript、Vitest、Playwright
+- uv、pytest、httpx
+
+## 快速启动
+
+所有命令从仓库根执行。全新 Compose volume 会创建 Java `ai_center` 和 Python
+`ai_center_py`；已有 volume 用幂等脚本补建 Python 数据库，不删除现有数据。
 
 ```bash
-docker compose up -d                       # 在仓库根启动 PG:5433 / Redis:6380 / Ollama
-./codeaware-py/scripts/ensure_python_db.sh # 已有 volume：缺失时只补建 ai_center_py
+docker compose up -d
+./codeaware-py/scripts/ensure_python_db.sh
 docker compose exec ollama ollama pull bge-m3
-(cd codeaware-py && cp .env.example .env)  # 填 LLM_API_KEY
+(cd codeaware-py && cp .env.example .env)
+# 编辑 codeaware-py/.env，填写有效 LLM_API_KEY
 (cd codeaware-py && uv sync)
 (cd codeaware-py && uv run alembic upgrade head)
-(cd codeaware-py && uv run uvicorn app.main:app --reload --port 8000)
-# API 文档：http://localhost:8000/docs
+(cd codeaware-py && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000)
 ```
 
-可重复的 fresh-volume 验收不会触碰开发 volume：
+另开终端启动前端：
+
+```bash
+(cd codeaware-py/frontend && npm ci)
+(cd codeaware-py/frontend && npm run dev)
+```
+
+- 前端：http://localhost:5173
+- OpenAPI：http://localhost:8000/docs
+- liveness：http://localhost:8000/health/live
+- readiness：http://localhost:8000/health/ready
+- AI 依赖诊断：http://localhost:8000/api/ai/health
+
+## typed SSE 示例
+
+新会话的 `conversation_id` 由服务端创建并在 `chat.started` 中返回：
+
+```bash
+curl -N http://localhost:8000/api/chat/send/stream \
+  -H 'Content-Type: application/json' \
+  -d '{"conversation_id":null,"message":"解释当前 RAG 完整链路"}'
+```
+
+响应是版本化事件，不是裸 token 或 `[DONE]`：
+
+```text
+id: 1
+event: chat.started
+data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":1,"created":true}
+
+id: 2
+event: token.delta
+data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":2,"delta":"..."}
+
+event: chat.completed
+data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":4,"assistant_message_id":1,"warning_count":0}
+```
+
+后续请求把该 `conversation_id` 原样传回；项目中不使用 `session_id`。
+
+## 安全测试与演示
+
+后端测试禁止裸跑 `pytest`。安全执行器会创建带随机 identity 的一次性 PostgreSQL/Redis，
+拒绝开发库、Redis DB 0、远程目标和伪造 sentinel，并在成功、失败或中断后精确清理。
+
+```bash
+(cd codeaware-py && uv run python scripts/run_tests_safe.py -q)
+(cd codeaware-py && uv run python scripts/run_tests_safe.py --cov=app --cov-report=term-missing -q)
+(cd codeaware-py/frontend && npm run test)
+(cd codeaware-py/frontend && npm run lint)
+(cd codeaware-py/frontend && npm run build)
+./codeaware-py/scripts/demo_c2_mocked.sh
+```
+
+空 volume 验证：
 
 ```bash
 ./codeaware-py/scripts/verify_fresh_bootstrap.sh
 ```
 
-### 迁移最大价值（面试卖点）
-
-① 向量内联 pgvector 消除 UUID 反查；② 关键词检索下沉 PG `pg_trgm` 替代内存伪 BM25；③ LLM 结构化输出 + 全异步 SSE 替代手写 JSON 解析与同步回调；④ Knowledge 拆父子表修全文冗余、消息改 PG 真相源修只写不读、Prompt 模板版本化修激活非确定性。
-
-### 文档
-
-- 所有 coding agent 通用规则：[AGENTS.md](AGENTS.md)
-- 历史 Java → Python 迁移记录（不再直接执行）：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
-- 7 份 ADR：[docs/decisions/adr/](docs/decisions/adr/)
-- DeepSeek 集成约定：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
-- 面试话术：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
-- 文档索引（编码先查）：[docs/INDEX.md](docs/INDEX.md)
-- 当前版本 C1–C3 与 C4 BM25 检索增强：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
-- C1 手动真实启动联调：[docs/roadmap/current-release/C1-手动可视化联调.md](docs/roadmap/current-release/C1-手动可视化联调.md)
-- 后续个人项目 Chat → Agent 路线：[docs/roadmap/chat-to-agent/personal/README.md](docs/roadmap/chat-to-agent/personal/README.md)
-
-> **API 契约状态**：C2 已用规范化 OpenAPI、API contract/e2e 和七域 browser E2E
-> 冻结当前 Python 契约；根 README 中仍以 Java 8080 为前缀的 legacy 示例将在 C3
-> 统一校准。Python 端口为 8000。
-
----
-
-## 技术栈
-
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| 语言 | Java 17 | LTS |
-| 框架 | Spring Boot 3.2.5 | 最新稳定版 |
-| AI 框架 | LangChain4j 0.36.2 | Java 生态最成熟的 LLM 集成框架 |
-| LLM | DeepSeek V4 Flash | 免费/超低成本、中文优秀、OpenAI 兼容 API |
-| Embedding | Ollama + bge-m3 | 本地免费、1024 维、中文向量 SOTA |
-| 向量存储 | PostgreSQL pgvector | 原生 vector 类型 + IVFFlat ANN 索引，一库两用 |
-| 文档解析 | Apache Tika 3.1 | 支持 PDF/Word/HTML/Markdown 等多格式 |
-| 数据库 | PostgreSQL 16 + pgvector | 关系数据 + 向量数据合二为一 |
-| 缓存 | Redis 7 | 短期记忆、会话管理 |
-| ORM | MyBatis-Plus 3.5.5 | 简洁高效 |
-| API 文档 | Knife4j (Swagger 3) | 可视化接口调试 |
-| 构建 | Maven 多模块 | 分层清晰 |
-
-## 模型选择说明
-
-| 组件 | 选择 | 原因 |
-|------|------|------|
-| LLM | DeepSeek V4 Flash | 免费/超低成本，中文优秀，OpenAI 兼容 API |
-| Embedding | Ollama bge-m3 | 本地免费无限制，1024-dim，中文向量 SOTA |
-| 向量存储 | pgvector (默认) / Pinecone (可选) | 本地 pgvector 零成本，Pinecone 云托管生产可用 |
-
-## 项目结构
-
-```
-ai-center/
-├── pom.xml
-├── docker-compose.yml            # PostgreSQL 16 + Redis 7 + Ollama
-├── ai-center-common/             # 公共模块：Result、枚举、异常
-├── ai-center-model/              # 模型模块：Entity、DTO、VO、Mapper
-├── ai-center-ai/                 # AI 核心模块：LangChain4j + RAG + 记忆
-│   ├── config/AIConfig.java      # LLM + Embedding + VectorStore Bean
-│   ├── service/                  # CodeReview / UnitTest / AiReadme / Chat / Rag / DocumentParser
-│   ├── memory/                   # 短期记忆(Redis) + 长期记忆(向量)
-│   ├── prompt/                   # Prompt 模板管理器
-│   └── rag/                      # 查询重写 + 语义分块 + BM25+向量混合检索
-└── ai-center-server/             # Web 启动模块：Controller + 配置
-```
-
----
-
-## 快速启动
-
-### 1. 启动基础设施
+真实 DeepSeek/Ollama smoke 会产生实际 API 调用，只在本地显式执行：
 
 ```bash
-docker compose up -d
+./codeaware-py/scripts/demo_c2_live.sh
 ```
 
-启动 PostgreSQL 16 (pgvector) + Redis 7 + Ollama。
-
-### 2. 拉取 Embedding 模型（仅首次）
-
-```bash
-docker compose exec ollama ollama pull bge-m3
-```
-
-### 3. 配置 DeepSeek API Key
-
-编辑 `ai-center-server/src/main/resources/application-dev.yml`：
-
-```yaml
-ai:
-  llm:
-    api-key: sk-your-deepseek-api-key
-```
-
-### 4. 启动应用
-
-```bash
-mvn clean package -pl ai-center-server -am -DskipTests
-java -jar ai-center-server/target/ai-center-server-1.0.0-SNAPSHOT.jar
-```
-
-### 5. 访问 API 文档
-
-http://localhost:8080/doc.html
-
----
-
-## API 使用指南
-
-### 1. AI Code Review — 结构化代码评审
-
-**七层结构化 Prompt（v2）**：角色定位 + 6步评审流程SOP + 3级问题分级（含触发条件）+ 8维检查清单 + 特殊场景处理 + 职责边界 + JSON Schema 输出约束。
-8 个评审维度：代码质量、安全性、可维护性、架构设计、Java最佳实践、数据库、测试、性能。
-问题等级：Critical（安全漏洞/线程安全/空指针）、Warning（代码质量/性能隐患）、Info（风格改进/设计优化）。
-
-```bash
-# 提交代码评审
-curl -X POST http://localhost:8080/api/code-review/review \
-  -H "Content-Type: application/json" \
-  -d '{
-    "projectName": "my-project",
-    "filePath": "src/main/java/com/example/UserService.java",
-    "sourceCode": "public void save(String name) {\n  String sql = \"DELETE FROM users WHERE name=\" + name;\n  jdbc.execute(sql);\n}"
-  }'
-```
-
-返回示例：
-```json
-{
-  "code": 1,
-  "data": {
-    "score": 15,
-    "summary": "该代码存在严重的安全漏洞...",
-    "issuesCount": 6,
-    "criticalCount": 1,
-    "warningCount": 2,
-    "infoCount": 3,
-    "issues": [
-      {
-        "dimension": "安全性",
-        "severity": "Critical",
-        "lineRange": "1-3",
-        "title": "SQL注入漏洞",
-        "description": "使用字符串拼接构造SQL...",
-        "suggestion": "使用PreparedStatement参数化查询",
-        "fixCode": "String sql = \"DELETE FROM users WHERE name = ?\";\nPreparedStatement ps = conn.prepareStatement(sql);\nps.setString(1, name);"
-      }
-    ]
-  }
-}
-```
-
-```bash
-# 查询评审记录
-curl "http://localhost:8080/api/code-review/records?page=1&size=10&projectName=my-project"
-
-# 查询评审详情
-curl "http://localhost:8080/api/code-review/records/1"
-```
-
-### 2. AI 单元测试生成
-
-提交源代码，自动生成 JUnit 5 + Mockito 单元测试。
-
-```bash
-curl -X POST http://localhost:8080/api/unit-test/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "projectName": "my-project",
-    "filePath": "src/main/java/com/example/UserService.java",
-    "sourceCode": "public class UserService {\n  public User findById(Long id) {\n    return userMapper.selectById(id);\n  }\n}",
-    "testFramework": "JUnit5"
-  }'
-```
-
-```bash
-# 查询生成记录
-curl "http://localhost:8080/api/unit-test/records?page=1&size=10"
-```
-
-### 3. AIReadMe 文档生成
-
-扫描项目信息，自动生成 6 章节文档：技术架构、核心流程、开发指南、项目结构、业务知识、历史经验。
-
-```bash
-curl -X POST http://localhost:8080/api/ai-readme/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "projectName": "ai-center",
-    "projectPath": "/home/projects/ai-center"
-  }'
-
-# 获取已生成的文档
-curl "http://localhost:8080/api/ai-readme/ai-center"
-```
-
-### 4. 智能问答 — 多轮对话（同步 + SSE 流式双模式）
-
-整合短期记忆（Redis 滑动窗口 + LLM 摘要）+ 长期记忆（Ollama 向量语义召回）+ RAG 知识库检索。支持同步一次性返回和 SSE 逐 token 流式推送。
-
-```bash
-# 同步模式 — 一次性返回完整回复
-curl -X POST http://localhost:8080/api/chat/send \
-  -H "Content-Type: application/json" \
-  -d '{"message": "什么是Spring Boot的自动配置原理？"}'
-```
-
-```bash
-# SSE 流式模式 — 逐 token 实时推送（类似 ChatGPT 打字效果）
-curl -N -X POST http://localhost:8080/api/chat/send/stream \
-  -H "Content-Type: application/json" \
-  -d '{"message": "用一句话介绍RAG检索增强生成"}'
-
-# 输出示例：
-# data:Spring
-# data: Boot
-# data: 是一个
-# data:基于
-# data: Spring
-# data: 的快速
-# data:开发脚手架
-# event:done
-# data:sessionId
-```
-
-返回示例：
-```json
-{
-  "code": 1,
-  "data": {
-    "sessionId": "a7f5239e459647f3...",
-    "reply": "Spring Boot的自动配置基于@EnableAutoConfiguration注解...",
-    "memorySummary": null
-  }
-}
-```
-
-```bash
-# 多轮对话 — 使用返回的 sessionId 保持上下文
-curl -X POST http://localhost:8080/api/chat/send \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "a7f5239e459647f3...",
-    "message": "给我一个具体的例子"
-  }'
-
-# 查看会话列表
-curl "http://localhost:8080/api/chat/conversations"
-
-# 查看会话消息历史（含短期记忆）
-curl "http://localhost:8080/api/chat/conversations/a7f5239e459647f3..."
-
-# 删除会话
-curl -X DELETE "http://localhost:8080/api/chat/conversations/a7f5239e459647f3..."
-```
-
-### 5. 知识库 + RAG 混合检索
-
-上传知识文档 → 语义分块 → bge-m3 向量化 → 混合检索（BM25 关键词 + 向量语义）。
-
-```bash
-# 上传知识文档（文本）
-curl -X POST http://localhost:8080/api/knowledge/upload \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Redis缓存最佳实践",
-    "content": "## 缓存穿透\n查询不存在的数据。方案：布隆过滤器、缓存空值。\n\n## 缓存击穿\n热点Key失效瞬间大量请求打DB。方案：互斥锁、逻辑过期。\n\n## 缓存雪崩\n大量Key同时失效。方案：过期时间加随机值、多级缓存。",
-    "sourceType": "MANUAL",
-    "projectName": "ai-center"
-  }'
-```
-
-```bash
-# RAG 混合检索 (BM25 + 向量)
-curl -X POST http://localhost:8080/api/knowledge/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "缓存击穿如何解决", "topK": 3}'
-```
-
-返回示例：
-```json
-{
-  "code": 1,
-  "data": [
-    {
-      "fusionScore": 0.565,
-      "bm25Score": 0.0,
-      "vectorScore": 0.807,
-      "document": {
-        "title": "Redis缓存最佳实践",
-        "chunkIndex": 2,
-        "chunkContent": "## 缓存击穿\n热点Key失效瞬间大量请求打DB。方案：互斥锁、逻辑过期。"
-      }
-    }
-  ]
-}
-```
-
-```bash
-# 上传文档文件（支持 PDF/Word/HTML/Markdown 等）
-curl -X POST http://localhost:8080/api/knowledge/upload-file \
-  -F "file=@/path/to/document.pdf" \
-  -F "projectName=ai-center" \
-  -F "sourceType=DOC"
-
-# 删除知识文档
-curl -X DELETE "http://localhost:8080/api/knowledge/1"
-```
-
-### 6. 长期记忆管理
-
-手动录入团队知识 → bge-m3 向量化存储 → 语义相似度召回。
-
-```bash
-# 保存长期记忆
-curl -X POST http://localhost:8080/api/memory/long-term \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "团队使用 MyBatis-Plus 3.5.5 作为 ORM 框架，配合 PostgreSQL 16",
-    "memoryType": "KNOWLEDGE",
-    "sessionId": "a7f5239e...",
-    "metadata": "{\"source\": \"team-wiki\"}"
-  }'
-```
-
-```bash
-# 语义搜索（自然语言查询，自动转向量比对）
-curl --get "http://localhost:8080/api/memory/long-term/search" \
-  --data-urlencode "query=ORM框架数据库" \
-  --data-urlencode "threshold=0.3" \
-  --data-urlencode "topK=5"
-```
-
-返回示例：
-```json
-{
-  "code": 1,
-  "data": [
-    {
-      "id": 2,
-      "content": "团队使用 MyBatis-Plus 3.5.5 作为 ORM 框架，配合 PostgreSQL 16",
-      "memoryType": "KNOWLEDGE",
-      "similarity": 0.6349
-    }
-  ]
-}
-```
-
-```bash
-# 删除记忆
-curl -X DELETE "http://localhost:8080/api/memory/long-term/2"
-```
-
-### 7. Prompt 模板管理
-
-```bash
-# 查询模板列表
-curl "http://localhost:8080/api/prompts?type=CODE_REVIEW"
-
-# 预览模板效果
-curl "http://localhost:8080/api/prompts/1/preview?sampleCode=public class Test {}"
-
-# 激活指定模板
-curl -X POST "http://localhost:8080/api/prompts/1/activate"
-```
-
----
-
-## 架构设计要点
-
-### 短期记忆 (Short-Term Memory)
-
-```
-用户消息 → Redis List (滑动窗口, 最近 20 轮)
-         → 超过 10 轮触发 LLM 摘要 → Redis String
-         → 冷数据异步持久化到 PostgreSQL
-```
-
-### 长期记忆 (Long-Term Memory)
-
-```
-手动录入/自动捕获 → Ollama bge-m3 向量化 → PGVector (pgvector)
-用户查询 → 向量化 → pgvector ANN 检索 → 注入对话上下文
-```
-
-### RAG 混合检索
-
-```
-用户查询 → QueryRewriter (改写+生成变体)
-         → HybridRetriever:
-              BM25: PostgreSQL 关键词匹配 (权重 0.3)
-              向量: EmbeddingStore 语义检索 (权重 0.7)
-         → 融合排序 → Top-K 结果
-```
-
-### 向量存储双模式
-
-```
-默认: pgvector (PostgreSQL 原生向量扩展，ANN 索引)
-生产: PineconeEmbeddingStore (配置 ai.pinecone.api-key 自动切换)
-```
-
----
-
-## Docker Compose 服务
-
-| 服务 | 镜像 | 端口 | 说明 |
-|------|------|------|------|
-| postgres | `pgvector/pgvector:pg16` | 5433→5432 | 关系数据 + 向量存储 |
-| redis | `redis:7-alpine` | 6380→6379 | 缓存 + 短期记忆 |
-| ollama | `ollama/ollama:latest` | 11434→11434 | 本地 Embedding |
-
----
-
-## API 端点汇总
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/code-review/review` | AI 代码评审 |
-| GET | `/api/code-review/records` | 评审记录列表 |
-| GET | `/api/code-review/records/{id}` | 评审详情 |
-| POST | `/api/unit-test/generate` | 生成单元测试 |
-| GET | `/api/unit-test/records` | 生成记录列表 |
-| GET | `/api/unit-test/records/{id}` | 生成详情 |
-| POST | `/api/ai-readme/generate` | 生成 AIReadMe |
-| GET | `/api/ai-readme/{projectName}` | 获取文档 |
-| POST | `/api/chat/send` | 发送消息（同步） |
-| POST | `/api/chat/send/stream` | 发送消息（SSE 流式，逐 token） |
-| GET | `/api/chat/conversations` | 会话列表 |
-| GET | `/api/chat/conversations/{sessionId}` | 会话消息历史 |
-| DELETE | `/api/chat/conversations/{sessionId}` | 删除会话 |
-| POST | `/api/memory/long-term` | 录入长期记忆 |
-| GET | `/api/memory/long-term/search` | 语义搜索记忆 |
-| DELETE | `/api/memory/long-term/{id}` | 删除记忆 |
-| POST | `/api/knowledge/upload` | 上传知识文档（文本） |
-| POST | `/api/knowledge/upload-file` | 上传知识文档（文件） |
-| POST | `/api/knowledge/search` | RAG 混合检索 |
-| DELETE | `/api/knowledge/{id}` | 删除知识文档 |
-| GET/POST/PUT | `/api/prompts` | Prompt 模板管理 |
+## AIReadMe 与文件安全
+
+AIReadMe 快照默认关闭。启用时 `LOCAL_PROJECT_ROOTS` 只能配置专用、无敏感信息的服务端
+绝对目录；扫描拒绝越界、symlink、密钥、二进制、超限文件和项目命令执行。
+
+Knowledge 文件上传支持 PDF、DOCX、HTML、Markdown、TXT，默认限制为 5 MiB 原始文件和
+200,000 个解析后字符。上传内容不会被执行。
+
+## 当前限制
+
+- local-first、单用户；尚无认证、RBAC 或多租户隔离。
+- 同一会话 turn guard 是进程内实现，当前只支持单 worker；多 worker 前需改为 PG lease。
+- Unit Test 只生成并保存测试源码，不运行测试。
+- 普通 CI 使用 fake LLM/embedder；真实依赖只由显式 live smoke 验证。
+- Knowledge 词法腿当前是 `pg_trgm`，C4 才实施真实 BM25。
+- 没有 Agent Tool loop、Citation、仓库索引、shell、patch、Git 写入或多 Agent。
+
+## 文档入口
+
+- 通用开发规则：[AGENTS.md](AGENTS.md)
+- 文档索引：[docs/INDEX.md](docs/INDEX.md)
+- ADR：[docs/decisions/adr/](docs/decisions/adr/)
+- 当前路线：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
+- 面试准备：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
+- DeepSeek 集成：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
+- Java → Python 历史迁移：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
+- Java legacy 模块：`ai-center-common`、`ai-center-model`、`ai-center-ai`、`ai-center-server`
