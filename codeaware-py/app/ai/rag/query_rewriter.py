@@ -5,10 +5,16 @@
 """
 
 import json
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 
 class QueryRewriter:
+    _MAX_QUERIES = 4
+    _MAX_QUERY_CHARS = 1_000
+
     def __init__(self, chat_model) -> None:
         self.chat_model = chat_model
 
@@ -21,18 +27,42 @@ class QueryRewriter:
             f"用户查询：{query}\n\n"
             '请以 JSON 数组返回，第一个为增强后的主查询，后续为变体：["增强主查询","变体1","变体2"]'
         )
-        resp = await self.chat_model.ainvoke(prompt)
-        text = resp.content if hasattr(resp, "content") else str(resp)
-        return self._parse(text, query)
+        try:
+            resp = await self.chat_model.ainvoke(prompt)
+            text = resp.content if hasattr(resp, "content") else str(resp)
+        except Exception as exc:
+            logger.warning(
+                "query rewrite degraded code=QUERY_REWRITE_FAILED type=%s",
+                type(exc).__name__,
+            )
+            return [query]
+        parsed = self._parse(text, query)
+        if parsed == [query]:
+            logger.warning(
+                "query rewrite degraded code=QUERY_REWRITE_INVALID_OUTPUT"
+            )
+        return parsed
 
-    @staticmethod
-    def _parse(text: str, fallback: str) -> list[str]:
+    @classmethod
+    def _parse(cls, text: str, fallback: str) -> list[str]:
         m = re.search(r"\[.*?\]", text, re.S)
         if m:
             try:
                 arr = json.loads(m.group())
-                if arr:
-                    return [str(x) for x in arr]
+                if isinstance(arr, list):
+                    queries: list[str] = []
+                    for item in arr:
+                        value = str(item).strip()
+                        if (
+                            value
+                            and len(value) <= cls._MAX_QUERY_CHARS
+                            and value not in queries
+                        ):
+                            queries.append(value)
+                        if len(queries) >= cls._MAX_QUERIES:
+                            break
+                    if queries:
+                        return queries
             except (json.JSONDecodeError, TypeError):
                 pass
         return [fallback]

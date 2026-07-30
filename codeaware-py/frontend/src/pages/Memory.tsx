@@ -18,7 +18,7 @@ import PageHeader from "../components/PageHeader";
 export default function MemoryPage() {
   const toast = useToast();
   const [content, setContent] = useState("");
-  const [memType, setMemType] = useState("KNOWLEDGE");
+  const memType = "REFERENCE";
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
   const [threshold, setThreshold] = useState(0.3);
@@ -70,7 +70,10 @@ export default function MemoryPage() {
         <PageHeader icon={Brain} title="MEMORY" sub="bge-m3 向量语义召回" />
         <div className="space-y-3 mt-4">
           <Field label="记忆类型">
-            <Input value={memType} onChange={(e) => setMemType(e.target.value)} placeholder="KNOWLEDGE" />
+            <Input value={memType} disabled />
+            <p className="mt-1 font-mono text-2xs text-mute">
+              手动录入固定为 REFERENCE；FACT 仅由 Chat 自动抽取。
+            </p>
           </Field>
           <Field label="内容" hint="原子事实，不分块">
             <Textarea

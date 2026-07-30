@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { aiReadme, ApiError, knowledge, prompt, readApiErrorMessage } from "./client";
+import { aiReadme, ApiError, knowledge, memory, prompt, readApiErrorMessage } from "./client";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -171,5 +171,39 @@ describe("prompt client", () => {
       method: "POST",
       body: JSON.stringify(input),
     });
+  });
+});
+
+describe("memory client", () => {
+  it("使用 REFERENCE 与 canonical top_k 契约", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          code: 1,
+          msg: "success",
+          data: { id: 1, content: "原子事实" },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          code: 1,
+          msg: "success",
+          data: [],
+        }),
+      } as Response);
+
+    await memory.save({ content: "原子事实" });
+    await memory.search("事实", 0.4, 7);
+
+    expect(fetchMock.mock.calls[0][1]?.body).toBe(
+      JSON.stringify({ memory_type: "REFERENCE", content: "原子事实" }),
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      "/api/memory/long-term/search?query=%E4%BA%8B%E5%AE%9E&threshold=0.4&top_k=7",
+    );
   });
 });

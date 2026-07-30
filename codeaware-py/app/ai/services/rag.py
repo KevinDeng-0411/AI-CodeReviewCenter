@@ -44,14 +44,18 @@ class RagService:
         project_name: str | None = None,
         content_type: str = "md",
     ) -> Document:
-        """上传知识文档：父表存全文一次 + 子表分块内联向量化（ADR-0002）。"""
+        """上传知识文档：先完成外部 embedding，再以短事务写父子表。"""
+        chunks = self.chunker.chunk(content, content_type=content_type)
+        prepared_chunks = [
+            (chunk_text, await self.vector_recall.embed(chunk_text))
+            for chunk_text in chunks
+        ]
         doc = Document(title=title, source_type=source_type, project_name=project_name, content=content)
         self.session.add(doc)
         await self.session.flush()
-        chunks = self.chunker.chunk(content, content_type=content_type)
-        for i, chunk_text in enumerate(chunks):
+        for i, (chunk_text, embedding) in enumerate(prepared_chunks):
             kc = KnowledgeChunk(document_id=doc.id, chunk_index=i, chunk_content=chunk_text)
-            await self.vector_recall.store(self.session, kc, chunk_text)  # embed + 内联
+            await self.vector_recall.store_preembedded(self.session, kc, embedding)
         return doc
 
     async def search(self, query: str, top_k: int = 5) -> list[ScoredChunk]:

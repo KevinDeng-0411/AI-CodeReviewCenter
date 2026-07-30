@@ -159,11 +159,11 @@ export const memory = {
   save: (p: { content: string; memory_type?: string; conversation_id?: string; metadata?: object }) =>
     call<{ id: number; content: string }>("/api/memory/long-term", {
       method: "POST",
-      body: JSON.stringify({ memory_type: "KNOWLEDGE", ...p }),
+      body: JSON.stringify({ memory_type: "REFERENCE", ...p }),
     }),
   search: (query: string, threshold = 0.3, topK = 5) =>
     call<MemoryHit[]>(
-      `/api/memory/long-term/search?query=${encodeURIComponent(query)}&threshold=${threshold}&topK=${topK}`,
+      `/api/memory/long-term/search?query=${encodeURIComponent(query)}&threshold=${threshold}&top_k=${topK}`,
     ),
   remove: (id: number) => call<null>(`/api/memory/long-term/${id}`, { method: "DELETE" }),
 };

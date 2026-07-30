@@ -162,7 +162,7 @@ export default function KnowledgePage() {
                 <div key={i} className="bg-panel border border-line rounded p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="tag">{h.matchType}</span>
+                      <span className="tag">{h.match_type}</span>
                       <span className="font-mono text-2xs text-mute tracking-techy">
                         DOC #{h.document_id}
                       </span>

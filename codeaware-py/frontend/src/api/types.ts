@@ -90,7 +90,7 @@ export interface ChatMessage {
 // ---------- Knowledge ----------
 export interface KnowledgeSearchHit {
   score: number;
-  matchType: string; // vector | keyword | both
+  match_type: "vector" | "keyword" | "both";
   document_id: number;
   chunk_content: string;
 }

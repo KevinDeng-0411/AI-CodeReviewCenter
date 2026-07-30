@@ -26,3 +26,24 @@ async def test_rewrite_fallback_on_invalid():
     rw = QueryRewriter(_LLM("不是 JSON"))
     res = await rw.rewrite("原始查询")
     assert res == ["原始查询"]
+
+
+async def test_rewrite_fallback_on_model_failure():
+    class _FailedLLM:
+        async def ainvoke(self, prompt, **kw):
+            raise TimeoutError("upstream detail")
+
+    res = await QueryRewriter(_FailedLLM()).rewrite("原始查询")
+    assert res == ["原始查询"]
+
+
+async def test_rewrite_deduplicates_and_bounds_variants():
+    oversized = "x" * 1_001
+    rw = QueryRewriter(
+        _LLM(
+            '["主查询","主查询","变体1","变体2","变体3","'
+            + oversized
+            + '"]'
+        )
+    )
+    assert await rw.rewrite("fallback") == ["主查询", "变体1", "变体2", "变体3"]
