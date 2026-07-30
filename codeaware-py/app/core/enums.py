@@ -17,3 +17,16 @@ class AiOperationType(str, Enum):
 
     CODE_REVIEW = "CODE_REVIEW"
     UNIT_TEST = "UNIT_TEST"
+
+
+class MemoryType(str, Enum):
+    """长期记忆来源类型（ADR-0001）。"""
+
+    REFERENCE = "REFERENCE"
+    FACT = "FACT"
+
+
+class TestFramework(str, Enum):
+    """当前单测生成器真实支持的框架。"""
+
+    JUNIT5 = "JUnit5"

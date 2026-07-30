@@ -233,6 +233,7 @@ def _validate_environment(environment: Any, errors: list[str]) -> None:
 
 
 def _validate_migration(
+    stage: str,
     migration: Any,
     manifest_dir: Path,
     errors: list[str],
@@ -242,8 +243,12 @@ def _validate_migration(
         return
     heads = migration.get("heads")
     current = migration.get("current")
-    if heads != ["0004"] or current != ["0004"] or heads != current:
-        errors.append("migration heads/current 必须唯一且均为 ['0004']")
+    expected_head = "0004" if stage == "C1" else "0005"
+    if heads != [expected_head] or current != [expected_head] or heads != current:
+        errors.append(
+            "migration heads/current 必须唯一且均为 "
+            f"['{expected_head}']"
+        )
     artifact = {
         "path": migration.get("log"),
         "sha256": migration.get("sha256"),
@@ -377,7 +382,7 @@ def validate(stage: str, manifest: dict, manifest_dir: Path) -> list[str]:
         errors.append("report.path 必须为 report.md")
     _validate_hashed_file(manifest_dir, report, "report", errors)
     _validate_environment(manifest.get("environment"), errors)
-    _validate_migration(manifest.get("migration"), manifest_dir, errors)
+    _validate_migration(stage, manifest.get("migration"), manifest_dir, errors)
     _validate_hashed_file(
         manifest_dir,
         manifest.get("openapi"),

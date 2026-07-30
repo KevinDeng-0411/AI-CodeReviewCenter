@@ -6,7 +6,7 @@
 - 渲染 = {{占位符}} 替换。
 """
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PromptType
@@ -31,6 +31,26 @@ class PromptTemplateManager:
             )
         )
 
+    async def get_by_id_for_type(self, template_id: int, type_) -> PromptTemplate | None:
+        t = self._type_value(type_)
+        return await self.session.scalar(
+            select(PromptTemplate).where(
+                PromptTemplate.id == template_id,
+                PromptTemplate.type == t,
+            )
+        )
+
+    async def _lock_type(self, type_) -> str:
+        t = self._type_value(type_)
+        await self.session.execute(
+            text(
+                "SELECT pg_advisory_xact_lock("
+                "hashtextextended('prompt-template:' || :type, 0))"
+            ),
+            {"type": t},
+        )
+        return t
+
     async def list_by_type(self, type_) -> list[PromptTemplate]:
         t = self._type_value(type_)
         r = await self.session.execute(
@@ -51,16 +71,11 @@ class PromptTemplateManager:
         severity_levels: str | None = None,
     ) -> PromptTemplate:
         """新增版本并激活：先 deactivate 同 type 其他 -> insert 新 active（version=max+1）。"""
-        t = self._type_value(type_)
+        t = await self._lock_type(type_)
         max_v = await self.session.scalar(
             select(func.max(PromptTemplate.version)).where(PromptTemplate.type == t)
         ) or 0
-        # 先 deactivate 同 type 其他激活（partial unique 要求每 type 恰一 active）
-        await self.session.execute(
-            update(PromptTemplate)
-            .where(PromptTemplate.type == t, PromptTemplate.is_active.is_(True))
-            .values(is_active=False)
-        )
+        # 新行先 inactive 落库，避免与当前 active 冲突；随后在同一事务内原子切换。
         tpl = PromptTemplate(
             type=t,
             version=max_v + 1,
@@ -69,9 +84,16 @@ class PromptTemplateManager:
             template_body=template_body,
             review_dimensions=review_dimensions,
             severity_levels=severity_levels,
-            is_active=True,
+            is_active=False,
         )
         self.session.add(tpl)
+        await self.session.flush()
+        await self.session.execute(
+            update(PromptTemplate)
+            .where(PromptTemplate.type == t, PromptTemplate.is_active.is_(True))
+            .values(is_active=False)
+        )
+        tpl.is_active = True
         await self.session.flush()
         await self.session.refresh(tpl)
         return tpl
@@ -80,7 +102,8 @@ class PromptTemplateManager:
         """激活某个旧版本（回滚）：deactivate 同 type 其他 + 置本条 active。"""
         tpl = await self.session.get(PromptTemplate, template_id)
         if tpl is None:
-            raise BusinessException(f"Prompt 模板 {template_id} 不存在")
+            raise BusinessException("PROMPT_NOT_FOUND", status_code=404)
+        await self._lock_type(tpl.type)
         await self.session.execute(
             update(PromptTemplate)
             .where(

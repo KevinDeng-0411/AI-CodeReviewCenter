@@ -1,0 +1,2990 @@
+{
+  "components": {
+    "schemas": {
+      "AiOperationRecordRead": {
+        "properties": {
+          "ai_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Model"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "prompt_template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Template Id"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          },
+          "source_code": {
+            "title": "Source Code",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "project_name",
+          "file_path",
+          "source_code",
+          "result",
+          "created_at"
+        ],
+        "title": "AiOperationRecordRead",
+        "type": "object"
+      },
+      "AiReadmeCapability": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "enum": [
+              "available",
+              "disabled",
+              "roots_unavailable"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "reason"
+        ],
+        "title": "AiReadmeCapability",
+        "type": "object"
+      },
+      "AiReadmeRequest": {
+        "properties": {
+          "project_name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Project Name",
+            "type": "string"
+          },
+          "project_path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Project Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_name",
+          "project_path"
+        ],
+        "title": "AiReadmeRequest",
+        "type": "object"
+      },
+      "AiReadmeVO": {
+        "properties": {
+          "ai_model": {
+            "default": "deepseek-v4-flash",
+            "title": "Ai Model",
+            "type": "string"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "snapshot_file_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot File Count"
+          },
+          "snapshot_generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generated At"
+          },
+          "snapshot_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Hash"
+          },
+          "snapshot_truncated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Truncated"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_name",
+          "title",
+          "content"
+        ],
+        "title": "AiReadmeVO",
+        "type": "object"
+      },
+      "Body_upload_file_api_knowledge_upload_file_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "PDF/DOCX/HTML/Markdown/TXT，原始文件最大 5 MiB",
+            "title": "File",
+            "type": "string"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_file_api_knowledge_upload_file_post",
+        "type": "object"
+      },
+      "ChatMessageVO": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "ChatMessageVO",
+        "type": "object"
+      },
+      "ChatRequest": {
+        "properties": {
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "message": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatRequest",
+        "type": "object"
+      },
+      "ChatResponseVO": {
+        "properties": {
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "memory_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Summary"
+          },
+          "reply": {
+            "title": "Reply",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ChatWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "reply"
+        ],
+        "title": "ChatResponseVO",
+        "type": "object"
+      },
+      "ChatWarning": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "component": {
+            "enum": [
+              "message_cache",
+              "summary_cache",
+              "memory_recall",
+              "rag_retrieval",
+              "summary",
+              "memory_extraction"
+            ],
+            "title": "Component",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "code",
+          "message",
+          "retryable"
+        ],
+        "title": "ChatWarning",
+        "type": "object"
+      },
+      "CodeReviewRequest": {
+        "properties": {
+          "file_path": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "File Path",
+            "type": "string"
+          },
+          "project_name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Project Name",
+            "type": "string"
+          },
+          "prompt_template_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Template Id"
+          },
+          "source_code": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Source Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_name",
+          "file_path",
+          "source_code"
+        ],
+        "title": "CodeReviewRequest",
+        "type": "object"
+      },
+      "CodeReviewVO": {
+        "properties": {
+          "ai_model": {
+            "default": "deepseek-v4-flash",
+            "title": "Ai Model",
+            "type": "string"
+          },
+          "critical_count": {
+            "default": 0,
+            "title": "Critical Count",
+            "type": "integer"
+          },
+          "file_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Path"
+          },
+          "highlights": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Highlights",
+            "type": "array"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "info_count": {
+            "default": 0,
+            "title": "Info Count",
+            "type": "integer"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "issues_count": {
+            "default": 0,
+            "title": "Issues Count",
+            "type": "integer"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "score": {
+            "default": 0,
+            "title": "Score",
+            "type": "integer"
+          },
+          "summary": {
+            "default": "",
+            "title": "Summary",
+            "type": "string"
+          },
+          "warning_count": {
+            "default": 0,
+            "title": "Warning Count",
+            "type": "integer"
+          }
+        },
+        "title": "CodeReviewVO",
+        "type": "object"
+      },
+      "ConversationItem": {
+        "properties": {
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id"
+        ],
+        "title": "ConversationItem",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "KnowledgeDocumentVO": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "KnowledgeDocumentVO",
+        "type": "object"
+      },
+      "KnowledgeSearchHit": {
+        "properties": {
+          "chunk_content": {
+            "title": "Chunk Content",
+            "type": "string"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "integer"
+          },
+          "match_type": {
+            "enum": [
+              "vector",
+              "keyword",
+              "both"
+            ],
+            "title": "Match Type",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "score",
+          "match_type",
+          "document_id",
+          "chunk_content"
+        ],
+        "title": "KnowledgeSearchHit",
+        "type": "object"
+      },
+      "KnowledgeSearchRequest": {
+        "properties": {
+          "query": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 5,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "KnowledgeSearchRequest",
+        "type": "object"
+      },
+      "KnowledgeUploadRequest": {
+        "properties": {
+          "content": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "source_type": {
+            "default": "MANUAL",
+            "enum": [
+              "MANUAL",
+              "DOC"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ],
+        "title": "KnowledgeUploadRequest",
+        "type": "object"
+      },
+      "MemoryHit": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "memory_type": {
+            "$ref": "#/components/schemas/MemoryType"
+          },
+          "similarity": {
+            "title": "Similarity",
+            "type": "number"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "memory_type",
+          "source",
+          "similarity"
+        ],
+        "title": "MemoryHit",
+        "type": "object"
+      },
+      "MemorySaveRequest": {
+        "properties": {
+          "content": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "memory_type": {
+            "const": "REFERENCE",
+            "default": "REFERENCE",
+            "title": "Memory Type",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "MemorySaveRequest",
+        "type": "object"
+      },
+      "MemorySaveVO": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "content"
+        ],
+        "title": "MemorySaveVO",
+        "type": "object"
+      },
+      "MemoryType": {
+        "description": "长期记忆来源类型（ADR-0001）。",
+        "enum": [
+          "REFERENCE",
+          "FACT"
+        ],
+        "title": "MemoryType",
+        "type": "string"
+      },
+      "PageResult_AiOperationRecordRead_": {
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/AiOperationRecordRead"
+            },
+            "title": "Records",
+            "type": "array"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "size",
+          "records"
+        ],
+        "title": "PageResult[AiOperationRecordRead]",
+        "type": "object"
+      },
+      "PromptCreateRequest": {
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "review_dimensions": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Dimensions"
+          },
+          "role_setting": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Role Setting",
+            "type": "string"
+          },
+          "severity_levels": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Levels"
+          },
+          "template_body": {
+            "maxLength": 60000,
+            "minLength": 1,
+            "title": "Template Body",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PromptType"
+          }
+        },
+        "required": [
+          "type",
+          "name",
+          "role_setting",
+          "template_body"
+        ],
+        "title": "PromptCreateRequest",
+        "type": "object"
+      },
+      "PromptPreviewVO": {
+        "properties": {
+          "rendered": {
+            "title": "Rendered",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rendered"
+        ],
+        "title": "PromptPreviewVO",
+        "type": "object"
+      },
+      "PromptTemplateVO": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "review_dimensions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Dimensions"
+          },
+          "role_setting": {
+            "title": "Role Setting",
+            "type": "string"
+          },
+          "severity_levels": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Levels"
+          },
+          "template_body": {
+            "title": "Template Body",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PromptType"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "version",
+          "name",
+          "role_setting",
+          "template_body",
+          "is_active",
+          "created_at"
+        ],
+        "title": "PromptTemplateVO",
+        "type": "object"
+      },
+      "PromptType": {
+        "description": "Prompt 模板类型 = 逻辑身份（ADR-0005）。",
+        "enum": [
+          "CODE_REVIEW",
+          "UNIT_TEST",
+          "AI_README",
+          "CHAT"
+        ],
+        "title": "PromptType",
+        "type": "string"
+      },
+      "Result": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result",
+        "type": "object"
+      },
+      "Result_AiOperationRecordRead_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiOperationRecordRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[AiOperationRecordRead]",
+        "type": "object"
+      },
+      "Result_AiReadmeCapability_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiReadmeCapability"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[AiReadmeCapability]",
+        "type": "object"
+      },
+      "Result_AiReadmeVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiReadmeVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[AiReadmeVO]",
+        "type": "object"
+      },
+      "Result_ChatResponseVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatResponseVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[ChatResponseVO]",
+        "type": "object"
+      },
+      "Result_CodeReviewVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CodeReviewVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[CodeReviewVO]",
+        "type": "object"
+      },
+      "Result_KnowledgeDocumentVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeDocumentVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[KnowledgeDocumentVO]",
+        "type": "object"
+      },
+      "Result_MemorySaveVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemorySaveVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[MemorySaveVO]",
+        "type": "object"
+      },
+      "Result_NoneType_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "title": "Data",
+            "type": "null"
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[NoneType]",
+        "type": "object"
+      },
+      "Result_PageResult_AiOperationRecordRead__": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PageResult_AiOperationRecordRead_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[PageResult[AiOperationRecordRead]]",
+        "type": "object"
+      },
+      "Result_PromptPreviewVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PromptPreviewVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[PromptPreviewVO]",
+        "type": "object"
+      },
+      "Result_PromptTemplateVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PromptTemplateVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[PromptTemplateVO]",
+        "type": "object"
+      },
+      "Result_Union_AiReadmeVO__NoneType__": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiReadmeVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[Union[AiReadmeVO, NoneType]]",
+        "type": "object"
+      },
+      "Result_UnitTestVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnitTestVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[UnitTestVO]",
+        "type": "object"
+      },
+      "Result_list_ChatMessageVO__": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatMessageVO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[list[ChatMessageVO]]",
+        "type": "object"
+      },
+      "Result_list_ConversationItem__": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConversationItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[list[ConversationItem]]",
+        "type": "object"
+      },
+      "Result_list_KnowledgeSearchHit__": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/KnowledgeSearchHit"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[list[KnowledgeSearchHit]]",
+        "type": "object"
+      },
+      "Result_list_MemoryHit__": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MemoryHit"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[list[MemoryHit]]",
+        "type": "object"
+      },
+      "Result_list_PromptTemplateVO__": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PromptTemplateVO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[list[PromptTemplateVO]]",
+        "type": "object"
+      },
+      "ReviewIssue": {
+        "properties": {
+          "description": {
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "dimension": {
+            "minLength": 1,
+            "title": "Dimension",
+            "type": "string"
+          },
+          "fix_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Code"
+          },
+          "line_range": {
+            "minLength": 1,
+            "title": "Line Range",
+            "type": "string"
+          },
+          "severity": {
+            "minLength": 1,
+            "title": "Severity",
+            "type": "string"
+          },
+          "suggestion": {
+            "minLength": 1,
+            "title": "Suggestion",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension",
+          "severity",
+          "line_range",
+          "title",
+          "description",
+          "suggestion"
+        ],
+        "title": "ReviewIssue",
+        "type": "object"
+      },
+      "TestFramework": {
+        "description": "当前单测生成器真实支持的框架。",
+        "enum": [
+          "JUnit5"
+        ],
+        "title": "TestFramework",
+        "type": "string"
+      },
+      "UnitTestRequest": {
+        "properties": {
+          "file_path": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "File Path",
+            "type": "string"
+          },
+          "project_name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Project Name",
+            "type": "string"
+          },
+          "source_code": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Source Code",
+            "type": "string"
+          },
+          "test_framework": {
+            "$ref": "#/components/schemas/TestFramework",
+            "default": "JUnit5"
+          }
+        },
+        "required": [
+          "project_name",
+          "file_path",
+          "source_code"
+        ],
+        "title": "UnitTestRequest",
+        "type": "object"
+      },
+      "UnitTestVO": {
+        "properties": {
+          "ai_model": {
+            "default": "deepseek-v4-flash",
+            "title": "Ai Model",
+            "type": "string"
+          },
+          "file_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Path"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "test_code": {
+            "title": "Test Code",
+            "type": "string"
+          },
+          "test_framework": {
+            "$ref": "#/components/schemas/TestFramework",
+            "default": "JUnit5"
+          }
+        },
+        "required": [
+          "test_code"
+        ],
+        "title": "UnitTestVO",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "CodeAware - AI 驱动的研发效能平台 (Python 重构)",
+    "title": "codeaware",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/ai-readme/capabilities": {
+      "get": {
+        "operationId": "capabilities_api_ai_readme_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_AiReadmeCapability_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "AIReadMe"
+        ]
+      }
+    },
+    "/api/ai-readme/generate": {
+      "post": {
+        "operationId": "generate_api_ai_readme_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiReadmeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_AiReadmeVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "AIReadMe"
+        ]
+      }
+    },
+    "/api/ai-readme/{project_name}": {
+      "get": {
+        "operationId": "get_readme_api_ai_readme__project_name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_name",
+            "required": true,
+            "schema": {
+              "title": "Project Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_Union_AiReadmeVO__NoneType__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Readme",
+        "tags": [
+          "AIReadMe"
+        ]
+      }
+    },
+    "/api/ai/health": {
+      "get": {
+        "operationId": "ai_health_api_ai_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Health",
+        "tags": [
+          "AI 基建"
+        ]
+      }
+    },
+    "/api/chat/conversations": {
+      "get": {
+        "operationId": "list_conversations_api_chat_conversations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_list_ConversationItem__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Conversations",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/chat/conversations/{conversation_id}": {
+      "delete": {
+        "operationId": "delete_conversation_api_chat_conversations__conversation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Conversation",
+        "tags": [
+          "Chat"
+        ]
+      },
+      "get": {
+        "description": "会话消息历史（PG 真相，按时间正序）。",
+        "operationId": "get_conversation_api_chat_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_list_ChatMessageVO__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Conversation",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/chat/send": {
+      "post": {
+        "description": "同步对话：drain TurnCoordinator -> ChatResponseVO。",
+        "operationId": "send_api_chat_send_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_ChatResponseVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "CHAT_CONVERSATION_NOT_FOUND"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "conversation_id 不存在"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "CHAT_TURN_IN_PROGRESS"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "同一会话已有 turn 正在执行"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "CHAT_REQUEST_INVALID"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "请求字段校验失败"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_START_FAILED": {
+                    "summary": "CHAT_START_FAILED",
+                    "value": {
+                      "code": 0,
+                      "msg": "CHAT_START_FAILED"
+                    }
+                  },
+                  "CONTEXT_FAILED": {
+                    "summary": "CONTEXT_FAILED",
+                    "value": {
+                      "code": 0,
+                      "msg": "CONTEXT_FAILED"
+                    }
+                  },
+                  "MODEL_STREAM_FAILED": {
+                    "summary": "MODEL_STREAM_FAILED",
+                    "value": {
+                      "code": 0,
+                      "msg": "MODEL_STREAM_FAILED"
+                    }
+                  },
+                  "PERSIST_FAILED": {
+                    "summary": "PERSIST_FAILED",
+                    "value": {
+                      "code": 0,
+                      "msg": "PERSIST_FAILED"
+                    }
+                  },
+                  "POST_TURN_FAILED": {
+                    "summary": "POST_TURN_FAILED",
+                    "value": {
+                      "code": 0,
+                      "msg": "POST_TURN_FAILED"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "初始化失败或同步 Chat 核心失败"
+          }
+        },
+        "summary": "Send",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/chat/send/stream": {
+      "post": {
+        "description": "流式对话：typed SSE。",
+        "operationId": "send_stream_api_chat_send_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "版本化 typed SSE Chat 事件流"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "CHAT_CONVERSATION_NOT_FOUND"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "conversation_id 不存在"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "CHAT_TURN_IN_PROGRESS"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "同一会话已有 turn 正在执行"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "CHAT_REQUEST_INVALID"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "请求字段校验失败"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "CHAT_START_FAILED"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "SSE 响应建立前 Transaction A 初始化失败"
+          }
+        },
+        "summary": "Send Stream",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/code-review/records": {
+      "get": {
+        "operationId": "list_records_api_code_review_records_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_PageResult_AiOperationRecordRead__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Records",
+        "tags": [
+          "Code Review"
+        ]
+      }
+    },
+    "/api/code-review/records/{record_id}": {
+      "get": {
+        "operationId": "get_record_api_code_review_records__record_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_AiOperationRecordRead_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Record",
+        "tags": [
+          "Code Review"
+        ]
+      }
+    },
+    "/api/code-review/review": {
+      "post": {
+        "operationId": "review_api_code_review_review_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_CodeReviewVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review",
+        "tags": [
+          "Code Review"
+        ]
+      }
+    },
+    "/api/knowledge/search": {
+      "post": {
+        "operationId": "search_api_knowledge_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_list_KnowledgeSearchHit__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "Knowledge"
+        ]
+      }
+    },
+    "/api/knowledge/upload": {
+      "post": {
+        "operationId": "upload_api_knowledge_upload_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_KnowledgeDocumentVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload",
+        "tags": [
+          "Knowledge"
+        ]
+      }
+    },
+    "/api/knowledge/upload-file": {
+      "post": {
+        "operationId": "upload_file_api_knowledge_upload_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_file_api_knowledge_upload_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_KnowledgeDocumentVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "KNOWLEDGE_FILE_PARSE_FAILED"
+                }
+              }
+            },
+            "description": "文件为空、格式不支持、超限或解析失败"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload File",
+        "tags": [
+          "Knowledge"
+        ]
+      }
+    },
+    "/api/knowledge/{doc_id}": {
+      "delete": {
+        "operationId": "delete_api_knowledge__doc_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "doc_id",
+            "required": true,
+            "schema": {
+              "title": "Doc Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete",
+        "tags": [
+          "Knowledge"
+        ]
+      }
+    },
+    "/api/memory/long-term": {
+      "post": {
+        "operationId": "save_long_term_api_memory_long_term_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemorySaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_MemorySaveVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Long Term",
+        "tags": [
+          "Memory"
+        ]
+      }
+    },
+    "/api/memory/long-term/search": {
+      "get": {
+        "operationId": "search_long_term_api_memory_long_term_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "maxLength": 1000,
+              "minLength": 1,
+              "title": "Query",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "threshold",
+            "required": false,
+            "schema": {
+              "default": 0.3,
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Threshold",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "top_k",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Top K",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_list_MemoryHit__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Long Term",
+        "tags": [
+          "Memory"
+        ]
+      }
+    },
+    "/api/memory/long-term/{memory_id}": {
+      "delete": {
+        "operationId": "delete_long_term_api_memory_long_term__memory_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memory_id",
+            "required": true,
+            "schema": {
+              "title": "Memory Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Long Term",
+        "tags": [
+          "Memory"
+        ]
+      }
+    },
+    "/api/prompts": {
+      "get": {
+        "operationId": "list_prompts_api_prompts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PromptType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_list_PromptTemplateVO__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Prompts",
+        "tags": [
+          "Prompt"
+        ]
+      },
+      "post": {
+        "operationId": "create_prompt_api_prompts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_PromptTemplateVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Prompt",
+        "tags": [
+          "Prompt"
+        ]
+      }
+    },
+    "/api/prompts/{template_id}/activate": {
+      "post": {
+        "operationId": "activate_api_prompts__template_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_PromptTemplateVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate",
+        "tags": [
+          "Prompt"
+        ]
+      }
+    },
+    "/api/prompts/{template_id}/preview": {
+      "get": {
+        "operationId": "preview_api_prompts__template_id__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sample_code",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 20000,
+              "title": "Sample Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_PromptPreviewVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview",
+        "tags": [
+          "Prompt"
+        ]
+      }
+    },
+    "/api/unit-test/generate": {
+      "post": {
+        "operationId": "generate_api_unit_test_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_UnitTestVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "UnitTest"
+        ]
+      }
+    },
+    "/api/unit-test/records": {
+      "get": {
+        "operationId": "list_records_api_unit_test_records_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_PageResult_AiOperationRecordRead__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Records",
+        "tags": [
+          "UnitTest"
+        ]
+      }
+    },
+    "/api/unit-test/records/{record_id}": {
+      "get": {
+        "operationId": "get_record_api_unit_test_records__record_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_AiOperationRecordRead_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Record",
+        "tags": [
+          "UnitTest"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "兼容入口：仅表示应用进程存活。",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "系统"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "description": "Process-only liveness; does not contact dependencies.",
+        "operationId": "liveness_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Liveness",
+        "tags": [
+          "系统"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "description": "Strict PG/Redis/Ollama readiness without exposing dependency errors.",
+        "operationId": "readiness_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readiness",
+        "tags": [
+          "系统"
+        ]
+      }
+    }
+  }
+}

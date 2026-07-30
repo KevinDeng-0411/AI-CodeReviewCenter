@@ -4,6 +4,7 @@ embed + 内联 pgvector 存储 + cosine 检索；Memory 与 Knowledge 共用，�
 检索策略（纯向量 / 混合 pg_trgm+向量 RRF）作为参数，而非各自一套。
 """
 
+import math
 from typing import TypeVar
 
 from sqlalchemy import func, select
@@ -14,12 +15,25 @@ from app.db.base import Base
 ModelT = TypeVar("ModelT", bound=Base)
 
 
+class EmbeddingValidationError(ValueError):
+    """Embedding provider returned a vector incompatible with Vector(1024)."""
+
+
 class VectorRecallService:
     def __init__(self, embedder) -> None:
         self.embedder = embedder
 
     async def embed(self, text: str) -> list[float]:
-        return await self.embedder.aembed_query(text)
+        embedding = await self.embedder.aembed_query(text)
+        if (
+            len(embedding) != 1024
+            or any(
+                not isinstance(value, (int, float)) or not math.isfinite(float(value))
+                for value in embedding
+            )
+        ):
+            raise EmbeddingValidationError("embedding must contain 1024 finite values")
+        return [float(value) for value in embedding]
 
     async def store(self, session: AsyncSession, entity: ModelT, text: str) -> ModelT:
         """embed 文本 -> 写入 entity.embedding 内联列 -> add + flush。"""

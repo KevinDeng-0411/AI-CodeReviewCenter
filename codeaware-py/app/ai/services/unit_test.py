@@ -27,7 +27,7 @@ class UnitTestService:
     ) -> UnitTestVO:
         template = await self.prompt_manager.get_active(PromptType.UNIT_TEST)
         if template is None:
-            raise BusinessException("未找到 UNIT_TEST Prompt 模板")
+            raise BusinessException("UNIT_TEST_PROMPT_NOT_FOUND", status_code=404)
         params = {
             "source_code": source_code,
             "file_path": file_path,
@@ -53,8 +53,29 @@ class UnitTestService:
     async def _invoke_structured(self, system_prompt: str, test_framework: str) -> UnitTestResult:
         """结构化输出：thinking 模式用 json_mode，失败回退 ainvoke + Pydantic 解析。"""
         try:
-            structured = self.chat_model.with_structured_output(UnitTestResult, method="json_mode")
-            return await structured.ainvoke(system_prompt)
-        except Exception:
-            raw = await self.chat_model.ainvoke(system_prompt)
-            return UnitTestResult.model_validate_json(_extract_json(raw.content))
+            try:
+                structured = self.chat_model.with_structured_output(
+                    UnitTestResult,
+                    method="json_mode",
+                )
+                return await structured.ainvoke(system_prompt)
+            except TimeoutError as exc:
+                raise BusinessException(
+                    "UNIT_TEST_MODEL_TIMEOUT",
+                    status_code=504,
+                ) from exc
+            except Exception:
+                raw = await self.chat_model.ainvoke(system_prompt)
+                return UnitTestResult.model_validate_json(_extract_json(raw.content))
+        except BusinessException:
+            raise
+        except TimeoutError as exc:
+            raise BusinessException(
+                "UNIT_TEST_MODEL_TIMEOUT",
+                status_code=504,
+            ) from exc
+        except Exception as exc:
+            raise BusinessException(
+                "UNIT_TEST_OUTPUT_INVALID",
+                status_code=502,
+            ) from exc

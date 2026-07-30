@@ -102,7 +102,7 @@ async def test_review_parses_counts_and_persists(db_session, cr_template):
 async def test_review_no_template_raises(db_session):
     svc = CodeReviewService(
         db_session,
-        FakeChatModel(CodeReviewResult(summary="", score=0, issues=[])),
+        FakeChatModel(CodeReviewResult(summary="empty", score=0, issues=[])),
         PromptTemplateManager(db_session),
     )
     with pytest.raises(BusinessException):

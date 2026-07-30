@@ -146,17 +146,17 @@ async def test_full_chain_knowledge_rag_chat_review(client, e2e_overrides):
     doc_id = r.json()["data"]["id"]
     assert doc_id is not None
 
-    # 2. RAG 混合检索（验证知识库可被检索，命中 matchType）
+    # 2. RAG 混合检索（验证知识库可被检索，命中 match_type）
     r = await client.post("/api/knowledge/search", json={"query": "缓存击穿方案", "top_k": 3})
     assert r.status_code == 200
     results = r.json()["data"]
     assert len(results) >= 1
-    assert "matchType" in results[0]
+    assert "match_type" in results[0]
 
     # 3. 存长期记忆（让后续对话的长期记忆召回分支命中）
     r = await client.post(
         "/api/memory/long-term",
-        json={"content": "团队使用 SQLAlchemy 2.0 作为 ORM 框架", "memory_type": "KNOWLEDGE"},
+        json={"content": "团队使用 SQLAlchemy 2.0 作为 ORM 框架", "memory_type": "REFERENCE"},
     )
     assert r.status_code == 200
     assert r.json()["data"]["id"] is not None

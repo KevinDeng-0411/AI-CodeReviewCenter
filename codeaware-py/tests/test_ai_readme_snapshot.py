@@ -386,8 +386,11 @@ async def test_llm_failure_or_invalid_output_does_not_write_record(
         _snapshot_service(tmp_path),
     )
 
-    with pytest.raises((RuntimeError, ValueError)):
+    from app.core.exceptions import BusinessException
+
+    with pytest.raises(BusinessException) as raised:
         await service.generate("failed-readme", str(project))
+    assert raised.value.message == "AI_README_OUTPUT_INVALID"
 
     count = await db_session.scalar(
         select(func.count(AiReadmeDocument.id)).where(

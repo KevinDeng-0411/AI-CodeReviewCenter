@@ -29,11 +29,20 @@ class CodeReviewService:
         project_name: str,
         file_path: str,
         source_code: str,
-        conversation_id: str | None = None,
+        prompt_template_id: int | None = None,
     ) -> CodeReviewVO:
-        template = await self.prompt_manager.get_active(PromptType.CODE_REVIEW)
+        if prompt_template_id is None:
+            template = await self.prompt_manager.get_active(PromptType.CODE_REVIEW)
+        else:
+            template = await self.prompt_manager.get_by_id_for_type(
+                prompt_template_id,
+                PromptType.CODE_REVIEW,
+            )
         if template is None:
-            raise BusinessException("未找到可用的 CODE_REVIEW Prompt 模板")
+            raise BusinessException(
+                "CODE_REVIEW_PROMPT_NOT_FOUND",
+                status_code=404,
+            )
 
         system_prompt = self.prompt_manager.render_system_prompt(
             template, {"source_code": source_code}
@@ -70,11 +79,32 @@ class CodeReviewService:
         失败回退 ainvoke + Pydantic 解析（迁移文档 §10 风险缓解）。
         """
         try:
-            structured = self.chat_model.with_structured_output(CodeReviewResult, method="json_mode")
-            return await structured.ainvoke(system_prompt)
-        except Exception:
-            raw = await self.chat_model.ainvoke(system_prompt)
-            return CodeReviewResult.model_validate_json(_extract_json(raw.content))
+            try:
+                structured = self.chat_model.with_structured_output(
+                    CodeReviewResult,
+                    method="json_mode",
+                )
+                return await structured.ainvoke(system_prompt)
+            except TimeoutError as exc:
+                raise BusinessException(
+                    "CODE_REVIEW_MODEL_TIMEOUT",
+                    status_code=504,
+                ) from exc
+            except Exception:
+                raw = await self.chat_model.ainvoke(system_prompt)
+                return CodeReviewResult.model_validate_json(_extract_json(raw.content))
+        except BusinessException:
+            raise
+        except TimeoutError as exc:
+            raise BusinessException(
+                "CODE_REVIEW_MODEL_TIMEOUT",
+                status_code=504,
+            ) from exc
+        except Exception as exc:
+            raise BusinessException(
+                "CODE_REVIEW_OUTPUT_INVALID",
+                status_code=502,
+            ) from exc
 
     @staticmethod
     def _to_vo(result: CodeReviewResult, project_name: str, file_path: str) -> CodeReviewVO:

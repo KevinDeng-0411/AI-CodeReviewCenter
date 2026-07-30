@@ -17,8 +17,8 @@ async def test_long_term_memory_vector_recall_order(db_session):
     query_vec = _vec(1)
     db_session.add_all(
         [
-            LongTermMemory(content="近", memory_type="KNOWLEDGE", embedding=_vec(1)),
-            LongTermMemory(content="远", memory_type="KNOWLEDGE", embedding=_vec(99)),
+            LongTermMemory(content="近", memory_type="REFERENCE", embedding=_vec(1)),
+            LongTermMemory(content="远", memory_type="REFERENCE", embedding=_vec(99)),
         ]
     )
     await db_session.flush()
@@ -60,7 +60,7 @@ async def test_long_term_memory_metadata_jsonb(db_session):
     """metadata JSONB 列可读写（ADR-0006 同模式）。"""
     mem = LongTermMemory(
         content="带元数据的事实",
-        memory_type="KNOWLEDGE",
+        memory_type="REFERENCE",
         meta={"source": "team-wiki", "tags": ["redis", "cache"]},
     )
     db_session.add(mem)

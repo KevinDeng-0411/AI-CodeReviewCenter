@@ -12,7 +12,7 @@ import app.core.config as cfg
 from _safeguard import assert_safe_target_identity
 from alembic import command
 from alembic.config import Config
-from asyncpg import UniqueViolationError
+from asyncpg import CheckViolationError, UniqueViolationError
 
 ALEMBIC_INI = "alembic.ini"
 
@@ -110,6 +110,87 @@ async def _assert_ai_readme_0004(*, metadata_present: bool) -> None:
         await connection.close()
 
 
+async def _seed_c2_contract_rows() -> None:
+    connection = await _migration_connection()
+    try:
+        await connection.execute(
+            "INSERT INTO prompt_templates "
+            "(type, version, name, role_setting, template_body, is_active) "
+            "VALUES ('CODE_REVIEW', 1, 'duplicate-version', 'role', "
+            "'{{source_code}}', false)"
+        )
+        await connection.executemany(
+            "INSERT INTO long_term_memories "
+            "(content, memory_type) VALUES ($1, $2)",
+            [
+                ("manual reference", "KNOWLEDGE"),
+                ("conversation fact", "FACT"),
+            ],
+        )
+    finally:
+        await connection.close()
+
+
+async def _assert_c2_0005(*, enabled: bool) -> None:
+    connection = await _migration_connection()
+    try:
+        versions = await connection.fetch(
+            "SELECT version FROM prompt_templates "
+            "WHERE type = 'CODE_REVIEW' ORDER BY version"
+        )
+        assert [row["version"] for row in versions] == [1, 2]
+        prompt_index = await connection.fetchval(
+            "SELECT EXISTS ("
+            "SELECT 1 FROM pg_indexes "
+            "WHERE schemaname = 'public' "
+            "AND tablename = 'prompt_templates' "
+            "AND indexname = 'uq_prompt_templates_type_version'"
+            ")"
+        )
+        assert prompt_index is enabled
+
+        memory_types = await connection.fetch(
+            "SELECT memory_type FROM long_term_memories ORDER BY id"
+        )
+        expected_manual = "REFERENCE" if enabled else "KNOWLEDGE"
+        assert [row["memory_type"] for row in memory_types] == [
+            expected_manual,
+            "FACT",
+        ]
+        constraint_exists = await connection.fetchval(
+            "SELECT EXISTS ("
+            "SELECT 1 FROM pg_constraint "
+            "WHERE conname = 'ck_long_term_memories_memory_type'"
+            ")"
+        )
+        assert constraint_exists is enabled
+
+        if enabled:
+            try:
+                await connection.execute(
+                    "INSERT INTO prompt_templates "
+                    "(type, version, name, role_setting, template_body, is_active) "
+                    "VALUES ('CODE_REVIEW', 2, 'duplicate', 'role', "
+                    "'{{source_code}}', false)"
+                )
+            except UniqueViolationError:
+                pass
+            else:
+                raise AssertionError("同 type 重复 version 应被唯一索引拒绝")
+
+            try:
+                await connection.execute(
+                    "INSERT INTO long_term_memories "
+                    "(content, memory_type) VALUES ('bad', 'UNKNOWN')"
+                )
+            except CheckViolationError:
+                pass
+            else:
+                raise AssertionError("未知 memory_type 应被检查约束拒绝")
+    finally:
+        await connection.close()
+
+
 async def _migration_connection():
     return await asyncpg.connect(
         host=cfg.settings.pg_host,
@@ -141,8 +222,15 @@ def test_migration_roundtrip():
         asyncio.run(_assert_ai_readme_0004(metadata_present=False))
         command.upgrade(ac, "0004")    # C1-E：再次新增，验证可往返
         asyncio.run(_assert_ai_readme_0004(metadata_present=True))
+        asyncio.run(_seed_c2_contract_rows())
+        command.upgrade(ac, "0005")
+        asyncio.run(_assert_c2_0005(enabled=True))
+        _safe_downgrade(ac, "0004")
+        asyncio.run(_assert_c2_0005(enabled=False))
+        command.upgrade(ac, "0005")
+        asyncio.run(_assert_c2_0005(enabled=True))
         _safe_downgrade(ac, "0002")   # C1-B：删除水位线
-        command.upgrade(ac, "0004")    # C1-B/C1-E：再次新增到 head，验证迁移链
+        command.upgrade(ac, "0005")    # C1-B/C1-E/C2：再次新增到 head，验证迁移链
         _safe_downgrade(ac, "base")  # 拆：验证 downgrade SQL
         command.upgrade(ac, "head")    # 重建：可重复
     finally:

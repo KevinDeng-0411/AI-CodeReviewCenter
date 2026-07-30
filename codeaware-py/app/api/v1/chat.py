@@ -16,7 +16,12 @@ from app.ai.services.turn_coordinator import (
 from app.api.v1.deps import get_chat_service, get_db, get_turn_coordinator
 from app.core.response import Result
 from app.models import Conversation, Message
-from app.schemas.chat import ChatRequest, ChatResponseVO
+from app.schemas.chat import (
+    ChatMessageVO,
+    ChatRequest,
+    ChatResponseVO,
+    ConversationItem,
+)
 from app.schemas.chat_events import EVENT_TYPES
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
@@ -219,7 +224,7 @@ async def send_stream(req: ChatRequest, coordinator: TurnCoordinator = Depends(g
         raise
 
 
-@router.get("/conversations")
+@router.get("/conversations", response_model=Result[list[ConversationItem]])
 async def list_conversations(svc: ChatService = Depends(get_chat_service)):
     convs = await svc.list_conversations()
     return Result.ok(
@@ -230,11 +235,21 @@ async def list_conversations(svc: ChatService = Depends(get_chat_service)):
     )
 
 
-@router.get("/conversations/{conversation_id}")
+@router.get(
+    "/conversations/{conversation_id}",
+    response_model=Result[list[ChatMessageVO]],
+)
 async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_db)):
     """会话消息历史（PG 真相，按时间正序）。"""
     from sqlalchemy import select
 
+    exists = await db.scalar(
+        select(Conversation.id).where(
+            Conversation.conversation_id == conversation_id
+        )
+    )
+    if exists is None:
+        return _error(404, "CHAT_CONVERSATION_NOT_FOUND")
     r = await db.execute(
         select(Message).where(Message.conversation_id == conversation_id).order_by(Message.id.asc())
     )
@@ -242,7 +257,10 @@ async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_
     return Result.ok([{"role": m.role, "content": m.content} for m in msgs])
 
 
-@router.delete("/conversations/{conversation_id}")
+@router.delete(
+    "/conversations/{conversation_id}",
+    response_model=Result[None],
+)
 async def delete_conversation(conversation_id: str, svc: ChatService = Depends(get_chat_service)):
     await svc.delete_conversation(conversation_id)
     return Result.ok()

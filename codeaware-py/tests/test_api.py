@@ -50,18 +50,20 @@ async def test_knowledge_upload_and_search(client, api_overrides):
     assert r2.status_code == 200
     results = r2.json()["data"]
     assert len(results) >= 1
-    assert "matchType" in results[0]
+    assert "match_type" in results[0]
 
 
 async def test_memory_save_and_search(client, api_overrides):
     r = await client.post(
         "/api/memory/long-term",
-        json={"content": "团队用 SQLAlchemy 2.0", "memory_type": "KNOWLEDGE"},
+        json={"content": "团队用 SQLAlchemy 2.0", "memory_type": "REFERENCE"},
     )
     assert r.status_code == 200
     assert r.json()["data"]["id"] is not None
 
-    r2 = await client.get("/api/memory/long-term/search?query=SQLAlchemy&threshold=0.0&topK=5")
+    r2 = await client.get(
+        "/api/memory/long-term/search?query=SQLAlchemy&threshold=0.0&top_k=5"
+    )
     assert r2.status_code == 200
     results = r2.json()["data"]
     assert any("SQLAlchemy" in r["content"] for r in results)

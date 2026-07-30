@@ -27,6 +27,12 @@ class PromptTemplate(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     __table_args__ = (
+        Index(
+            "uq_prompt_templates_type_version",
+            "type",
+            "version",
+            unique=True,
+        ),
         # ADR-0005 激活不变量：每 type 恰一 is_active=true
         Index(
             "uq_prompt_templates_type_active",

@@ -9,7 +9,7 @@ from app.ai.services.ai_readme import AiReadmeService
 from app.ai.services.project_snapshot import ProjectSnapshotService
 from app.api.v1.deps import get_db
 from app.core.response import Result
-from app.schemas.ai_readme import AiReadmeCapability, AiReadmeRequest
+from app.schemas.ai_readme import AiReadmeCapability, AiReadmeRequest, AiReadmeVO
 
 router = APIRouter(prefix="/api/ai-readme", tags=["AIReadMe"])
 
@@ -18,7 +18,7 @@ def get_project_snapshot_service() -> ProjectSnapshotService:
     return ProjectSnapshotService.from_settings()
 
 
-@router.get("/capabilities")
+@router.get("/capabilities", response_model=Result[AiReadmeCapability])
 async def capabilities(
     snapshot_service: ProjectSnapshotService = Depends(get_project_snapshot_service),
 ):
@@ -26,7 +26,7 @@ async def capabilities(
     return Result.ok(AiReadmeCapability(enabled=enabled, reason=reason))
 
 
-@router.post("/generate")
+@router.post("/generate", response_model=Result[AiReadmeVO])
 async def generate(
     req: AiReadmeRequest,
     db: AsyncSession = Depends(get_db),
@@ -42,7 +42,7 @@ async def generate(
     return Result.ok(await service.generate(req.project_name, req.project_path))
 
 
-@router.get("/{project_name}")
+@router.get("/{project_name}", response_model=Result[AiReadmeVO | None])
 async def get_readme(
     project_name: str,
     db: AsyncSession = Depends(get_db),

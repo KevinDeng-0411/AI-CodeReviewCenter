@@ -9,12 +9,12 @@ from app.models import Document, KnowledgeChunk, LongTermMemory
 async def test_store_and_pure_vector_recall(db_session, vector_recall):
     await vector_recall.store(
         db_session,
-        LongTermMemory(content="Redis 缓存穿透", memory_type="KNOWLEDGE"),
+        LongTermMemory(content="Redis 缓存穿透", memory_type="REFERENCE"),
         "Redis 缓存穿透",
     )
     await vector_recall.store(
         db_session,
-        LongTermMemory(content="Java 多线程并发", memory_type="KNOWLEDGE"),
+        LongTermMemory(content="Java 多线程并发", memory_type="REFERENCE"),
         "Java 多线程并发",
     )
 
@@ -28,7 +28,7 @@ async def test_store_and_pure_vector_recall(db_session, vector_recall):
 async def test_threshold_filters(db_session, vector_recall):
     await vector_recall.store(
         db_session,
-        LongTermMemory(content="A", memory_type="KNOWLEDGE"),
+        LongTermMemory(content="A", memory_type="REFERENCE"),
         "A",
     )
     # threshold=0.999 只留几乎相同的；query "A" 与存储 "A" sim≈1 -> 保留

@@ -6,7 +6,7 @@ conversation_id 为可选来源（ADR-0004）。
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Index, String, Text, func
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
@@ -26,6 +26,10 @@ class LongTermMemory(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     __table_args__ = (
+        CheckConstraint(
+            "memory_type IN ('REFERENCE', 'FACT')",
+            name="ck_long_term_memories_memory_type",
+        ),
         Index("ix_ltm_conversation_id", "conversation_id"),
         Index("ix_ltm_embedding_hnsw", "embedding", postgresql_using="hnsw", postgresql_ops={"embedding": "vector_cosine_ops"}),
     )

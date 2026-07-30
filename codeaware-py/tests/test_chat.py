@@ -653,6 +653,9 @@ async def test_delete_conversation_commits_pg_before_best_effort_cache_cleanup(
 
 async def test_delete_conversation_does_not_touch_cache_when_pg_commit_fails():
     class _CommitFailingSession:
+        async def scalar(self, _statement):
+            return 1
+
         async def execute(self, _statement):
             return None
 
@@ -742,10 +745,14 @@ async def test_chat_request_validation_uses_stable_result_envelope(client, path)
     assert "sensitive-input-without-message" not in response.text
 
 
-async def test_non_chat_validation_keeps_fastapi_default_contract(client):
+async def test_non_chat_validation_uses_stable_result_contract(client):
     response = await client.post("/api/knowledge/upload", json={})
     assert response.status_code == 422
-    assert "detail" in response.json()
+    assert response.json() == {
+        "code": 0,
+        "msg": "KNOWLEDGE_REQUEST_INVALID",
+        "data": None,
+    }
 
 
 async def test_sync_returns_reply_and_persists(db_session, redis_client, vector_recall, chunker):

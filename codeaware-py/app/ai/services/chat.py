@@ -8,7 +8,8 @@ import logging
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Conversation, Message
+from app.models import Conversation, LongTermMemory, Message
+from app.core.exceptions import BusinessException
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,18 @@ class ChatService:
         return list(r.scalars().all())
 
     async def delete_conversation(self, cid: str) -> None:
+        exists = await self.session.scalar(
+            select(Conversation.id).where(Conversation.conversation_id == cid)
+        )
+        if exists is None:
+            raise BusinessException(
+                "CHAT_CONVERSATION_NOT_FOUND",
+                status_code=404,
+            )
         await self.session.execute(delete(Message).where(Message.conversation_id == cid))
+        await self.session.execute(
+            delete(LongTermMemory).where(LongTermMemory.conversation_id == cid)
+        )
         await self.session.execute(delete(Conversation).where(Conversation.conversation_id == cid))
         await self.session.commit()
         if self.redis:

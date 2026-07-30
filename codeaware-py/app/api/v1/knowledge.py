@@ -3,7 +3,6 @@
 import logging
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.infra.vector_recall import VectorRecallService
@@ -15,6 +14,12 @@ from app.api.v1.deps import get_chat_model, get_db, get_vector_recall_service
 from app.core.config import settings
 from app.core.exceptions import BusinessException
 from app.core.response import Result
+from app.schemas.knowledge import (
+    KnowledgeDocumentVO,
+    KnowledgeSearchHit,
+    KnowledgeSearchRequest,
+    KnowledgeUploadRequest,
+)
 
 router = APIRouter(prefix="/api/knowledge", tags=["Knowledge"])
 logger = logging.getLogger(__name__)
@@ -24,18 +29,6 @@ FILE_TYPE_UNSUPPORTED = "KNOWLEDGE_FILE_TYPE_UNSUPPORTED"
 FILE_TOO_LARGE = "KNOWLEDGE_FILE_TOO_LARGE"
 FILE_PARSE_FAILED = "KNOWLEDGE_FILE_PARSE_FAILED"
 FILE_CONTENT_TOO_LARGE = "KNOWLEDGE_FILE_CONTENT_TOO_LARGE"
-
-
-class KnowledgeUploadRequest(BaseModel):
-    title: str
-    content: str
-    source_type: str = "MANUAL"
-    project_name: str | None = None
-
-
-class KnowledgeSearchRequest(BaseModel):
-    query: str
-    top_k: int = 5
 
 
 def _rag_service(db, llm, vr):
@@ -54,7 +47,7 @@ async def _read_limited_upload(file: UploadFile) -> bytes:
     return b"".join(chunks)
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=Result[KnowledgeDocumentVO])
 async def upload(
     req: KnowledgeUploadRequest,
     db: AsyncSession = Depends(get_db),
@@ -62,11 +55,21 @@ async def upload(
     vr: VectorRecallService = Depends(get_vector_recall_service),
 ):
     rag = _rag_service(db, llm, vr)
-    doc = await rag.upload_document(req.title, req.content, req.source_type, req.project_name)
-    return Result.ok({"id": doc.id, "title": doc.title})
+    try:
+        doc = await rag.upload_document(
+            req.title,
+            req.content,
+            req.source_type,
+            req.project_name,
+        )
+    except BusinessException:
+        raise
+    except Exception as exc:
+        raise BusinessException("KNOWLEDGE_EMBEDDING_FAILED", status_code=502) from exc
+    return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title))
 
 
-@router.post("/search")
+@router.post("/search", response_model=Result[list[KnowledgeSearchHit]])
 async def search(
     req: KnowledgeSearchRequest,
     db: AsyncSession = Depends(get_db),
@@ -74,32 +77,39 @@ async def search(
     vr: VectorRecallService = Depends(get_vector_recall_service),
 ):
     rag = _rag_service(db, llm, vr)
-    results = await rag.search(req.query, top_k=req.top_k)
+    try:
+        results = await rag.search(req.query, top_k=req.top_k)
+    except BusinessException:
+        raise
+    except Exception as exc:
+        raise BusinessException("KNOWLEDGE_SEARCH_FAILED", status_code=502) from exc
     return Result.ok(
         [
-            {
-                "score": r.score,
-                "matchType": r.match_type,
-                "document_id": r.chunk.document_id,
-                "chunk_content": r.chunk.chunk_content,
-            }
+            KnowledgeSearchHit(
+                score=r.score,
+                match_type=r.match_type,
+                document_id=r.chunk.document_id,
+                chunk_content=r.chunk.chunk_content,
+            )
             for r in results
         ]
     )
 
 
-@router.delete("/{doc_id}")
+@router.delete("/{doc_id}", response_model=Result[None])
 async def delete(doc_id: int, db: AsyncSession = Depends(get_db)):
     from app.models import Document
     doc = await db.get(Document, doc_id)
-    if doc:
-        await db.delete(doc)
-        await db.commit()
+    if doc is None:
+        raise BusinessException("KNOWLEDGE_DOCUMENT_NOT_FOUND", status_code=404)
+    await db.delete(doc)
+    await db.commit()
     return Result.ok()
 
 
 @router.post(
     "/upload-file",
+    response_model=Result[KnowledgeDocumentVO],
     responses={
         400: {
             "description": "文件为空、格式不支持、超限或解析失败",
@@ -153,12 +163,18 @@ async def upload_file(
             raise BusinessException(FILE_CONTENT_TOO_LARGE)
 
         rag = _rag_service(db, llm, vr)
-        doc = await rag.upload_document(
-            filename,
-            text,
-            source_type="DOC",
-            project_name=project_name,
-        )
-        return Result.ok({"id": doc.id, "title": doc.title})
+        try:
+            doc = await rag.upload_document(
+                filename,
+                text,
+                source_type="DOC",
+                project_name=project_name,
+            )
+        except Exception as exc:
+            raise BusinessException(
+                "KNOWLEDGE_EMBEDDING_FAILED",
+                status_code=502,
+            ) from exc
+        return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title))
     finally:
         await file.close()

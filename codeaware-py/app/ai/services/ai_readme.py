@@ -75,7 +75,7 @@ class AiReadmeService:
         try:
             template = await self.prompt_manager.get_active(PromptType.AI_README)
             if template is None:
-                raise BusinessException("未找到 AI_README Prompt 模板")
+                raise BusinessException("AI_README_PROMPT_NOT_FOUND", status_code=404)
             return self.prompt_manager.render_system_prompt(
                 template,
                 {
@@ -113,11 +113,29 @@ class AiReadmeService:
 
     async def _invoke_structured(self, system_prompt: str) -> AiReadmeResult:
         try:
-            structured = self.chat_model.with_structured_output(
-                AiReadmeResult,
-                method="json_mode",
-            )
-            return await structured.ainvoke(system_prompt)
-        except Exception:
-            raw = await self.chat_model.ainvoke(system_prompt)
-            return AiReadmeResult.model_validate_json(_extract_json(raw.content))
+            try:
+                structured = self.chat_model.with_structured_output(
+                    AiReadmeResult,
+                    method="json_mode",
+                )
+                return await structured.ainvoke(system_prompt)
+            except TimeoutError as exc:
+                raise BusinessException(
+                    "AI_README_MODEL_TIMEOUT",
+                    status_code=504,
+                ) from exc
+            except Exception:
+                raw = await self.chat_model.ainvoke(system_prompt)
+                return AiReadmeResult.model_validate_json(_extract_json(raw.content))
+        except BusinessException:
+            raise
+        except TimeoutError as exc:
+            raise BusinessException(
+                "AI_README_MODEL_TIMEOUT",
+                status_code=504,
+            ) from exc
+        except Exception as exc:
+            raise BusinessException(
+                "AI_README_OUTPUT_INVALID",
+                status_code=502,
+            ) from exc
