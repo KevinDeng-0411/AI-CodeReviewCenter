@@ -14,8 +14,9 @@ Code Review、Unit Test、AIReadMe 是复用同一 AI 基建的薄工具。
   [OpenAPI 快照](codeaware-py/openapi/current-release.json)为准
 - C1 真实缺口修复：[Evidence](docs/roadmap/current-release/evidence/C1/report.md)
 - C2 七域 API/持久化/UI 闭环：[Evidence](docs/roadmap/current-release/evidence/C2/report.md)
-- 当前执行阶段：C3 版本冻结与交接
-- 后续阶段：C4 真实 BM25 词法召回增强
+- C3 版本冻结与交接：[Evidence](docs/roadmap/current-release/evidence/C3/report.md)
+- 当前冻结基线：C3 已完成
+- 下一阶段：C4 真实 BM25 词法召回增强，未开始
 - Agent：未来方向，尚未实现且保持锁定
 
 完整顺序见[当前版本与检索增强路线](docs/roadmap/current-release/README.md)。

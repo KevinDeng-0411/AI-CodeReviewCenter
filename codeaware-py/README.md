@@ -5,8 +5,9 @@ Prompt 复用 FastAPI/LangChain/SQLAlchemy/pgvector/Redis 基建。
 
 - C1 Evidence：[报告](../docs/roadmap/current-release/evidence/C1/report.md)
 - C2 Evidence：[报告](../docs/roadmap/current-release/evidence/C2/report.md)
-- 当前阶段：C3 版本冻结
-- 下一阶段：C4 BM25；Agent 仍未实现
+- C3 Evidence：[报告](../docs/roadmap/current-release/evidence/C3/report.md)
+- 当前冻结基线：C3 已完成
+- 下一阶段：C4 BM25，未开始；Agent 仍未实现
 
 通用编码和安全规则见上级 [AGENTS.md](../AGENTS.md)，文档入口见
 [docs/INDEX.md](../docs/INDEX.md)。

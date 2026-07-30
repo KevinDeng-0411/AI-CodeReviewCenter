@@ -3,9 +3,9 @@
 > 这是当前应优先实施的计划。目标是把已承诺的 Python Chat 应用真正闭环；Agent 仅存在于另一目录的未来方向文档中。
 
 - 制定日期：2026-07-29
-- 当前证据基线：C2 后端 `251 passed, 2 deselected`、覆盖率 `90%`、API
-  contract/e2e `38 passed`、七域 browser E2E 与真实 DeepSeek/Ollama smoke 通过；
-  见 [C2 Evidence](evidence/C2/report.md)
+- 当前证据基线：C3 后端 `264 passed, 2 deselected`、覆盖率 `90%`、前端
+  `34 passed`、七域 browser E2E、30 条检索基线和安全回退通过；C2 的真实
+  DeepSeek/Ollama smoke 哈希仍有效。见 [C3 Evidence](evidence/C3/report.md)
 - 当前产品边界：FastAPI + LangChain + DeepSeek 的 Chat/RAG/Memory 与四类薄工具
 - 完成原则：修复真实链路，不以 mock 单测或文档中的 `[x]` 代替可运行演示
 
@@ -15,8 +15,8 @@
 |---|---|---|---|
 | C1 | 修复已确认的真实链路缺口 | **已完成**（[manifest](evidence/C1/manifest.json) 已验证） | [01-当前缺口修复](01-当前缺口修复.md) |
 | C2 | 现有功能全链路闭环验收 | **已完成**（[manifest](evidence/C2/manifest.json) 已验证） | [02-现有功能闭环验收](02-现有功能闭环验收.md) |
-| C3 | 文档、启动方式和版本基线冻结 | **下一阶段，未开始** | [03-版本冻结与交接](03-版本冻结与交接.md) |
-| C4 | BM25 词法召回 + pgvector RRF 增强 | 未开始，等待 C3 | [04-BM25 检索增强](04-BM25检索增强.md) |
+| C3 | 文档、启动方式和版本基线冻结 | **已完成**（[manifest](evidence/C3/manifest.json) 已验证） | [03-版本冻结与交接](03-版本冻结与交接.md) |
+| C4 | BM25 词法召回 + pgvector RRF 增强 | **下一阶段，未开始；需用户明确要求实施** | [04-BM25 检索增强](04-BM25检索增强.md) |
 
 依赖关系：
 

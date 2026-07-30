@@ -7,6 +7,7 @@
 >
 > 当前优先级以[升级总入口](docs/roadmap/README.md)为准：先完成
 > [C1–C3 当前版本收尾与 C4 BM25 检索增强](docs/roadmap/current-release/README.md)。
+> C1–C3 Evidence 已通过；当前唯一下一阶段是尚未实施的 C4，开工仍需用户明确要求。
 > Chat → Agent 是锁定的未来方向；没有 C1–C4 evidence 和用户在其后的另行授权，
 > 不得开始 Agent 代码改造。
 >
