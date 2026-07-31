@@ -74,10 +74,15 @@ class Bm25LexicalRecall(LexicalRecallPort):
         top_k: int = 5,
     ) -> list[tuple[ModelT, float]]:
         try:
-            txt_col = getattr(model, text_column)
+            # @@ @ 右边必须 text literal（不能用参数）；转义单引号后内联
+            q = query_text.replace("'", "''")
             stmt = (
                 select(model)
-                .where(txt_col.op("@@@")(query_text))
+                .where(
+                    __import__("sqlalchemy").text(
+                        f"{model.__tablename__}.{text_column} @@@ '{q}'"
+                    )
+                )
                 .limit(top_k * 3)
             )
             rows = (await session.execute(stmt)).scalars().all()

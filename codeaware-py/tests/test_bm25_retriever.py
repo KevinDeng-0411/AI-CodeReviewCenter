@@ -1,4 +1,4 @@
-"""C4-B: BM25 词法召回测试 - ParadeDB pg_search + chinese_compatible tokenizer。
+"""C4-B: BM25 词法召回测试 - ParadeDB pg_search + default tokenizer。
 
 需要 BM25 镜像（codeaware/pgvector-pgsearch:pg16-v0.12.0）。
 BM25 索引由 bm25_ready fixture 创建（create_all 不含 ParadeDB 索引）。
@@ -24,7 +24,7 @@ async def bm25_ready(setup_db):
         await conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_kc_chunk_content_bm25 "
             "ON knowledge_chunks USING bm25 (chunk_content) "
-            "WITH (key_field='id', text_fields='{\"chunk_content\": {\"tokenizer\": {\"type\": \"chinese_compatible\"}}}')"
+            "WITH (key_field='id', text_fields='{\"chunk_content\": {\"tokenizer\": {\"type\": \"default\"}}}')"
         ))
     # ParadeDB v0.12.0:空表上建 BM25 索引不初始化 Tantivy 文件 -> 首次 INSERT 报错
     async with AsyncSessionLocal() as s:
@@ -59,7 +59,7 @@ async def _upload_doc(db_session, title, content, vr):
 
 
 async def test_bm25_chinese_query(bm25_ready, db_session, vector_recall):
-    """BM25 中文查询：chinese_compatible tokenizer 命中中文内容。"""
+    """BM25 中文查询：default tokenizer 命中中文内容。"""
     await _upload_doc(db_session, "缓存", "## 缓存击穿\n热点Key失效方案：互斥锁、逻辑过期。", vector_recall)
     await _upload_doc(db_session, "RAG", "## RAG 检索\n查询改写 + 混合检索 + RRF 融合。", vector_recall)
 

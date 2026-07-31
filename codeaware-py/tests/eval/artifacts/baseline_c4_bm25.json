@@ -1,24 +1,24 @@
 {
-  "bm25_only": {
+  "bm25": {
     "summary": {
-      "recall_at_5_mean": 0.5142857142857142,
-      "mrr_at_10_mean": 0.4857142857142857
+      "recall_at_5_mean": 0.6,
+      "mrr_at_10_mean": 0.6
     },
     "by_category": {
       "chinese_exact": {
         "n": 8,
-        "recall@5_mean": 0.125,
-        "mrr@10_mean": 0.125
+        "recall@5_mean": 0.25,
+        "mrr@10_mean": 0.25
       },
       "english_natural": {
         "n": 7,
-        "recall@5_mean": 0.7142857142857143,
-        "mrr@10_mean": 0.6428571428571429
+        "recall@5_mean": 0.8571428571428571,
+        "mrr@10_mean": 0.8571428571428571
       },
       "rare_identifier": {
         "n": 8,
-        "recall@5_mean": 0.875,
-        "mrr@10_mean": 0.8125
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
       },
       "semantic_paraphrase": {
         "n": 7,
@@ -32,16 +32,16 @@
       }
     }
   },
-  "bm25_fused": {
+  "fused": {
     "summary": {
       "recall_at_5_mean": 0.9571428571428572,
-      "mrr_at_10_mean": 0.9202380952380953
+      "mrr_at_10_mean": 0.9338095238095238
     },
     "by_category": {
       "chinese_exact": {
         "n": 8,
         "recall@5_mean": 1.0,
-        "mrr@10_mean": 0.84375
+        "mrr@10_mean": 0.90625
       },
       "english_natural": {
         "n": 7,
@@ -56,7 +56,7 @@
       "semantic_paraphrase": {
         "n": 7,
         "recall@5_mean": 0.7857142857142857,
-        "mrr@10_mean": 0.7797619047619048
+        "mrr@10_mean": 0.7761904761904762
       },
       "negative": {
         "n": 5,
@@ -66,20 +66,7 @@
     }
   },
   "timing": {
-    "bm25_only": 0.101,
-    "bm25_fused": 5.934
-  },
-  "quality_gates": {
-    "fused_recall_at_5_gte_c3": true,
-    "rare_identifier_mrr_gt_pg_trgm": false,
-    "semantic_recall_at_5_gte_vector_only": true
-  },
-  "c3_comparison": {
-    "c3_fused_r5": 0.9571428571428572,
-    "c4_fused_r5": 0.9571428571428572,
-    "c3_pg_trgm_rare_mrr": 0.9375,
-    "c4_bm25_rare_mrr": 0.8125,
-    "c3_vector_semantic_r5": 0.7857142857142857,
-    "c4_fused_semantic_r5": 0.7857142857142857
+    "bm25": 0.09,
+    "fused": 5.876
   }
 }

@@ -5,7 +5,7 @@ Revises: 0005
 Create Date: 2026-07-31
 
 C4-B: 在 knowledge_chunks.chunk_content 上创建 BM25 索引（ParadeDB pg_search v0.12.0，
-chinese_compatible tokenizer）。需要 BM25 镜像（codeaware/pgvector-pgsearch:pg16-v0.12.0）。
+default tokenizer）。需要 BM25 镜像（codeaware/pgvector-pgsearch:pg16-v0.12.0）。
 pg_trgm GIN 索引保留为回退后端；RAG_LEXICAL_BACKEND 默认仍 pg_trgm，C4-D 通过后切 bm25。
 """
 
@@ -24,13 +24,13 @@ def upgrade() -> None:
     # pg_search 扩展（需要镜像内置 + shared_preload_libraries）
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_search")
 
-    # BM25 索引：chinese_compatible tokenizer 处理中文分词
+    # BM25 索引：default tokenizer 处理中文分词
     op.execute(
         sa.text(
             "CREATE INDEX IF NOT EXISTS ix_kc_chunk_content_bm25 "
             "ON knowledge_chunks "
             "USING bm25 (chunk_content) "
-            "WITH (key_field='id', text_fields='{\"chunk_content\": {\"tokenizer\": {\"type\": \"chinese_compatible\"}}}')"
+            "WITH (key_field='id', text_fields='{\"chunk_content\": {\"tokenizer\": {\"type\": \"default\"}}}')"
         )
     )
 
