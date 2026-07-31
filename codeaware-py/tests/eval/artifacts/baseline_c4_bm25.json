@@ -1,0 +1,85 @@
+{
+  "bm25_only": {
+    "summary": {
+      "recall_at_5_mean": 0.5142857142857142,
+      "mrr_at_10_mean": 0.4857142857142857
+    },
+    "by_category": {
+      "chinese_exact": {
+        "n": 8,
+        "recall@5_mean": 0.125,
+        "mrr@10_mean": 0.125
+      },
+      "english_natural": {
+        "n": 7,
+        "recall@5_mean": 0.7142857142857143,
+        "mrr@10_mean": 0.6428571428571429
+      },
+      "rare_identifier": {
+        "n": 8,
+        "recall@5_mean": 0.875,
+        "mrr@10_mean": 0.8125
+      },
+      "semantic_paraphrase": {
+        "n": 7,
+        "recall@5_mean": 0.0,
+        "mrr@10_mean": 0.0
+      },
+      "negative": {
+        "n": 5,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      }
+    }
+  },
+  "bm25_fused": {
+    "summary": {
+      "recall_at_5_mean": 0.9571428571428572,
+      "mrr_at_10_mean": 0.9202380952380953
+    },
+    "by_category": {
+      "chinese_exact": {
+        "n": 8,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 0.84375
+      },
+      "english_natural": {
+        "n": 7,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      },
+      "rare_identifier": {
+        "n": 8,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      },
+      "semantic_paraphrase": {
+        "n": 7,
+        "recall@5_mean": 0.7857142857142857,
+        "mrr@10_mean": 0.7797619047619048
+      },
+      "negative": {
+        "n": 5,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      }
+    }
+  },
+  "timing": {
+    "bm25_only": 0.101,
+    "bm25_fused": 5.934
+  },
+  "quality_gates": {
+    "fused_recall_at_5_gte_c3": true,
+    "rare_identifier_mrr_gt_pg_trgm": false,
+    "semantic_recall_at_5_gte_vector_only": true
+  },
+  "c3_comparison": {
+    "c3_fused_r5": 0.9571428571428572,
+    "c4_fused_r5": 0.9571428571428572,
+    "c3_pg_trgm_rare_mrr": 0.9375,
+    "c4_bm25_rare_mrr": 0.8125,
+    "c3_vector_semantic_r5": 0.7857142857142857,
+    "c4_fused_semantic_r5": 0.7857142857142857
+  }
+}
