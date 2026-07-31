@@ -3,7 +3,8 @@
 # 端口由 runner 经 CODEWARE_TEST_PG_PORT / CODEWARE_TEST_REDIS_PORT 注入。
 services:
   pg:
-    image: pgvector/pgvector:pg16
+    image: codeaware/pgvector-pgsearch:pg16-v0.12.0
+    command: postgres -c shared_preload_libraries=pg_search
     environment:
       POSTGRES_USER: aicenter
       POSTGRES_PASSWORD: aicenter123

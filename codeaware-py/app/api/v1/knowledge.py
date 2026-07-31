@@ -10,7 +10,7 @@ from app.ai.rag.hybrid_retriever import HybridRetriever
 from app.ai.rag.query_rewriter import QueryRewriter
 from app.ai.rag.semantic_chunker import SemanticChunker
 from app.ai.services.rag import RagService
-from app.api.v1.deps import get_chat_model, get_db, get_vector_recall_service
+from app.api.v1.deps import get_chat_model, get_db, get_lexical_recall, get_vector_recall_service
 from app.core.config import settings
 from app.core.exceptions import BusinessException
 from app.core.response import Result
@@ -31,8 +31,8 @@ FILE_PARSE_FAILED = "KNOWLEDGE_FILE_PARSE_FAILED"
 FILE_CONTENT_TOO_LARGE = "KNOWLEDGE_FILE_CONTENT_TOO_LARGE"
 
 
-def _rag_service(db, llm, vr):
-    return RagService(db, SemanticChunker(), vr, QueryRewriter(llm), HybridRetriever(db, vr))
+def _rag_service(db, llm, vr, lr):
+    return RagService(db, SemanticChunker(), vr, QueryRewriter(llm), HybridRetriever(db, vr, lr))
 
 
 async def _read_limited_upload(file: UploadFile) -> bytes:
@@ -53,8 +53,9 @@ async def upload(
     db: AsyncSession = Depends(get_db),
     llm=Depends(get_chat_model),
     vr: VectorRecallService = Depends(get_vector_recall_service),
+    lr=Depends(get_lexical_recall),
 ):
-    rag = _rag_service(db, llm, vr)
+    rag = _rag_service(db, llm, vr, lr)
     try:
         doc = await rag.upload_document(
             req.title,
@@ -75,8 +76,9 @@ async def search(
     db: AsyncSession = Depends(get_db),
     llm=Depends(get_chat_model),
     vr: VectorRecallService = Depends(get_vector_recall_service),
+    lr=Depends(get_lexical_recall),
 ):
-    rag = _rag_service(db, llm, vr)
+    rag = _rag_service(db, llm, vr, lr)
     try:
         results = await rag.search(req.query, top_k=req.top_k)
     except BusinessException:
@@ -134,6 +136,7 @@ async def upload_file(
     db: AsyncSession = Depends(get_db),
     llm=Depends(get_chat_model),
     vr: VectorRecallService = Depends(get_vector_recall_service),
+    lr=Depends(get_lexical_recall),
 ):
     from app.ai.services.document_parser import DocumentParserService
 
@@ -162,7 +165,7 @@ async def upload_file(
         if len(text) > settings.knowledge_parsed_max_chars:
             raise BusinessException(FILE_CONTENT_TOO_LARGE)
 
-        rag = _rag_service(db, llm, vr)
+        rag = _rag_service(db, llm, vr, lr)
         try:
             doc = await rag.upload_document(
                 filename,

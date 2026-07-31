@@ -3,7 +3,8 @@ services:
   # PostgreSQL 16 + pgvector — 关系数据 + 向量存储
   # ============================================================
   postgres:
-    image: pgvector/pgvector:pg16
+    image: codeaware/pgvector-pgsearch:pg16-v0.12.0
+    command: postgres -c shared_preload_libraries=pg_search
     container_name: ${CODEAWARE_POSTGRES_CONTAINER_NAME:-ai-center-postgres}
     restart: unless-stopped
     ports:

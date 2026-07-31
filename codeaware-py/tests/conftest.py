@@ -116,19 +116,26 @@ def chunker():
 
 
 @pytest.fixture
-async def hybrid_retriever(db_session, vector_recall):
-    from app.ai.rag.hybrid_retriever import HybridRetriever
-    return HybridRetriever(db_session, vector_recall)
+def lexical_recall():
+    """C4-B: 默认用 pg_trgm 回退后端（fake embedder 场景）。BM25 测试用专用 fixture。"""
+    from app.ai.rag.lexical_recall import PgTrgmLexicalRecall
+    return PgTrgmLexicalRecall()
 
 
 @pytest.fixture
-async def rag_service(db_session, chunker, vector_recall, mock_llm):
+async def hybrid_retriever(db_session, vector_recall, lexical_recall):
+    from app.ai.rag.hybrid_retriever import HybridRetriever
+    return HybridRetriever(db_session, vector_recall, lexical_recall)
+
+
+@pytest.fixture
+async def rag_service(db_session, chunker, vector_recall, mock_llm, lexical_recall):
     from app.ai.rag.query_rewriter import QueryRewriter
     from app.ai.rag.hybrid_retriever import HybridRetriever
     from app.ai.services.rag import RagService
     return RagService(
         db_session, chunker, vector_recall,
-        QueryRewriter(mock_llm), HybridRetriever(db_session, vector_recall),
+        QueryRewriter(mock_llm), HybridRetriever(db_session, vector_recall, lexical_recall),
     )
 
 
@@ -139,12 +146,12 @@ async def chat_service(db_session, redis_client):
 
 
 @pytest.fixture
-async def turn_coordinator(db_session, mock_llm, redis_client, vector_recall, chunker):
+async def turn_coordinator(db_session, mock_llm, redis_client, vector_recall, chunker, lexical_recall):
     """C1-A: TurnCoordinator（用 fake LLM/embedder，自管一次性 session 由 db_session fixture 保证安全）。"""
     from app.ai.rag.query_rewriter import QueryRewriter
     from app.ai.services.turn_coordinator import TurnCoordinator
 
-    return TurnCoordinator(mock_llm, redis_client, vector_recall, chunker, QueryRewriter(mock_llm))
+    return TurnCoordinator(mock_llm, redis_client, vector_recall, chunker, QueryRewriter(mock_llm), lexical_recall)
 
 
 @pytest.fixture

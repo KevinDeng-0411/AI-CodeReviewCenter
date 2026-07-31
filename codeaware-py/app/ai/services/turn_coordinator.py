@@ -84,18 +84,19 @@ class PreparedTurn:
 class TurnCoordinator:
     _active: set[str] = set()  # 类级 turn guard（local-first 单 worker）
 
-    def __init__(self, chat_model, redis_client, vector_recall, chunker, query_rewriter) -> None:
+    def __init__(self, chat_model, redis_client, vector_recall, chunker, query_rewriter, lexical_recall=None) -> None:
         self.chat_model = chat_model
         self.redis = redis_client
         self.vector_recall = vector_recall
         self.chunker = chunker
         self.query_rewriter = query_rewriter
+        self.lexical_recall = lexical_recall
         self._owned_guards: set[str] = set()
 
     def _managers(self, session):
         st = ShortTermMemoryManager(self.redis, session, self.chat_model)
         lt = LongTermMemoryManager(session, self.vector_recall)
-        hybrid = HybridRetriever(session, self.vector_recall)
+        hybrid = HybridRetriever(session, self.vector_recall, self.lexical_recall)
         rag = RagService(session, self.chunker, self.vector_recall, self.query_rewriter, hybrid)
         pm = PromptTemplateManager(session)
         return st, lt, rag, pm

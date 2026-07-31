@@ -59,11 +59,12 @@ class VectorRecallService:
         threshold: float = 0.0,
         hybrid: bool = False,
         text_column: str = "content",
+        lexical_recall=None,
     ) -> list[tuple[ModelT, float, str]]:
         """语义召回，返回 (entity, score, matchType)。
 
-        hybrid=False 纯向量(matchType='vector')；hybrid=True 关键词(pg_trgm)+向量 RRF 融合
-        (matchType='vector'/'keyword'/'both')。
+        hybrid=False 纯向量(matchType='vector')；hybrid=True + lexical_recall 词法+向量 RRF 融合
+        (matchType='vector'/'keyword'/'both')。hybrid=True + lexical_recall=None 纯向量(Memory 兼容)。
         """
         qvec = await self.embed(query_text)
         return await self.recall_by_vector(
@@ -75,6 +76,7 @@ class VectorRecallService:
             threshold=threshold,
             hybrid=hybrid,
             text_column=text_column,
+            lexical_recall=lexical_recall,
         )
 
     async def recall_by_vector(
@@ -88,11 +90,13 @@ class VectorRecallService:
         threshold: float = 0.0,
         hybrid: bool = False,
         text_column: str = "content",
+        lexical_recall=None,
     ) -> list[tuple[ModelT, float, str]]:
         """使用已生成的向量执行纯数据库召回。
 
-        调用方可先在无数据库事务时完成远程 embedding，再在短 session 中调用本方法；
-        本方法自身不执行任何模型或网络调用。
+        hybrid=False: 纯向量。
+        hybrid=True + lexical_recall: 向量 + 词法 RRF 融合。
+        hybrid=True + lexical_recall=None: 纯向量（Memory 兼容）。
         """
         emb_col = getattr(model, "embedding")
         vec_stmt = (
@@ -102,23 +106,18 @@ class VectorRecallService:
         )
         vec_rows = (await session.execute(vec_stmt)).all()
 
-        if not hybrid:
+        if not hybrid or lexical_recall is None:
             return [
                 (r[0], round(float(r[1]), 4), "vector")
                 for r in vec_rows
                 if float(r[1]) >= threshold
             ][:top_k]
 
-        # 混合：pg_trgm 关键词腿 + RRF 融合（ADR-0001 改进②）
-        txt_col = getattr(model, text_column)
-        kw_stmt = (
-            select(model, func.similarity(txt_col, query_text).label("kw_score"))
-            .where(func.similarity(txt_col, query_text) > 0.1)
-            .order_by(func.similarity(txt_col, query_text).desc())
-            .limit(top_k * 3)
+        # 混合：词法腿（pg_trgm 或 BM25）+ RRF 融合（ADR-0001 改进②/C4-B）
+        lexical_rows = await lexical_recall.search(
+            session, model, query_text, text_column=text_column, top_k=top_k
         )
-        kw_rows = (await session.execute(kw_stmt)).all()
-        return self._rrf_fuse(vec_rows, kw_rows, top_k=top_k, threshold=threshold)
+        return self._rrf_fuse(vec_rows, lexical_rows, top_k=top_k, threshold=threshold)
 
     @staticmethod
     def _rrf_fuse(

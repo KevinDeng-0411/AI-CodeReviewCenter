@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     ai_readme_snapshot_max_prompt_chars: int = Field(default=60_000, gt=0)
     ai_readme_snapshot_timeout_seconds: float = Field(default=5.0, gt=0)
 
+    # RAG 词法检索后端（C4-B：pg_trgm 回退 / bm25 ParadeDB pg_search 默认目标）
+    rag_lexical_backend: str = "pg_trgm"  # C4-D 通过后切 "bm25"
+
     @property
     def pg_url_async(self) -> str:
         return (
