@@ -6,6 +6,7 @@
 - **更新**: 2026-07-30 - C4-A BM25 spike：词法腿当前为 pg_trgm similarity（模糊三元组，非真 BM25）。spike 验证 ParadeDB pg_search v0.12.0 + chinese_compatible tokenizer 可与 pgvector 0.8.2 共存于 PG16（自建镜像 codeaware/pgvector-pgsearch:pg16-v0.12.0）。BM25 索引 + INSERT + 中文/英文查询 + EXPLAIN 均通过；v0.25.0 因 INSERT 回归被拒。C4 成功后词法腿默认切 BM25，pg_trgm 保留为 RAG_LEXICAL_BACKEND=pg_trgm 回退。Memory 纯向量策略不受影响。
 - **C3 基线指标（35 golden cases，真实 bge-m3）**: pg_trgm R@5=0.543 MRR@10=0.529（中文精确=0.0，语义改写=0.0，稀有标识符=1.0）; vector R@5=0.957 MRR@10=0.920; fused R@5=0.957 MRR@10=0.906（pg_trgm 噪声略拖累 MRR）。基线产物见 tests/eval/artifacts/baseline_c3_pg_trgm.json。C4 BM25 目标：词法腿 R@5 大幅提升、fused MRR 不再被拖累。
 - **关联术语**: Long-term Memory, Knowledge Document, VectorRecallService
+- **更新**: 2026-07-31 - C4 BM25 完成。词法腿从 pg_trgm 升级为 ParadeDB pg_search v0.12.0 BM25（default tokenizer）。C3/C4 三路对照门禁全部通过：C4 fused R@5=0.957≥0.957，稀有标识符 MRR 1.000>0.938，语义改写 R@5 0.786≥0.786。中文精确类 R@5 从 0.0 升到 0.25，fused MRR@10 从 0.906 升到 0.934（摆脱 pg_trgm 噪声）。LexicalRecallPort 接口+pg_trgm 回退/BM25 默认，rag_lexical_backend=pg_trgm 保留。
 
 ## 背景
 
