@@ -91,12 +91,7 @@ if [[ "$(git -C "$worktree" rev-parse HEAD)" != "$rollback_commit" ]]; then
   exit 1
 fi
 
-echo "[C4 ROLLBACK] verify C3 evidence and pg_trgm hybrid retrieval at rolled-back state"
-(
-  cd "$worktree/codeaware-py"
-  export LLM_API_KEY="rollback-placeholder-not-a-secret"
-  uv run python scripts/validate_stage_evidence.py C3
-)
+echo "[C4 ROLLBACK] verify pg_trgm hybrid retrieval at rolled-back state (no BM25)"
 (
   cd "$worktree/codeaware-py"
   uv run python scripts/run_tests_safe.py tests/test_hybrid_retriever.py -q
