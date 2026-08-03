@@ -6,9 +6,9 @@
 > 长期领域语义以 `docs/decisions/adr/0001~0007` 和 `docs/decisions/glossary.md` 为权威；`docs/migration/Python重构迁移文档.md` 仅是历史迁移记录。当前实现以 `docs/roadmap/current-release/` 为执行权威。**编码前先查 [docs/INDEX.md](docs/INDEX.md) 定位相关文档。**
 >
 > 当前优先级以[升级总入口](docs/roadmap/README.md)为准：先完成
-> [C1–C3 当前版本收尾与 C4 BM25 检索增强](docs/roadmap/current-release/README.md)。
-> C1–C3 Evidence 已通过；当前唯一下一阶段是尚未实施的 C4，开工仍需用户明确要求。
-> Chat → Agent 是锁定的未来方向；没有 C1–C4 evidence 和用户在其后的另行授权，
+> [C1–C4 当前版本收尾与 C5 文档解析分块增强](docs/roadmap/current-release/README.md)。
+> C1–C4 Evidence 已通过；当前唯一下一阶段是尚未实施的 C5，开工仍需用户明确要求。
+> Chat → Agent 是锁定的未来方向；没有 C1–C5 evidence 和用户在其后的另行授权，
 > 不得开始 Agent 代码改造。
 >
 > 获得未来 Agent 实施授权后，默认采用个人项目档案
@@ -20,11 +20,11 @@
 >
 > 阶段完成与解锁只认[证据清单与解锁规则](docs/roadmap/证据清单与解锁规则.md)定义的
 > `manifest.json`。ADR 管长期语义，`current-release/` 管当前实现，`migration/` 只作
-> 历史背景；C4 之后首次 Agent 实施授权只能解锁 S1。
+> 历史背景；C5 之后首次 Agent 实施授权只能解锁 S1。
 
 ## 个人默认 Chat → Agent 阶段实施铁律
 
-- C1–C4 未全部完成前，本节仅供未来参考；不得据此提前安装框架、建表或开放工具。
+- C1–C5 未全部完成前，本节仅供未来参考；不得据此提前安装框架、建表或开放工具。
 - 默认能力 DAG 是 `C4 → S1 → S2 → S4 → S5`；S4 直接依赖 S2，S3 缺失是合法状态，
   不得伪造 S3 evidence。
 - 开工前验证当前卡声明的全部直接依赖 manifests；验证器未通过时，不实施当前卡。
