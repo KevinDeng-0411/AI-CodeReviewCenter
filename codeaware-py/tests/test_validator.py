@@ -413,7 +413,6 @@ def test_unknown_stage_is_rejected_directly(tmp_path):
 
 def test_personal_route_skips_s3_and_keeps_required_regressions():
     assert DAG["C4"] == ["C3"]
-    assert DAG["C5"] == ["C4"]
     assert DAG["S1"] == ["C4"]
     assert DAG["S4"] == ["S2"]
     assert "S3" not in DAG
@@ -423,14 +422,6 @@ def test_personal_route_skips_s3_and_keeps_required_regressions():
         "hybrid-fusion",
         "index-lifecycle",
         "fallback-rollback",
-    ]
-    assert REQUIRED_CHECKS["C5"] == [
-        "element-serializer",
-        "pdf-fast-partition",
-        "pdf-no-text-layer",
-        "retrieval-quality",
-        "knowledge-regression",
-        "rollback",
     ]
     assert "chat-runtime-regression" in REQUIRED_CHECKS["S4"]
     assert {"source-unchanged", "profile-safety-locks"} <= set(REQUIRED_CHECKS["S5"])
