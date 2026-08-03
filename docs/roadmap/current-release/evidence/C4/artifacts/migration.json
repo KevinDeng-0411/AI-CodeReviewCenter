@@ -1,0 +1,10 @@
+{
+  "current": [
+    "0006"
+  ],
+  "heads": [
+    "0006"
+  ],
+  "note": "0006 only adds BM25 index; revert via DROP INDEX",
+  "source_command": "rollback"
+}

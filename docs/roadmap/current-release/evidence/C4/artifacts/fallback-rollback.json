@@ -1,0 +1,9 @@
+{
+  "bm25_unavailable_returns_empty": true,
+  "hybrid_degrades_to_vector_only": true,
+  "pg_trgm_feature_rollback_compatible": true,
+  "rag_lexical_backend_default": "pg_trgm",
+  "result": "passed",
+  "rollback_commit": "3f95543c1fb31e630e233332c1bfed850e855c21",
+  "rollback_log_sha256": "6e496c6512e45585f70304b4551a86c0505048721a51d5a0e8305b6316ae8258"
+}

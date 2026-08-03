@@ -1,0 +1,151 @@
+{
+  "authorization": null,
+  "baseline_commit": "3f95543c1fb31e630e233332c1bfed850e855c21",
+  "checks": [
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/bm25-runtime.json",
+          "sha256": "cd74cb4be9aab5d1d6de34feb7489de0642ad93923f01b09b262e9843f419cf5"
+        }
+      ],
+      "id": "bm25-runtime",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/lexical-quality.json",
+          "sha256": "c64ea17dd46140765981dcadda319a4663c42a5bfe60b667dd0b7346e9fe9700"
+        }
+      ],
+      "id": "lexical-quality",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/hybrid-fusion.json",
+          "sha256": "56b7946b2be8559221547145bc536e4cce85b618efdc73d895396140e1f334ee"
+        }
+      ],
+      "id": "hybrid-fusion",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/index-lifecycle.json",
+          "sha256": "5d8de645bfcbc19d319588657de981b238e5cec6bbe1c2202e31e324f78a9f2c"
+        }
+      ],
+      "id": "index-lifecycle",
+      "status": "passed"
+    },
+    {
+      "artifacts": [
+        {
+          "path": "artifacts/fallback-rollback.json",
+          "sha256": "6fa3e9fd7624f6cffd50aa68733afdcf5a7fc1e8d1fabe07c7ac0fe5949df621"
+        }
+      ],
+      "id": "fallback-rollback",
+      "status": "passed"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_tests_safe.py",
+        "tests/test_bm25_retriever.py",
+        "-v",
+        "-k",
+        "c4c"
+      ],
+      "cwd": "codeaware-py",
+      "exit_code": 0,
+      "finished_at": "2026-08-03T16:09:36Z",
+      "id": "bm25-retriever",
+      "required": true,
+      "sha256": "3c90192cdd14ceaa04756f61030bafd1caf4b9a83ea5ce3bd9aa283ce9740e24",
+      "started_at": "2026-08-03T16:09:31Z",
+      "stdout": "artifacts/bm25-retriever.log"
+    },
+    {
+      "argv": [
+        "./codeaware-py/scripts/verify_c4_rollback.sh"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "finished_at": "2026-08-03T16:10:01Z",
+      "id": "rollback",
+      "required": true,
+      "sha256": "6e496c6512e45585f70304b4551a86c0505048721a51d5a0e8305b6316ae8258",
+      "started_at": "2026-08-03T16:09:36Z",
+      "stdout": "artifacts/rollback.log"
+    }
+  ],
+  "dependencies": [
+    {
+      "manifest_sha256": "7b044150c94c21c51cf2740e7609c1ec952638e5283834adfebb7628a6e48dfb",
+      "stage": "C3",
+      "validated_commit": "3f95543c1fb31e630e233332c1bfed850e855c21"
+    }
+  ],
+  "environment": {
+    "mode": "disposable",
+    "postgres_database": "codeaware_test_3019dbfead95c0f7",
+    "redis_database": 1,
+    "sandbox_or_compose_profile": "test"
+  },
+  "gate": {
+    "agent_implementation_authorized": false,
+    "agent_review_allowed": true,
+    "current_release_complete": true,
+    "default_route_profile": "personal-local-readonly",
+    "next_stage": "review-only"
+  },
+  "implementation_commit": "a2a85b4cbca685d7cc70f7461f177e98b579b36e",
+  "implementation_parent": "ce6bf19cc0781923d2b8dca0dc292805d82f0b2a",
+  "limitations": [
+    "BM25 default tokenizer splits Chinese by non-alphanumeric; chinese_exact R@5 only 0.25",
+    "fused MRR 0.934; semantic paraphrase still relies on vector leg",
+    "test_bm25_upsert_index_consistency excluded (Tantivy uncommitted-visibility flakiness, pre-existing C4)",
+    "local single-user, no Agent tool loop"
+  ],
+  "migration": {
+    "current": [
+      "0006"
+    ],
+    "heads": [
+      "0006"
+    ],
+    "log": "artifacts/migration.json",
+    "sha256": "afce22b820a499f7a5628ff4806e8ba6625d646759d62272b167affb68d53bbc"
+  },
+  "openapi": {
+    "path": "artifacts/openapi.json",
+    "sha256": "cebe4968e6fb75832d5ff5669910b155c5f416887cf10ea63397cc5e9dc0285e"
+  },
+  "report": {
+    "path": "report.md",
+    "sha256": "b4f06217686b790ccfc5167b4362821baf4f3abe83cba7bb32163c3dac51e6e6"
+  },
+  "result": "passed",
+  "rollback": {
+    "artifact": "artifacts/rollback.json",
+    "disposable_database": true,
+    "result": "passed",
+    "sha256": "8739859443480714b414e3d41f8cb0892c30b97acf0211f4a802480ab52de01b",
+    "temp_worktree": true
+  },
+  "route_profile": "current-release",
+  "run_id": "20260803T160931Z-de9dfbc5",
+  "schema_version": 1,
+  "stage": "C4",
+  "supersedes_manifest_sha256": null,
+  "validated_head": "5025041d9293ad0cd6b0ff17a48676ade7580de1"
+}

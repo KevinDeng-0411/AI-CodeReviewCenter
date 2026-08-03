@@ -1,0 +1,11 @@
+{
+  "bm25_only_mrr_at_10": 0.6,
+  "bm25_only_recall_at_5": 0.6,
+  "chinese_query_hit": true,
+  "demo_log_sha256": "3c90192cdd14ceaa04756f61030bafd1caf4b9a83ea5ce3bd9aa283ce9740e24",
+  "english_identifier_hit": true,
+  "rare_identifier_hit": true,
+  "result": "passed",
+  "tests_passed": 5,
+  "unrelated_returns_empty": true
+}

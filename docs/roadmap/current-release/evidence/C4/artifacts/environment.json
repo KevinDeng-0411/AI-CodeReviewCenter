@@ -1,0 +1,9 @@
+{
+  "bm25_image": "codeaware/pgvector-pgsearch:pg16-v0.12.0",
+  "development_resources_unchanged": true,
+  "exact_cleanup": true,
+  "mode": "disposable",
+  "postgres_database": "codeaware_test_3019dbfead95c0f7",
+  "redis_database": 1,
+  "sandbox_or_compose_profile": "test"
+}

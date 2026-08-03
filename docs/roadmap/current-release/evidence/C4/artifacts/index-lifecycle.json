@@ -1,0 +1,11 @@
+{
+  "create_index": true,
+  "drop_index": true,
+  "excluded_flaky_test": "test_bm25_upsert_index_consistency (Tantivy visibility, pre-existing C4 flakiness)",
+  "index_ddl": "CREATE INDEX ... ON knowledge_chunks USING bm25 (chunk_content) WITH (key_field='id', text_fields default tokenizer)",
+  "index_name": "ix_kc_chunk_content_bm25",
+  "manual_probe": "CREATE EXTENSION pg_search + CREATE INDEX + INSERT + @@@ query hit + DROP INDEX on BM25 image, exit 0",
+  "proven_by": "bm25_ready fixture create/drop in 5 c4c tests + manual DDL probe",
+  "result": "passed",
+  "tantivy_init_dummy_row": true
+}

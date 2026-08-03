@@ -1,0 +1,10 @@
+{
+  "c3_fused_mrr_at_10": 0.905952380952381,
+  "c3_fused_recall_at_5": 0.9571428571428572,
+  "c4_fused_mrr_at_10": 0.9338095238095238,
+  "c4_fused_recall_at_5": 0.9571428571428572,
+  "fused_mrr_lift": 0.027857142857142803,
+  "g1_not_below_c3": true,
+  "match_type_both_verified": true,
+  "result": "passed"
+}
