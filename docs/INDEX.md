@@ -98,3 +98,4 @@
 | [0006](decisions/adr/0006-records-audit-log-merge.md) | Record=审计日志 + CR/UT 合并 ai_operation_records |
 | [0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | 核心域=Chat，基建支撑子域，工具次要上下文 |
 | [0008](decisions/adr/0008-document-parsing-element-aware-serialization.md) | 文档解析元素感知序列化（C5）：Title->`#`、PDF pdfminer 字号标题、扫描版拒绝 |
+| [0009](decisions/adr/0009-reranker-deferred.md) | Reranker 二阶段重排--评估后暂缓（MRR 目标/cross-encoder/torch 约束/门禁+重启条件） |
