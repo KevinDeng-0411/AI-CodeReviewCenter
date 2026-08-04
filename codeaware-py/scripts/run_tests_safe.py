@@ -367,6 +367,9 @@ def run(pytest_args: list[str]) -> int:
                 "CODEWARE_TEST_REDIS_GUARD_DB": str(REDIS_GUARD_DB),
                 "CODEWARE_TEST_MIG_DB": mig_db,
                 "CODEAWARE_TESTING": "1",
+                # 测试 DB 只建 vector + pg_trgm 扩展（无 BM25 索引）；
+                # 词法腿用 pg_trgm。BM25 专测（test_bm25_retriever）自带索引，不受影响。
+                "RAG_LEXICAL_BACKEND": "pg_trgm",
             }
         )
         if pytest_args == ["--browser-e2e"]:

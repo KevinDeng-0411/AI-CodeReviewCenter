@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TypeVar
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import Base
@@ -74,18 +74,18 @@ class Bm25LexicalRecall(LexicalRecallPort):
         top_k: int = 5,
     ) -> list[tuple[ModelT, float]]:
         try:
-            # @@ @ 右边必须 text literal（不能用参数）；转义单引号后内联
+            # @@@ 右边必须 text literal（不能用参数）；转义单引号后内联
             q = query_text.replace("'", "''")
             stmt = (
                 select(model)
                 .where(
-                    __import__("sqlalchemy").text(
-                        f"{model.__tablename__}.{text_column} @@@ '{q}'"
-                    )
+                    text(f"{model.__tablename__}.{text_column} @@@ '{q}'")
                 )
                 .limit(top_k * 3)
             )
-            rows = (await session.execute(stmt)).scalars().all()
+            # savepoint：@@@ 失败（扩展/索引缺失）只回滚 savepoint，不中止外层事务
+            async with session.begin_nested():
+                rows = (await session.execute(stmt)).scalars().all()
             # RRF 只用排名；score 给 0.0（顺序由 @@@ BM25 排序保证）
             return [(r, 0.0) for r in rows]
         except Exception:
