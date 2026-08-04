@@ -3,6 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { MessageSquare, Plus, Send, Square, Trash2, User, Cpu } from "lucide-react";
 import { chat, chatStream } from "../api/client";
 import { ChatStreamProtocolError } from "../api/sseParser";
+import type {
+  ContextReferences,
+  KnowledgeRef,
+  MemoryRef,
+} from "../api/chatEvents";
 import type { ChatMessage, ConversationItem } from "../api/types";
 import { Button, EmptyState, SignalTrace, ToastBar, useToast } from "../components/ui";
 import Markdown from "../components/Markdown";
@@ -28,6 +33,11 @@ export default function ChatPage() {
   const [loadingConv, setLoadingConv] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [turnStatus, setTurnStatus] = useState<string | null>(null);
+  // C6: 当前轮参考来源 + 思考过程（ephemeral，不随消息持久化）
+  const [turnMeta, setTurnMeta] = useState<{
+    refs: ContextReferences | null;
+    reasoning: string;
+  }>({ refs: null, reasoning: "" });
   const [turnController] = useState(() => new ChatTurnController());
   const scrollRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
@@ -65,12 +75,14 @@ export default function ChatPage() {
     setStreaming(false);
     setTurnStatus(null);
     setWarnings([]);
+    setTurnMeta({ refs: null, reasoning: "" });
   };
 
   const selectConv = async (cid: string) => {
     if (streaming) return;
     setActiveCid(cid);
     setTurnStatus(null);
+    setTurnMeta({ refs: null, reasoning: "" });
     setLoadingConv(true);
     try {
       setMessages(await chat.messages(cid));
@@ -145,6 +157,7 @@ export default function ChatPage() {
     setStreaming(true);
     setWarnings([]);
     setTurnStatus(null);
+    setTurnMeta({ refs: null, reasoning: "" });
     setMessages(optimisticTurnMessages(turn.baseMessages, text));
 
     try {
@@ -154,6 +167,14 @@ export default function ChatPage() {
           onStarted: (e) => {
             if (!turnController.rememberConversation(turn, e.conversation_id)) return;
             setActiveCid(e.conversation_id); // 立即拿到 cid，不猜最新
+          },
+          onReferences: (e) => {
+            if (turnController.acceptsEvents(turn))
+              setTurnMeta((prev) => ({ ...prev, refs: e }));
+          },
+          onReasoning: (e) => {
+            if (turnController.acceptsEvents(turn))
+              setTurnMeta((prev) => ({ ...prev, reasoning: prev.reasoning + e.delta }));
           },
           onDelta: (e) => {
             setMessages((m) => {
@@ -284,9 +305,18 @@ export default function ChatPage() {
             />
           ) : (
             <div className="max-w-3xl mx-auto space-y-5">
-              {messages.map((m, i) => (
-                <MessageBubble key={i} msg={m} streaming={streaming && i === messages.length - 1} />
-              ))}
+              {messages.map((m, i) => {
+                const last = i === messages.length - 1;
+                return (
+                  <MessageBubble
+                    key={i}
+                    msg={m}
+                    streaming={streaming && last}
+                    refs={last ? turnMeta.refs : undefined}
+                    reasoning={last ? turnMeta.reasoning : undefined}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -348,8 +378,23 @@ export default function ChatPage() {
   );
 }
 
-function MessageBubble({ msg, streaming }: { msg: ChatMessage; streaming: boolean }) {
+function MessageBubble({
+  msg,
+  streaming,
+  refs,
+  reasoning,
+}: {
+  msg: ChatMessage;
+  streaming: boolean;
+  refs?: ContextReferences | null;
+  reasoning?: string;
+}) {
   const isUser = msg.role === "USER";
+  const showThinking = !isUser && !!reasoning;
+  const showRefs =
+    !isUser &&
+    !!refs &&
+    (refs.knowledge_refs.length > 0 || refs.memory_refs.length > 0);
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
       <div
@@ -367,6 +412,9 @@ function MessageBubble({ msg, streaming }: { msg: ChatMessage; streaming: boolea
         >
           {isUser ? "YOU" : "AI"}
         </div>
+        {showThinking && (
+          <ThinkingPanel reasoning={reasoning!} answerStarted={!!msg.content} />
+        )}
         <div
           className={`inline-block text-left rounded px-3.5 py-2.5 ${
             isUser ? "bg-oxblood/8 border border-oxblood/20" : "bg-panel border border-line"
@@ -381,7 +429,94 @@ function MessageBubble({ msg, streaming }: { msg: ChatMessage; streaming: boolea
           )}
           {streaming && msg.content && <SignalTrace label="STREAMING" />}
         </div>
+        {showRefs && <SourceCards refs={refs!} />}
       </div>
+    </div>
+  );
+}
+
+// C6: 思考过程折叠窗（流式时展开，答案开始后自动折叠，用户可手动切换）
+function ThinkingPanel({
+  reasoning,
+  answerStarted,
+}: {
+  reasoning: string;
+  answerStarted: boolean;
+}) {
+  const [forced, setForced] = useState<boolean | null>(null);
+  const open = forced ?? !answerStarted;
+  return (
+    <div className="mb-2 rounded border border-line bg-graph/40">
+      <button
+        type="button"
+        onClick={() => setForced(!open)}
+        className="w-full flex items-center justify-between px-3 py-1.5 font-mono text-2xs uppercase tracking-techy text-mute"
+      >
+        <span>思考过程{!open ? " · 已折叠" : ""}</span>
+        <span>{open ? "▾ 收起" : "▸ 展开"}</span>
+      </button>
+      {open && (
+        <div className="px-3 pb-2 font-mono text-2xs text-mute/80 whitespace-pre-wrap max-h-40 overflow-y-auto border-t border-line/60">
+          {reasoning}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// C6: 参考来源卡片（摘要形式 + 可展开；知识 chunk + 记忆）
+function SourceCards({ refs }: { refs: ContextReferences }) {
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="font-mono text-2xs uppercase tracking-techy text-mute">参考来源</div>
+      {refs.knowledge_refs.map((r, i) => (
+        <SourceCard key={`k-${i}`} index={i + 1} ref={r} />
+      ))}
+      {refs.memory_refs.map((r, i) => (
+        <MemoryCard key={`m-${i}`} index={refs.knowledge_refs.length + i + 1} ref={r} />
+      ))}
+    </div>
+  );
+}
+
+function SourceCard({ index, ref }: { index: number; ref: KnowledgeRef }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="rounded border border-line bg-paper">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-2.5 py-1.5 text-left flex items-center gap-2"
+      >
+        <span className="font-mono text-2xs text-mute shrink-0">[{index}]</span>
+        <span className="text-xs text-ink truncate flex-1">📄 {ref.title}</span>
+        <span className="font-mono text-2xs text-mute uppercase shrink-0">{ref.match_type}</span>
+        <span className="text-mute text-2xs shrink-0">{expanded ? "▾" : "▸"}</span>
+      </button>
+      <div
+        className={`px-2.5 pb-1.5 text-2xs text-mute whitespace-pre-wrap ${
+          expanded ? "" : "truncate"
+        }`}
+      >
+        {ref.snippet}
+      </div>
+    </div>
+  );
+}
+
+function MemoryCard({ index, ref }: { index: number; ref: MemoryRef }) {
+  return (
+    <div className="rounded border border-line bg-paper px-2.5 py-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-2xs text-mute shrink-0">[{index}]</span>
+        <span className="font-mono text-2xs text-mute uppercase flex-1 truncate">
+          💭 记忆 · {ref.memory_type}
+        </span>
+        <span className="font-mono text-2xs text-mute shrink-0">
+          sim {ref.similarity.toFixed(2)}
+        </span>
+      </div>
+      <div className="text-2xs text-ink mt-0.5 whitespace-pre-wrap">{ref.content}</div>
     </div>
   );
 }

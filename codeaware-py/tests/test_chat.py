@@ -30,8 +30,10 @@ from app.schemas.chat_events import (
     ChatCompleted,
     ChatFailed,
     ChatStarted,
+    ContextReferences,
     ContextWarning,
     PostTurnWarning,
+    ReasoningDelta,
     TokenDelta,
 )
 
@@ -99,6 +101,29 @@ class _StreamLLM:
         for t in self.tokens:
             class _C:
                 content = t
+            yield _C()
+
+
+class _ReasoningLLM(_StreamLLM):
+    """C6: astream 先产 reasoning_content(additional_kwargs) 再产 content 的 fake。"""
+
+    def __init__(self, reasoning_tokens, content_tokens, ainvoke_text="pong摘要"):
+        super().__init__(content_tokens, ainvoke_text=ainvoke_text)
+        self.reasoning_tokens = reasoning_tokens
+
+    async def astream(self, prompt, **kw):
+        self.captured_prompt = prompt
+        for rt in self.reasoning_tokens:
+            class _R:
+                content = None
+                additional_kwargs = {"reasoning_content": rt}
+
+            yield _R()
+        for t in self.tokens:
+            class _C:
+                content = t
+                additional_kwargs = {}
+
             yield _C()
 
 
@@ -1562,3 +1587,40 @@ async def test_c1a_demo_typed_sse_degradation_abort_and_concurrency(
         "same_cid_conflict=CHAT_TURN_IN_PROGRESS",
         "parallel_new_cids_distinct=true",
     )
+
+
+# ---------- C6: context.references + reasoning.delta ----------
+
+
+async def test_c6_stream_emits_context_references(
+    redis_client, vector_recall, chunker
+):
+    """C6: 检索后下发 context.references（mock 无数据 -> 空列表，事件仍按协议出现）。"""
+    coord = _coord(redis_client, vector_recall, chunker, _StreamLLM(["answer"]))
+    events = await _events(coord, None, "参考来源测试")
+    refs = [e for e in events if isinstance(e, ContextReferences)]
+    assert len(refs) == 1
+    assert refs[0].knowledge_refs == []
+    assert refs[0].memory_refs == []
+    # 事件顺序：started -> references -> token.delta -> completed
+    types = [type(e).__name__ for e in events]
+    assert types[0] == "ChatStarted"
+    assert types[1] == "ContextReferences"
+    assert "TokenDelta" in types
+
+
+async def test_c6_stream_captures_reasoning_as_reasoning_delta(
+    redis_client, vector_recall, chunker
+):
+    """C6: reasoning_content 分流 reasoning.delta，content 分流 token.delta。"""
+    llm = _ReasoningLLM(["思考中", "继续思考"], ["answer"])
+    coord = _coord(redis_client, vector_recall, chunker, llm)
+    events = await _events(coord, None, "思考测试")
+    reasoning = [e for e in events if isinstance(e, ReasoningDelta)]
+    deltas = [e for e in events if isinstance(e, TokenDelta)]
+    assert "".join(e.delta for e in reasoning) == "思考中继续思考"
+    assert "".join(e.delta for e in deltas) == "answer"
+    # reasoning 在 token 之前
+    assert next(
+        i for i, e in enumerate(events) if isinstance(e, ReasoningDelta)
+    ) < next(i for i, e in enumerate(events) if isinstance(e, TokenDelta))

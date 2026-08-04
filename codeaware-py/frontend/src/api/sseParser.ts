@@ -5,10 +5,12 @@ import type {
   ChatCompleted,
   ChatFailed,
   ChatStarted,
+  ContextReferences,
   ContextWarning,
   EventName,
   FailurePhase,
   PostTurnWarning,
+  ReasoningDelta,
   TokenDelta,
   WarningComponent,
 } from "./chatEvents";
@@ -92,6 +94,8 @@ export function parseSseEvents(buffer: string): { events: RawSseEvent[]; rest: s
 
 export interface ChatStreamHandlers {
   onStarted?: (event: ChatStarted) => void;
+  onReferences?: (event: ContextReferences) => void;
+  onReasoning?: (event: ReasoningDelta) => void;
   onDelta?: (event: TokenDelta) => void;
   onContextWarning?: (event: ContextWarning) => void;
   onPostWarning?: (event: PostTurnWarning) => void;
@@ -161,10 +165,37 @@ function validateEventShape(eventName: EventName, payload: JsonRecord): void {
       if (typeof payload.created !== "boolean") invalidEvent(eventName, "created 必须是 boolean");
       return;
     case "token.delta":
+    case "reasoning.delta":
       if (typeof payload.delta !== "string" || payload.delta.length === 0) {
         invalidEvent(eventName, "delta 必须是非空字符串");
       }
       return;
+    case "context.references": {
+      const krefs = payload.knowledge_refs;
+      const mrefs = payload.memory_refs;
+      const badKref =
+        !Array.isArray(krefs) ||
+        krefs.some(
+          (r) =>
+            !isRecord(r) ||
+            typeof r.document_id !== "number" ||
+            typeof r.title !== "string" ||
+            typeof r.snippet !== "string" ||
+            typeof r.match_type !== "string" ||
+            typeof r.score !== "number",
+        );
+      const badMref =
+        !Array.isArray(mrefs) ||
+        mrefs.some(
+          (r) =>
+            !isRecord(r) ||
+            typeof r.content !== "string" ||
+            typeof r.memory_type !== "string" ||
+            typeof r.similarity !== "number",
+        );
+      if (badKref || badMref) invalidEvent(eventName, "references 字段不完整");
+      return;
+    }
     case "context.warning":
     case "post_turn.warning":
       if (
@@ -278,6 +309,12 @@ class ChatStreamState {
     switch (raw.event) {
       case "chat.started":
         handlers.onStarted?.(parsed as unknown as ChatStarted);
+        return;
+      case "context.references":
+        handlers.onReferences?.(parsed as unknown as ContextReferences);
+        return;
+      case "reasoning.delta":
+        handlers.onReasoning?.(parsed as unknown as ReasoningDelta);
         return;
       case "token.delta":
         handlers.onDelta?.(parsed as unknown as TokenDelta);

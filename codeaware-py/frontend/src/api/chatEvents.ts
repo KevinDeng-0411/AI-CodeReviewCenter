@@ -30,6 +30,25 @@ export interface ContextWarning extends ChatEventBase {
 export interface TokenDelta extends ChatEventBase {
   delta: string;
 }
+export interface ReasoningDelta extends ChatEventBase {
+  delta: string;
+}
+export interface KnowledgeRef {
+  document_id: number;
+  title: string;
+  snippet: string;
+  match_type: string;
+  score: number;
+}
+export interface MemoryRef {
+  content: string;
+  memory_type: string;
+  similarity: number;
+}
+export interface ContextReferences extends ChatEventBase {
+  knowledge_refs: KnowledgeRef[];
+  memory_refs: MemoryRef[];
+}
 export interface PostTurnWarning extends ChatEventBase {
   component: WarningComponent;
   code: string;
@@ -65,6 +84,8 @@ export interface ChatFailed extends ChatEventBase {
 export type ChatEvent =
   | ChatStarted
   | ContextWarning
+  | ContextReferences
+  | ReasoningDelta
   | TokenDelta
   | PostTurnWarning
   | ChatCompleted
@@ -73,6 +94,8 @@ export type ChatEvent =
 export const EVENT_NAMES = [
   "chat.started",
   "context.warning",
+  "context.references",
+  "reasoning.delta",
   "token.delta",
   "post_turn.warning",
   "chat.completed",

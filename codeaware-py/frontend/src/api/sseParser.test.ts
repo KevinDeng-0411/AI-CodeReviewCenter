@@ -427,3 +427,85 @@ describe("consumeChatStream protocol state", () => {
     expect(readerCancelled).toBe(true);
   });
 });
+
+describe("C6 context.references + reasoning.delta", () => {
+  function references(sequence: number): string {
+    return sse(sequence, "context.references", {
+      ...base(sequence),
+      knowledge_refs: [
+        {
+          document_id: 1,
+          title: "缓存最佳实践",
+          snippet: "热点Key失效瞬间大量请求打DB。方案：互斥锁、逻辑过期。",
+          match_type: "both",
+          score: 0.85,
+        },
+      ],
+      memory_refs: [
+        { content: "团队使用 SQLAlchemy 2.0", memory_type: "REFERENCE", similarity: 0.72 },
+      ],
+    });
+  }
+
+  function reasoning(sequence: number, content: string): string {
+    return sse(sequence, "reasoning.delta", { ...base(sequence), delta: content });
+  }
+
+  it("started -> references -> reasoning -> token -> completed 顺序解析", async () => {
+    const received: string[] = [];
+    const outcome = await consumeChatStream(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(
+              started(1) +
+                references(2) +
+                reasoning(3, "analyzing…") +
+                delta(4, "答案") +
+                completed(5),
+            ),
+          );
+          controller.close();
+        },
+      }),
+      {
+        onReferences: (e) => received.push(`refs:${e.knowledge_refs[0].match_type}`),
+        onReasoning: (e) => received.push(`reasoning:${e.delta}`),
+        onDelta: (e) => received.push(`delta:${e.delta}`),
+      },
+    );
+
+    expect(outcome).toEqual({
+      status: "completed",
+      event: expect.objectContaining({ assistant_message_id: 9 }),
+    });
+    expect(received).toEqual([
+      "refs:both",
+      "reasoning:analyzing…",
+      "delta:答案",
+    ]);
+  });
+
+  it("context.references 校验失败时 fail closed", async () => {
+    await expect(
+      consumeChatStream(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                started(1) +
+                  sse(2, "context.references", {
+                    ...base(2),
+                    knowledge_refs: [{ document_id: "not-number", title: 1 }],
+                    memory_refs: [],
+                  }),
+              ),
+            );
+            controller.close();
+          },
+        }),
+        {},
+      ),
+    ).rejects.toThrow(ChatStreamProtocolError);
+  });
+});
