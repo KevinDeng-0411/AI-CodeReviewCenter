@@ -464,17 +464,30 @@ function ThinkingPanel({
   );
 }
 
-// C6: 参考来源卡片（摘要形式 + 可展开；知识 chunk + 记忆）
+// C6: 参考来源折叠面板（默认折叠，用户手动展开）
 function SourceCards({ refs }: { refs: ContextReferences }) {
+  const [expanded, setExpanded] = useState(false);
+  const count = refs.knowledge_refs.length + refs.memory_refs.length;
   return (
-    <div className="mt-2 space-y-1">
-      <div className="font-mono text-2xs uppercase tracking-techy text-mute">参考来源</div>
-      {refs.knowledge_refs.map((r, i) => (
-        <SourceCard key={`k-${i}`} index={i + 1} ref={r} />
-      ))}
-      {refs.memory_refs.map((r, i) => (
-        <MemoryCard key={`m-${i}`} index={refs.knowledge_refs.length + i + 1} ref={r} />
-      ))}
+    <div className="mt-2 rounded border border-line bg-graph/40">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-3 py-1.5 font-mono text-2xs uppercase tracking-techy text-mute"
+      >
+        <span>参考来源 · {count} 项{!expanded ? " · 已折叠" : ""}</span>
+        <span>{expanded ? "▾ 收起" : "▸ 展开"}</span>
+      </button>
+      {expanded && (
+        <div className="px-3 pb-2 space-y-1 border-t border-line/60">
+          {refs.knowledge_refs.map((r, i) => (
+            <SourceCard key={`k-${i}`} index={i + 1} ref={r} />
+          ))}
+          {refs.memory_refs.map((r, i) => (
+            <MemoryCard key={`m-${i}`} index={refs.knowledge_refs.length + i + 1} ref={r} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
