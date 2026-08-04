@@ -1,13 +1,13 @@
 """P2：LLM 连通性（mock 接线 + 单例）。"""
 
-from langchain_openai import ChatOpenAI
+from langchain_deepseek import ChatDeepSeek
 
 from app.ai.config import get_chat_model, get_embedding_model
 from app.main import app
 
 
 async def test_get_chat_model_singleton(monkeypatch):
-    # ChatOpenAI 新版构造即校验凭据，注入 dummy key（不实际调用）
+    # ChatDeepSeek 新版构造即校验凭据，注入 dummy key（不实际调用）
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "llm_api_key", "sk-dummy")
@@ -15,7 +15,7 @@ async def test_get_chat_model_singleton(monkeypatch):
     try:
         m1 = get_chat_model()
         m2 = get_chat_model()
-        assert isinstance(m1, ChatOpenAI)
+        assert isinstance(m1, ChatDeepSeek)
         assert m1 is m2  # lru_cache 单例
     finally:
         get_chat_model.cache_clear()

@@ -237,11 +237,12 @@ async def test_chat_context_summary_fact_and_delete_closure(
     events = _parse_sse(streamed.text)
     assert [name for name, _ in events] == [
         "chat.started",
+        "context.references",
         "token.delta",
         "token.delta",
         "chat.completed",
     ]
-    assert [payload["sequence"] for _, payload in events] == [1, 2, 3, 4]
+    assert [payload["sequence"] for _, payload in events] == [1, 2, 3, 4, 5]
     assert all(payload["protocol_version"] == 1 for _, payload in events)
     cid = events[0][1]["conversation_id"]
     assert "".join(
