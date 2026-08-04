@@ -18,14 +18,15 @@
 | C3 | 文档、启动方式和版本基线冻结 | **已完成**（[manifest](evidence/C3/manifest.json) 已验证） | [03-版本冻结与交接](03-版本冻结与交接.md) |
 | C4 | BM25 词法召回 + pgvector RRF 增强 | **已完成**（[manifest](evidence/C4/manifest.json) 已验证） | [04-BM25 检索增强](04-BM25检索增强.md) |
 | C5 | 文档解析元素感知 + PDF 文字版 + 扫描版显式拒绝 | **已完成**（42 测试通过 + before/after 评测） | [05-文档解析与分块增强](05-文档解析与分块增强.md) |
+| C6 | Chat 参考来源 + 思考过程（typed SSE 扩 2 事件） | **下一阶段，未开始；需用户明确要求实施** | [06-Chat引用与思考过程](06-Chat引用与思考过程.md) |
 
 依赖关系：
 
 ```text
-C1 → C2 → C3 → C4（BM25）→ C5（解析分块增强）  |  Agent 路线从 C4 分支，仍锁定（需另行授权）
+C1 → C2 → C3 → C4（BM25）→ C5（解析分块增强）→ C6（Chat 引用+思考）  |  Agent 路线从 C4 分支，仍锁定（需另行授权）
 ```
 
-C5（current-release 增强分支）不阻塞 Agent 路线--Agent 从 C4 分支，仍锁定，需另行授权。
+C5/C6（current-release 增强分支）不阻塞 Agent 路线--Agent 从 C4 分支，仍锁定，需另行授权。
 
 ## 2. 当前版本完成后的用户体验
 
