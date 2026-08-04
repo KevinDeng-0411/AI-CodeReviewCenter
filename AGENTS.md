@@ -172,4 +172,4 @@ docker compose exec ollama ollama pull bge-m3
 - 术语表：[docs/decisions/glossary.md](docs/decisions/glossary.md)
 - DeepSeek 集成：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
 - 面试话术：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
-- Java 遗留源码：`ai-center-common` / `ai-center-model` / `ai-center-ai` / `ai-center-server`
+- Java 遗留源码：`java-legacy/ai-center-common` / `ai-center-model` / `ai-center-ai` / `ai-center-server`

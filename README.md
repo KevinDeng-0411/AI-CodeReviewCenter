@@ -168,4 +168,4 @@ Knowledge 文件上传支持 PDF、DOCX、HTML、Markdown、TXT，默认限制�
 - DeepSeek 集成：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
 - 当前发布说明：[docs/releases/0.1.0.md](docs/releases/0.1.0.md)
 - Java → Python 历史迁移：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
-- Java legacy 模块：`ai-center-common`、`ai-center-model`、`ai-center-ai`、`ai-center-server`
+- Java legacy 模块：`java-legacy/ai-center-common`、`ai-center-model`、`ai-center-ai`、`ai-center-server`

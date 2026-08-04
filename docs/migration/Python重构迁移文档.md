@@ -39,11 +39,11 @@
 ### 1.1 Java 技术栈
 Spring Boot 3.2.5 · LangChain4j 0.36.2 · MyBatis-Plus 3.5.5 · PostgreSQL/pgvector · Redis 7 · Ollama bge-m3 · DeepSeek V4 · Tika · Knife4j · Hutool/Lombok/Jackson。
 
-### 1.2 模块结构（Maven 四模块）
-- `ai-center-common`：`Result`/`PageResult`、枚举、`BusinessException`
-- `ai-center-model`：Entity / DTO / VO / Mapper（MyBatis-Plus）
-- `ai-center-ai`：`AIConfig` + service + memory + prompt + rag
-- `ai-center-server`：Controller + 配置 + 启动类
+### 1.2 模块结构（Maven 四模块，已收进 `java-legacy/`）
+- `java-legacy/ai-center-common`：`Result`/`PageResult`、枚举、`BusinessException`
+- `java-legacy/ai-center-model`：Entity / DTO / VO / Mapper（MyBatis-Plus）
+- `java-legacy/ai-center-ai`：`AIConfig` + service + memory + prompt + rag
+- `java-legacy/ai-center-server`：Controller + 配置 + 启动类
 
 ### 1.3 功能与 API 规模
 22 个 API，4 大模块：AI Code Review（七层结构化 Prompt）、AI 单测生成、AIReadMe 生成、智能问答（多轮 + 两级记忆 + RAG）。
