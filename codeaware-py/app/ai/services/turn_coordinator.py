@@ -26,14 +26,18 @@ from app.ai.services.rag import RagService
 from app.core.config import settings
 from app.core.enums import PromptType
 from app.db.session import AsyncSessionLocal
-from app.models import Conversation, LongTermMemory
+from app.models import Conversation, Document, LongTermMemory
 from app.schemas.chat_events import (
     ChatCompleted,
     ChatFailed,
     ChatStarted,
+    ContextReferences,
     ContextWarning,
     ErrorInfo,
+    KnowledgeRef,
+    MemoryRef,
     PostTurnWarning,
+    ReasoningDelta,
     TokenDelta,
 )
 
@@ -241,7 +245,7 @@ class TurnCoordinator:
                 )
 
             # ---- build context (exclude current USER) ----
-            prompt, ctx_warns = await self._build_context(cid, message)
+            prompt, ctx_warns, refs = await self._build_context(cid, message)
             if prompt is None:
                 self._log_failure(
                     cid, turn_id, "context", "prompt_context", "CONTEXT_FAILED"
@@ -259,12 +263,29 @@ class TurnCoordinator:
                     component=comp, code=code, message=msg, retryable=True,
                 )
 
+            # C6: 检索后、模型前下发本轮参考来源（知识 chunk + 记忆）
+            yield ContextReferences(
+                conversation_id=cid, turn_id=turn_id, sequence=nxt(),
+                knowledge_refs=[KnowledgeRef(**r) for r in refs["knowledge_refs"]],
+                memory_refs=[MemoryRef(**r) for r in refs["memory_refs"]],
+            )
+
             # ---- model stream ----
             text = ""
             model_stream = None
             try:
                 model_stream = self.chat_model.astream(prompt)
                 async for chunk in model_stream:
+                    # C6: reasoning_content 与 content 在不同 chunk，分别分流
+                    reasoning = (
+                        chunk.additional_kwargs.get("reasoning_content")
+                        if hasattr(chunk, "additional_kwargs")
+                        else None
+                    )
+                    if reasoning:
+                        yield ReasoningDelta(
+                            conversation_id=cid, turn_id=turn_id, sequence=nxt(), delta=reasoning
+                        )
                     delta = chunk.content if hasattr(chunk, "content") else str(chunk)
                     if delta:
                         text += delta
@@ -462,7 +483,14 @@ class TurnCoordinator:
             cache_failed = True
         return summary, cache_failed
 
-    async def _build_context(self, cid, message) -> tuple[str | None, list[tuple[str, str, str]]]:
+    async def _build_context(
+        self, cid, message
+    ) -> tuple[str | None, list[tuple[str, str, str]], dict]:
+        """构建 Chat context，返回 (prompt, warnings, refs)。
+
+        refs = {"knowledge_refs": [...], "memory_refs": [...]}，供 C6 context.references
+        事件下发（本轮实际注入 prompt 的参考来源）。
+        """
         """分离外部调用与短 DB session，返回 (prompt, context_warnings)。"""
         warnings: list[tuple[str, str, str]] = []
         try:
@@ -500,6 +528,7 @@ class TurnCoordinator:
             history = "\n\n".join(history_parts)
 
             long_ctx = ""
+            memory_refs: list[dict] = []
             try:
                 memory_vector = await self.vector_recall.embed(message)
                 async with AsyncSessionLocal() as s:
@@ -516,6 +545,14 @@ class TurnCoordinator:
                         f"- {memory[0].content} (相似度:{memory[1]:.2f})"
                         for memory in recalled
                     )
+                    memory_refs = [
+                        {
+                            "content": memory[0].content,
+                            "memory_type": memory[0].memory_type,
+                            "similarity": round(float(memory[1]), 4),
+                        }
+                        for memory in recalled
+                    ]
             except Exception:
                 warnings.append(
                     self._context_warning(
@@ -527,6 +564,7 @@ class TurnCoordinator:
                 )
 
             rag_ctx = ""
+            knowledge_refs: list[dict] = []
             try:
                 # prepare_search 完成 QueryRewriter 和全部 embedding；此 session 从未执行 SQL。
                 async with AsyncSessionLocal() as s:
@@ -537,6 +575,24 @@ class TurnCoordinator:
                     _, _, rag, _ = self._managers(s)
                     docs = await rag.search_prepared(prepared_queries, top_k=5)
                     rag_ctx = rag.format_context(docs)
+                    if docs:
+                        doc_ids = {r.chunk.document_id for r in docs}
+                        titles = dict(
+                            (await s.execute(
+                                select(Document.id, Document.title)
+                                .where(Document.id.in_(doc_ids))
+                            )).all()
+                        )
+                        knowledge_refs = [
+                            {
+                                "document_id": r.chunk.document_id,
+                                "title": titles.get(r.chunk.document_id, "未知文档"),
+                                "snippet": r.chunk.chunk_content[:100],
+                                "match_type": r.match_type,
+                                "score": round(float(r.score), 4),
+                            }
+                            for r in docs
+                        ]
             except Exception:
                 warnings.append(
                     self._context_warning(
@@ -557,11 +613,15 @@ class TurnCoordinator:
                 pm = PromptTemplateManager(s)
                 template = await pm.get_active(PromptType.CHAT)
                 if template is None:
-                    return None, warnings
+                    return None, warnings, {"knowledge_refs": [], "memory_refs": []}
                 prompt = pm.render_system_prompt(template, params)
         except Exception:
-            return None, []
-        return prompt, warnings
+            return None, [], {"knowledge_refs": [], "memory_refs": []}
+        return (
+            prompt,
+            warnings,
+            {"knowledge_refs": knowledge_refs, "memory_refs": memory_refs},
+        )
 
     async def _txn_assistant(self, cid, text) -> int | None:
         """Transaction B。返回 message_id；None 表示 persist 失败。"""

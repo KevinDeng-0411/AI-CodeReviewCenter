@@ -505,7 +505,7 @@ async def test_build_context_never_awaits_external_io_with_active_transaction(
                 not context.session.in_transaction() for context in tracked_contexts
             )
             probe.permits.put_nowait(None)
-        prompt, warnings = await asyncio.wait_for(context_task, timeout=2)
+        prompt, warnings, refs = await asyncio.wait_for(context_task, timeout=2)
     finally:
         if not context_task.done():
             context_task.cancel()
@@ -809,7 +809,7 @@ async def test_completed_waits_until_post_turn_finishes(
     observed_events = []
 
     async def fixed_context(_cid, _message):
-        return "prompt", []
+        return "prompt", [], {"knowledge_refs": [], "memory_refs": []}
 
     async def blocking_post_turn(_cid, _text):
         post_turn_started.set()
@@ -914,7 +914,7 @@ async def test_context_and_persist_failures_emit_sanitized_structured_logs(
     )
 
     async def fail_context(_cid, _message):
-        return None, []
+        return None, [], {"knowledge_refs": [], "memory_refs": []}
 
     monkeypatch.setattr(context_coord, "_build_context", fail_context)
     with caplog.at_level(logging.ERROR, logger="app.ai.services.turn_coordinator"):
@@ -1126,7 +1126,7 @@ async def test_post_commit_message_cache_rebuilds_cold_and_dirty_windows(
             "ASSISTANT:::历史回答",
             "USER:::当前问题",
         ]
-        prompt, _warnings = await coord._build_context(cid, "当前问题")
+        prompt, _warnings, _refs = await coord._build_context(cid, "当前问题")
         assert prompt is not None
         assert "历史问题" in prompt
         assert "历史回答" in prompt
@@ -1226,7 +1226,7 @@ async def test_summary_set_failure_invalidates_stale_cache_and_still_completes(
     )
 
     async def fixed_context(_cid, _message):
-        return "固定 prompt", []
+        return "固定 prompt", [], {"knowledge_refs": [], "memory_refs": []}
 
     async def skip_extraction(_cid, _warnings):
         return None
@@ -1320,6 +1320,10 @@ async def test_abort_before_first_token_closes_model_and_releases_new_cid_guard(
     cid = started["conversation_id"]
     assert cid in TurnCoordinator._active
 
+    # C6: started 之后是 context.references，再之后才是模型首 token
+    references = _frame_payload(await anext(stream))
+    assert "knowledge_refs" in references
+
     pending_frame = asyncio.create_task(anext(stream))
     await asyncio.wait_for(llm.waiting.wait(), timeout=2)
     with caplog.at_level(logging.INFO, logger="app.ai.services.turn_coordinator"):
@@ -1357,7 +1361,7 @@ async def test_abort_after_multiple_tokens_discards_partial_and_releases_guard(
         if message["type"] != "http.response.body" or not message.get("body"):
             return
         body_payloads.append(_frame_payload(message["body"].decode()))
-        if len(body_payloads) == 3:
+        if len(body_payloads) == 4:
             raise OSError("client socket closed")
 
     with caplog.at_level(logging.INFO, logger="app.ai.services.turn_coordinator"):
@@ -1365,7 +1369,9 @@ async def test_abort_after_multiple_tokens_discards_partial_and_releases_guard(
             await response.stream_response(interrupted_send)
 
     cid = body_payloads[0]["conversation_id"]
-    assert body_payloads[1]["delta"] + body_payloads[2]["delta"] == "partial answer"
+    deltas = [p for p in body_payloads if "delta" in p]
+    assert len(deltas) >= 2
+    assert deltas[0]["delta"] + deltas[1]["delta"] == "partial answer"
     assert llm.abort_observed is True
     assert llm.closed is True
     assert cid not in TurnCoordinator._active

@@ -25,6 +25,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "markdown>=3.5",
     "pathspec>=0.12,<1",
+    "langchain-deepseek>=1.1.0",
 ]
 
 [dependency-groups]

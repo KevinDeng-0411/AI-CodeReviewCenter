@@ -7,17 +7,21 @@
 
 from functools import lru_cache
 
+from langchain_deepseek import ChatDeepSeek
 from langchain_ollama import OllamaEmbeddings
-from langchain_openai import ChatOpenAI
 
 from app.ai.infra.vector_recall import VectorRecallService
 from app.core.config import settings
 
 
 @lru_cache
-def get_chat_model() -> ChatOpenAI:
-    """LLM: DeepSeek（OpenAI 兼容 API）。"""
-    return ChatOpenAI(
+def get_chat_model() -> ChatDeepSeek:
+    """LLM: DeepSeek（ChatDeepSeek 提取 reasoning_content，供 C6 思考过程展示）。
+
+    切 ChatDeepSeek 而非 ChatOpenAI：ChatOpenAI 官方不提取第三方 provider 的
+    reasoning_content（langchain-openai 文档明示）。C6 需流式捕获 reasoning。
+    """
+    return ChatDeepSeek(
         api_key=settings.llm_api_key,
         base_url=settings.llm_base_url,
         model=settings.llm_model,

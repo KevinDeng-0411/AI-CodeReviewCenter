@@ -52,6 +52,43 @@ class TokenDelta(ChatEventBase):
     delta: str = Field(min_length=1)
 
 
+class ReasoningDelta(ChatEventBase):
+    """模型 reasoning_content 流式 delta（C6：与 token.delta 分开）。
+
+    思考是过程不是内容：只流式展示，不持久化到消息表。
+    """
+
+    delta: str = Field(min_length=1)
+
+
+class KnowledgeRef(BaseModel):
+    """知识库参考来源：文档标题 + chunk 摘要片段 + 命中腿（C6）。"""
+
+    document_id: int
+    title: str
+    snippet: str  # chunk 摘要片段（~100 字），前端卡片展示
+    match_type: str  # vector / keyword / both
+    score: float
+
+
+class MemoryRef(BaseModel):
+    """长期记忆参考来源：原子事实 + 类型 + 相似度（C6）。"""
+
+    content: str
+    memory_type: str  # FACT / REFERENCE
+    similarity: float
+
+
+class ContextReferences(ChatEventBase):
+    """检索后、模型前下发：本轮实际注入 context 的知识 chunk + 记忆（C6）。
+
+    措辞为"参考来源"（被检索并注入 prompt），不依赖 LLM 显式 cite。
+    """
+
+    knowledge_refs: list[KnowledgeRef] = Field(default_factory=list)
+    memory_refs: list[MemoryRef] = Field(default_factory=list)
+
+
 class PostTurnWarning(ChatEventBase):
     """assistant 已持久化后的 post-turn 降级（摘要/记忆/缓存刷新）。"""
 
@@ -86,6 +123,8 @@ class ChatFailed(ChatEventBase):
 EVENT_TYPES = {
     "chat.started": ChatStarted,
     "context.warning": ContextWarning,
+    "context.references": ContextReferences,
+    "reasoning.delta": ReasoningDelta,
     "token.delta": TokenDelta,
     "post_turn.warning": PostTurnWarning,
     "chat.completed": ChatCompleted,
