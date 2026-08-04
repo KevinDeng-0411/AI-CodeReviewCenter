@@ -3,7 +3,10 @@
 > 本阶段在 C5 之后。目标：让 Chat 回答可溯源（下发参考来源）+ 思考过程可见（流式展示
 > reasoning_content）。新增两个 typed SSE 事件，扩展现有 6 事件协议到 8 事件。
 >
-> **当前状态：未开始；需用户明确要求实施。** 沿用 C5 降密度：不产出 evidence manifest，
+> **当前状态：已完成。** Chat 回答可溯源（`context.references` 下发知识+记忆参考来源，
+> 前端来源卡片）+ 思考过程可见（`reasoning.delta` 流式展示，折叠窗）。切 `ChatDeepSeek`
+> 提取 reasoning_content（ChatOpenAI 官方不提取）。后端 285 passed + 前端 36 passed，
+> 真实 DeepSeek 流含 references + reasoning。沿用 C5 降密度：无 evidence manifest，
 > 完成标志 = 测试通过 + demo。
 
 ## 1. 为什么单独设为 C6
