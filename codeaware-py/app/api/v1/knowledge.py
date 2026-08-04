@@ -29,6 +29,7 @@ FILE_TYPE_UNSUPPORTED = "KNOWLEDGE_FILE_TYPE_UNSUPPORTED"
 FILE_TOO_LARGE = "KNOWLEDGE_FILE_TOO_LARGE"
 FILE_PARSE_FAILED = "KNOWLEDGE_FILE_PARSE_FAILED"
 FILE_CONTENT_TOO_LARGE = "KNOWLEDGE_FILE_CONTENT_TOO_LARGE"
+PDF_NO_TEXT_LAYER = "KNOWLEDGE_PDF_NO_TEXT_LAYER"
 
 
 def _rag_service(db, llm, vr, lr):
@@ -161,7 +162,9 @@ async def upload_file(
             )
             raise BusinessException(FILE_PARSE_FAILED) from exc
         if not text:
-            raise BusinessException(FILE_PARSE_FAILED)
+            raise BusinessException(
+                PDF_NO_TEXT_LAYER if extension == ".pdf" else FILE_PARSE_FAILED
+            )
         if len(text) > settings.knowledge_parsed_max_chars:
             raise BusinessException(FILE_CONTENT_TOO_LARGE)
 

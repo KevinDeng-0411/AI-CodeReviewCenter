@@ -58,23 +58,28 @@ def _serialize(elements) -> str:
 `knowledge.py` 用法、`RagService.upload_document` 签名、全部 `SemanticChunker()` 构造点、
 两个 monkeypatch 契约；而 `Document.content` 列存储侧仍要序列化，收益被抵消。
 
-### 2. PDF 文字版：pypdf 文本层探针 + unstructured fast
+### 2. PDF 文字版：pypdf 文本层探针 + pdfminer 直接布局分析
 
-PDF 从 pypdf 纯文本层升级为 unstructured `strategy="fast"`（pdfminer 布局启发式元素）：
+PDF 从 pypdf 纯文本层升级为 pdfminer 布局分析（按行字号检测标题）。**不走**
+`unstructured.partition.pdf`：它无条件 `import unstructured_inference`（拖 torch /
+torchvision / opencv / onnxruntime 视觉模型栈），违反 C5“不引视觉模型”约束。
+pdfminer.six 是纯 Python，无重依赖，直接用其 `extract_pages` 取 LTTextLine + 字号：
 
 ```python
 def _parse_pdf_sync(self, file_content: bytes) -> str:
     reader = PdfReader(io.BytesIO(file_content))
     if not any((page.extract_text() or "").strip() for page in reader.pages):
         return ""                              # 扫描版 -> 路由层新错误码
-    elements = partition(file=io.BytesIO(file_content),
-                         content_type="application/pdf", strategy="fast")
-    return self._serialize(elements)
+    return self._pdfminer_serialize(file_content)  # pdfminer 按行字号检测标题
 ```
 
-pypdf 保留为**文本层探针**：损坏 PDF -> `PdfReadError` -> `FILE_PARSE_FAILED`（行为不变）；
-合法但无文本层 -> 返回 `""` -> 路由层 `KNOWLEDGE_PDF_NO_TEXT_LAYER`。扫描版零 pdfminer
-成本，且错误语义精确区分“损坏”与“扫描版”。
+`_pdfminer_serialize`：递归遍历 LTTextLine，正文字号 = 众数（平局取较小，标题恒 ≥
+正文），行字号 > 正文 +0.5 且 ≤12 词 -> `# ` 标题。pypdf 保留为**文本层探针**：损坏
+PDF -> `PdfReadError` -> `FILE_PARSE_FAILED`；合法但无文本层 -> `""` ->
+`KNOWLEDGE_PDF_NO_TEXT_LAYER`。扫描版零 pdfminer 成本，错误语义精确区分“损坏”与“扫描版”。
+
+PDF 标题检测是字号启发式（同 unstructured `is_possible_title` 思路但更轻），不如
+DOCX/HTML 的元素分类精确：多栏/表格/页眉页脚可能误判，长标题（>12 词）漏切。记入限制。
 
 ### 3. 扫描版显式拒绝，不引 OCR
 
@@ -84,10 +89,10 @@ pypdf 保留为**文本层探针**：损坏 PDF -> `PdfReadError` -> `FILE_PARSE
 
 ### 4. 依赖最小子集
 
-不安装 `unstructured[pdf]`（带入 `unstructured-inference` + `google-cloud-vision` 视觉
-模型，违反约束）。仅 pin 最小四件套：`pdfminer-six`（fast 提取）、`pi-heif`（pdf.py 顶层
-导入）、`pdf2image`（过 `_PartitionerLoader` importable 检查，fast 路径不调用）、
-`pillow`（pdf.py 顶层导入）。fast 路径不需要系统 poppler。
+不安装 `unstructured[pdf]` 或 `unstructured-inference`（带入 torch / torchvision /
+opencv / onnxruntime 视觉模型栈，违反约束）。PDF 走 pdfminer.six 直接布局分析，只需
+新增一个依赖：`pdfminer-six`（纯 Python，无 torch/poppler）。pi-heif / pdf2image / pillow
+均不需要（它们只服务于 `unstructured.partition.pdf` 的 import 链，C5 不走该路径）。
 
 ## 结果
 

@@ -21,6 +21,7 @@ dependencies = [
     "redis>=5.0",
     "unstructured[docx]>=0.16",
     "pypdf>=6.6.2",
+    "pdfminer-six>=20251230,<20270000",
     "python-multipart>=0.0.20",
     "markdown>=3.5",
     "pathspec>=0.12,<1",
@@ -44,7 +45,7 @@ asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = [".", "scripts"]  # app + scripts/validate_stage_evidence 可在测试中导入
 python_files = ["test_*.py", "*_test.py", "e2e_*.py"]
-addopts = "-m 'not integration and not live_eval'"
+addopts = "-m 'not integration and not live_eval' -p no:langsmith"
 markers = [
     "integration: 真实外部 API(Ollama/DeepSeek)测试，默认跳过；-m integration 单独跑",
     "live_eval: C2 release smoke，调用真实 DeepSeek/Ollama，仅由安全执行器显式运行",
