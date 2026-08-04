@@ -38,6 +38,22 @@ rerank 比 RRF 强在：RRF 是无模型排名融合（只看各腿 rank），re
 - **降级**：reranker 异常 -> 回退 RRF 顺序，记 warning（fail-soft）
 - **评测门禁**：rerank ON 的 MRR@10 >= 0.944（+0.01），且 R@5 不降
 
+## 评估路径（思考过程凝练）
+
+决策不是一步到位，而是经五步推演收敛，记录于此供复盘：
+
+1. **起点纠偏**：初始动机“reranker 提升召回率”被纠正--rerank 改 MRR（排序）不改
+   R@5（召回）。R@5=0.957 已近天花板，目标必须说成 MRR，否则方案悬空。
+2. **原理确认**：cross-encoder 联合编码捕捉 query-doc 交互；bi-encoder（现有 bge-m3）
+   独立编码丢交互。这是“精排比 RRF+向量更准”的唯一技术依据，须能说清。
+3. **方案选型**：Ollama 跑不了 cross-encoder（无 rerank API），排除 Ollama 复用；
+   外部 API 违背本地优先；选 path A 进程内 sentence-transformers。量化成本：
+   eager 加载 2-5s、常驻 ~568MB、15 条 CPU rerank 0.45-0.75s。
+4. **约束冲突浮现**：path A 拉 torch，与 C5“不引视觉模型”拒 torch 形成张力。
+   reranker 的 torch 是必需非无谓，但“C5 拒/C6 装”需额外解释，叙事一致性受损。
+5. **门禁 + 暂缓**：设 MRR+0.01 门禁与 R@5 不降约束；因 torch/延迟/边际收益三重
+   不确定性，当前不实施，留三条重启条件。结论是 Deferred，不是 Rejected。
+
 ## 决策：暂不实施
 
 评估后当前不实施，理由按重要性排序：
@@ -73,3 +89,23 @@ rerank 比 RRF 强在：RRF 是无模型排名融合（只看各腿 rank），re
    且 R@5 不降，再决定是否合入。
 
 在以上条件未满足前，reranker 保持 Deferred。
+
+## 参考资料
+
+- **RRF（一阶段融合，本项目现状）**：Cormack, Clarke, Buettcher. *Reciprocal Rank Fusion
+  outperforms Condorcet and individual rank learning methods.* SIGIR 2009. -- RRF 的原始
+  论文，`1/(k+rank)` 融合的出处。本项目 C4 的 RRF 实现即基于此。
+- **Cross-encoder vs bi-encoder**：Sentence-Transformers 官方文档“Cross-Encoders”章节
+  （sbert.net）。说明 cross-encoder 把 query+doc 拼一起进 Transformer、输出相关性分数，
+  精度高于 bi-encoder 但不能预计算、慢于向量检索--这正是“二阶段”的依据（粗排用
+  bi-encoder 召回、精排用 cross-encoder）。
+- **bge-reranker-v2-m3 模型卡**：HuggingFace `BAAI/bge-reranker-v2-m3`。多语言
+  cross-encoder reranker，与本项目 embedding 用的 bge-m3 同系列，~568MB。
+- **BGE 技术报告**：Xiao et al. *C-Pack: Packaged Resources To Advance General Chinese
+  Embedding.* SIGIR 2024. -- BGE embedding + reranker 系列的设计与评测，bge-m3 与
+  bge-reranker 的能力边界。
+- **BM25 词法腿（C4 上下文）**：ParadeDB pg_search（https://github.com/paradedb/paradedb ），
+  PostgreSQL 的 BM25 扩展，本项目 C4 用其 `@@@` 操作符 + Tantivy 索引做词法召回。
+- **二阶段检索范式**：粗排（召回，bi-encoder/词法）+ 精排（rerank，cross-encoder）是
+  检索系统的标准架构；本项目评估的即“是否在 RRF 粗排后加 cross-encoder 精排”。
+
