@@ -16,6 +16,7 @@ from app.api.v1.knowledge import (
     FILE_PARSE_FAILED,
     FILE_TOO_LARGE,
     FILE_TYPE_UNSUPPORTED,
+    PDF_NO_TEXT_LAYER,
     upload_file,
 )
 from app.core.config import Settings, settings
@@ -109,6 +110,26 @@ async def test_invalid_uploads_return_stable_errors(
     )
     assert response.status_code == 400
     assert response.json() == {"code": 0, "msg": error_code, "data": None}
+    assert await db_session.scalar(select(func.count()).select_from(Document)) == 0
+
+
+async def test_c5_scanned_pdf_rejected_with_no_text_layer_code(
+    client, db_session, upload_overrides
+):
+    """扫描版 PDF（无文本层）-> 400 KNOWLEDGE_PDF_NO_TEXT_LAYER，不留行。"""
+    from pypdf import PdfWriter
+
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+
+    response = await client.post(
+        "/api/knowledge/upload-file",
+        files={"file": ("scan.pdf", buffer.getvalue(), "application/pdf")},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"code": 0, "msg": PDF_NO_TEXT_LAYER, "data": None}
     assert await db_session.scalar(select(func.count()).select_from(Document)) == 0
 
 
