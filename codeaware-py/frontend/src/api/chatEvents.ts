@@ -18,6 +18,8 @@ export const WARNING_COMPONENTS = [
   "rag_retrieval",
   "summary",
   "memory_extraction",
+  "route", // LangGraph 智能路由（ROUTE_DIRECT / ROUTE_DECIDE_FAILED）
+  "rag_graph", // LangGraph 检索图（RAG_NOT_FOUND / RAG_GRAPH_FAILED）
 ] as const;
 export type WarningComponent = (typeof WARNING_COMPONENTS)[number];
 

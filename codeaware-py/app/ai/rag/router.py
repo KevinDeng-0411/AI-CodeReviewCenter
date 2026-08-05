@@ -28,13 +28,17 @@ class RouteRouter:
         - retrieve：问题可能由知识库文档回答（技术/规范/项目资料相关）
         - direct：常识/闲聊/与知识库无关（今天天气、你是谁、谢谢等）
         """
+        # 注意：json_object response_format 要求 prompt 必须出现 "json" 字眼，
+        # 否则 DeepSeek 返回 400（Prompt must contain the word 'json'）。
         prompt = (
             "你是知识库问答系统的路由判断器。判断用户问题是否需要检索项目知识库。\n"
             "规则：\n"
             "1. 技术问题（缓存、架构、编码规范、框架、系统设计）→ retrieve\n"
             "2. 需要参考项目文档或资料的问题 → retrieve\n"
             "3. 常识问答、闲聊、问候、与项目无关的话题（天气、美食、个人信息等）→ direct\n"
-            "4. 不确定时选择 retrieve（宁可多检索，不漏检）\n\n"
+            "4. 不确定时选择 retrieve（宁可多检索，不漏检）\n"
+            "请只输出一个 JSON 对象，格式如下，不要输出任何其他内容：\n"
+            '{"route": "retrieve"} 或 {"route": "direct"}\n\n'
             f"用户问题：{message}"
         )
         try:
