@@ -95,6 +95,24 @@ export interface KnowledgeSearchHit {
   chunk_content: string;
 }
 
+export interface DocumentVO {
+  id: number;
+  title: string;
+  source_type: string;
+  project_name: string | null;
+  status: "ACTIVE" | "DELETED";
+  chunk_count: number;
+  created_at: string;
+  deleted_at: string | null;
+}
+
+export interface DocumentListVO {
+  total: number;
+  page: number;
+  size: number;
+  records: DocumentVO[];
+}
+
 // ---------- Memory ----------
 export interface MemoryHit {
   id: number;

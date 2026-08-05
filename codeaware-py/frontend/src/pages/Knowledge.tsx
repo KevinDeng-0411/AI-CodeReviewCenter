@@ -1,8 +1,16 @@
-// Knowledge - 上传知识文档(文本/文件) + RAG 混合检索(pg_trgm + 向量)
-import { useRef, useState } from "react";
-import { Library, Upload, Search, Trash2, FileUp } from "lucide-react";
+// Knowledge - 上传(文本/文件) + RAG 检索 + 文档管理列表(ADR-0013)
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Library,
+  Upload,
+  Search,
+  Trash2,
+  FileUp,
+  RefreshCw,
+  RotateCcw,
+} from "lucide-react";
 import { knowledge } from "../api/client";
-import type { KnowledgeSearchHit } from "../api/types";
+import type { DocumentVO, KnowledgeSearchHit } from "../api/types";
 import {
   Button,
   EmptyState,
@@ -16,9 +24,13 @@ import {
 } from "../components/ui";
 import PageHeader from "../components/PageHeader";
 
+type Tab = "upload" | "search" | "documents";
+
 export default function KnowledgePage() {
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
+  const replaceFileRef = useRef<HTMLInputElement>(null);
+  const [tab, setTab] = useState<Tab>("upload");
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const showOk = (m: string) => {
     setOkMsg(m);
@@ -33,6 +45,31 @@ export default function KnowledgePage() {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [hits, setHits] = useState<KnowledgeSearchHit[]>([]);
+  // 文档列表
+  const [docStatus, setDocStatus] = useState<"ACTIVE" | "DELETED" | "ALL">("ACTIVE");
+  const [docs, setDocs] = useState<DocumentVO[]>([]);
+  const [docTotal, setDocTotal] = useState(0);
+  const [docPage, setDocPage] = useState(1);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [replacingId, setReplacingId] = useState<number | null>(null);
+
+  const loadDocs = useCallback(async (status: "ACTIVE" | "DELETED" | "ALL" = docStatus, page = docPage) => {
+    setLoadingDocs(true);
+    try {
+      const data = await knowledge.listDocuments({ status, page, size: 10 });
+      setDocs(data.records);
+      setDocTotal(data.total);
+      setDocPage(data.page);
+    } catch (e) {
+      toast.show(e);
+    } finally {
+      setLoadingDocs(false);
+    }
+  }, [docStatus, docPage, toast]);
+
+  useEffect(() => {
+    if (tab === "documents") void loadDocs();
+  }, [tab, loadDocs]);
 
   const upload = async () => {
     if (!title.trim() || !content.trim()) {
@@ -80,116 +117,273 @@ export default function KnowledgePage() {
     try {
       await knowledge.remove(docId);
       setHits((h) => h.filter((x) => x.document_id !== docId));
+      await loadDocs();
     } catch (e) {
       toast.show(e);
     }
   };
 
+  const replaceDoc = async (docId: number, file: File) => {
+    setReplacingId(docId);
+    try {
+      await knowledge.replace(docId, file, project);
+      showOk(`已更新文档 #${docId}`);
+      await loadDocs();
+    } catch (e) {
+      toast.show(e);
+    } finally {
+      setReplacingId(null);
+    }
+  };
+
+  const switchStatus = (status: "ACTIVE" | "DELETED" | "ALL") => {
+    setDocStatus(status);
+    setDocPage(1);
+    void loadDocs(status, 1);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(docTotal / 10));
+
   return (
     <div className="flex h-full">
       <ToastBar err={toast.err} onClose={toast.clear} />
-      {/* 上传面板 */}
-      <div className="w-80 shrink-0 border-r border-line bg-panel p-4 overflow-y-auto">
-        <PageHeader icon={Library} title="KNOWLEDGE" sub="RAG · pg_trgm + 向量" />
-        <div className="space-y-3 mt-4">
-          <Field label="标题">
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Redis 缓存最佳实践" />
-          </Field>
-          <Field label="项目">
-            <Input value={project} onChange={(e) => setProject(e.target.value)} />
-          </Field>
-          <Field label="文档内容" hint="Markdown 可用">
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={10}
-              placeholder={"## 缓存击穿\n热点 Key 失效方案…"}
-            />
-          </Field>
-          <Button onClick={upload} loading={uploading} className="w-full justify-center">
-            <Upload className="w-4 h-4" /> 上传文本
-          </Button>
-          {okMsg && (
-            <div className="flex justify-center">
-              <SuccessTick>{okMsg}</SuccessTick>
+      {/* 左侧导航 + 上传面板 */}
+      <div className="w-80 shrink-0 border-r border-line bg-panel flex flex-col">
+        <div className="p-4 pb-0">
+          <PageHeader icon={Library} title="KNOWLEDGE" sub="RAG · BM25 + 向量" />
+        </div>
+        {/* Tab 切换 */}
+        <div className="px-4 py-3 flex gap-1">
+          {(
+            [
+              ["upload", "上传"],
+              ["search", "检索"],
+              ["documents", "文档列表"],
+            ] as [Tab, string][]
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`flex-1 px-2 py-1.5 rounded font-mono text-2xs uppercase tracking-techy transition-colors ${
+                tab === id ? "bg-oxblood text-paper" : "text-mute hover:bg-graph"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 p-4 pt-2 overflow-y-auto">
+          {tab === "upload" && (
+            <div className="space-y-3">
+              <Field label="标题">
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Redis 缓存最佳实践" />
+              </Field>
+              <Field label="项目">
+                <Input value={project} onChange={(e) => setProject(e.target.value)} />
+              </Field>
+              <Field label="文档内容" hint="Markdown 可用">
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={10}
+                  placeholder={"## 缓存击穿\n热点 Key 失效方案…"}
+                />
+              </Field>
+              <Button onClick={upload} loading={uploading} className="w-full justify-center">
+                <Upload className="w-4 h-4" /> 上传文本
+              </Button>
+              {okMsg && (
+                <div className="flex justify-center">
+                  <SuccessTick>{okMsg}</SuccessTick>
+                </div>
+              )}
+              <div className="my-2 border-t border-line" />
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.docx,.html,.htm,.md,.markdown,.txt"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])}
+              />
+              <Button variant="ghost" onClick={() => fileRef.current?.click()} className="w-full justify-center">
+                <FileUp className="w-4 h-4" /> 上传文件 (PDF/DOCX/HTML/MD/TXT)
+              </Button>
             </div>
           )}
-          <div className="relative">
-            <div className="my-2 border-t border-line" />
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".pdf,.docx,.html,.htm,.md,.markdown,.txt"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])}
-            />
-            <Button variant="ghost" onClick={() => fileRef.current?.click()} className="w-full justify-center">
-              <FileUp className="w-4 h-4" /> 上传文件 (PDF/DOCX/HTML/MD/TXT · 最大 5 MiB)
-            </Button>
-          </div>
+          {tab === "documents" && (
+            <div className="space-y-2">
+              {/* 状态过滤 */}
+              <div className="flex gap-1">
+                {(["ACTIVE", "ALL", "DELETED"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => switchStatus(s)}
+                    className={`px-2 py-1 rounded font-mono text-2xs tracking-techy transition-colors ${
+                      docStatus === s ? "bg-oxblood text-paper" : "text-mute hover:bg-graph"
+                    }`}
+                  >
+                    {s === "ACTIVE" ? "正常" : s === "DELETED" ? "已删除" : "全部"}
+                  </button>
+                ))}
+                <button
+                  onClick={() => loadDocs()}
+                  className="ml-auto px-2 py-1 rounded text-mute hover:text-ink"
+                  title="刷新"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <p className="font-mono text-2xs text-mute tracking-techy">共 {docTotal} 篇文档</p>
+              {loadingDocs ? (
+                <p className="font-mono text-2xs text-mute animate-blink">LOADING…</p>
+              ) : docs.length === 0 ? (
+                <EmptyState icon={<Library className="w-8 h-8" />} title="暂无文档" hint="上传知识文档后在此查看" />
+              ) : (
+                <div className="space-y-2">
+                  {docs.map((d) => (
+                    <div key={d.id} className="bg-paper border border-line rounded p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-ink truncate flex-1">{d.title}</span>
+                        <span
+                          className={`font-mono text-2xs px-1.5 py-0.5 rounded border shrink-0 ${
+                            d.status === "ACTIVE"
+                              ? "bg-teal/10 text-teal border-teal/30"
+                              : "bg-oxblood/10 text-oxblood border-oxblood/30"
+                          }`}
+                        >
+                          {d.status === "ACTIVE" ? "正常" : "已删除"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5 font-mono text-2xs text-mute">
+                        <span>DOC #{d.id}</span>
+                        <span>{d.chunk_count} 分块</span>
+                        <span>{d.source_type}</span>
+                        <span className="truncate">{d.created_at?.slice(0, 10)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {d.status === "ACTIVE" && (
+                          <>
+                            <input
+                              ref={replaceFileRef}
+                              type="file"
+                              accept=".pdf,.docx,.html,.htm,.md,.markdown,.txt"
+                              className="hidden"
+                              onChange={(e) => e.target.files?.[0] && replaceDoc(d.id, e.target.files[0])}
+                            />
+                            <button
+                              onClick={() => replaceFileRef.current?.click()}
+                              disabled={replacingId === d.id}
+                              className="inline-flex items-center gap-1 text-2xs text-mute hover:text-ink disabled:opacity-40"
+                              title="用新文件更新该文档（删旧分块 + 重新上传）"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              {replacingId === d.id ? "更新中…" : "更新"}
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`确定删除「${d.title}」？将移除该文档的所有分块。`)) void remove(d.id);
+                          }}
+                          className="inline-flex items-center gap-1 text-2xs text-mute hover:text-oxblood ml-auto"
+                          title="删除（软删，可从已删除列表查看）"
+                        >
+                          <Trash2 className="w-3 h-3" /> 删除
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {/* 分页 */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 pt-2">
+                      <button
+                        onClick={() => void loadDocs(docStatus, Math.max(1, docPage - 1))}
+                        disabled={docPage <= 1}
+                        className="px-2 py-1 text-2xs text-mute hover:text-ink disabled:opacity-40"
+                      >
+                        ‹
+                      </button>
+                      <span className="font-mono text-2xs text-mute">
+                        {docPage} / {totalPages}
+                      </span>
+                      <button
+                        onClick={() => void loadDocs(docStatus, Math.min(totalPages, docPage + 1))}
+                        disabled={docPage >= totalPages}
+                        className="px-2 py-1 text-2xs text-mute hover:text-ink disabled:opacity-40"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 检索区 */}
-      <div className="flex-1 overflow-y-auto p-5">
-        <div className="max-w-4xl">
-          <div className="flex gap-2 mb-5">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && search()}
-              placeholder="检索知识库，如「缓存击穿如何解决」"
-            />
-            <Button onClick={search} loading={searching}>
-              <Search className="w-4 h-4" /> 检索
-            </Button>
-          </div>
+      {/* 检索区（tab=search 时显示） */}
+      {tab === "search" && (
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="max-w-4xl">
+            <div className="flex gap-2 mb-5">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && search()}
+                placeholder="检索知识库，如「缓存击穿如何解决」"
+              />
+              <Button onClick={search} loading={searching}>
+                <Search className="w-4 h-4" /> 检索
+              </Button>
+            </div>
 
-          {hits.length === 0 && !searching ? (
-            <EmptyState
-              icon={<Library className="w-10 h-10" />}
-              title="知识库检索"
-              hint="上传文档后输入查询，混合检索（关键词 pg_trgm + 向量语义）返回相关分块。"
-            />
-          ) : searching ? (
-            <p className="font-mono text-2xs text-mute tracking-techy animate-blink">SEARCHING…</p>
-          ) : (
-            <div className="space-y-3">
-              <p className="font-mono text-2xs uppercase tracking-techy text-mute">
-                {hits.length} 条命中 · RRF 融合
-              </p>
-              {hits.map((h, i) => (
-                <div key={i} className="bg-panel border border-line rounded p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="tag">{h.match_type}</span>
-                      <span className="font-mono text-2xs text-mute tracking-techy">
-                        DOC #{h.document_id}
+            {hits.length === 0 && !searching ? (
+              <EmptyState
+                icon={<Library className="w-10 h-10" />}
+                title="知识库检索"
+                hint="上传文档后输入查询，混合检索（BM25 词法 + 向量语义）返回相关分块。"
+              />
+            ) : searching ? (
+              <p className="font-mono text-2xs text-mute tracking-techy animate-blink">SEARCHING…</p>
+            ) : (
+              <div className="space-y-3">
+                <p className="font-mono text-2xs uppercase tracking-techy text-mute">
+                  {hits.length} 条命中 · RRF 融合
+                </p>
+                {hits.map((h, i) => (
+                  <div key={i} className="bg-panel border border-line rounded p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="tag">{h.match_type}</span>
+                        <span className="font-mono text-2xs text-mute tracking-techy">
+                          DOC #{h.document_id}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => remove(h.document_id)}
+                        className="text-mute hover:text-oxblood"
+                        title="删除该文档"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Meter value={h.score} max={1} />
+                      <span className="font-mono text-2xs text-mute w-10 text-right">
+                        {h.score.toFixed(3)}
                       </span>
                     </div>
-                    <button
-                      onClick={() => remove(h.document_id)}
-                      className="text-mute hover:text-oxblood"
-                      title="删除该文档"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <p className="font-mono text-2xs text-ink whitespace-pre-wrap leading-relaxed">
+                      {h.chunk_content}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Meter value={h.score} max={1} />
-                    <span className="font-mono text-2xs text-mute w-10 text-right">
-                      {h.score.toFixed(3)}
-                    </span>
-                  </div>
-                  <p className="font-mono text-2xs text-ink whitespace-pre-wrap leading-relaxed">
-                    {h.chunk_content}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import type {
   ChatResponseVO,
   CodeReviewVO,
   ConversationItem,
+  DocumentListVO,
   Envelope,
   KnowledgeSearchHit,
   MemoryHit,
@@ -171,6 +172,30 @@ export const knowledge = {
       body: JSON.stringify({ query: p.query, top_k: p.top_k ?? 5 }),
     }),
   remove: (id: number) => call<null>(`/api/knowledge/${id}`, { method: "DELETE" }),
+  listDocuments: (params: { status?: string; page?: number; size?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set("status", params.status);
+    if (params.page) qs.set("page", String(params.page));
+    if (params.size) qs.set("size", String(params.size));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return call<DocumentListVO>(`/api/knowledge/documents${suffix}`);
+  },
+  replace: async (docId: number, file: File, project_name?: string) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    if (project_name) fd.append("project_name", project_name);
+    const token = getToken();
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const res = await fetch(`${BASE}/api/knowledge/${docId}/replace`, { method: "POST", body: fd, headers });
+    if (res.status === 401) {
+      onAuthFailure();
+      throw new ApiError("AUTH_TOKEN_REQUIRED");
+    }
+    if (!res.ok) throw new ApiError(await readApiErrorMessage(res));
+    const body = (await res.json()) as Envelope<{ id: number; title: string }>;
+    if (body.code !== 1) throw new ApiError(body.msg);
+    return body.data;
+  },
 };
 
 // ---------- Memory ----------

@@ -207,3 +207,67 @@ describe("memory client", () => {
     );
   });
 });
+
+describe("knowledge.listDocuments", () => {
+  it("拼接 status/page/size 查询参数", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        code: 1,
+        msg: "success",
+        data: {
+          total: 2,
+          page: 1,
+          size: 10,
+          records: [
+            {
+              id: 1,
+              title: "文档一",
+              source_type: "MANUAL",
+              project_name: "demo",
+              status: "ACTIVE",
+              chunk_count: 3,
+              created_at: "2026-08-05T00:00:00",
+              deleted_at: null,
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const data = await knowledge.listDocuments({ status: "DELETED", page: 2, size: 10 });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/knowledge/documents?status=DELETED&page=2&size=10",
+    );
+    expect(data.total).toBe(2);
+    expect(data.records[0].status).toBe("ACTIVE");
+  });
+
+  it("无参数时不拼接查询字符串", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ code: 1, msg: "success", data: { total: 0, page: 1, size: 20, records: [] } }),
+    } as Response);
+
+    await knowledge.listDocuments();
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/knowledge/documents");
+  });
+});
+
+describe("knowledge.replace", () => {
+  it("POST FormData 到 /replace 并携带 Authorization", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ code: 1, msg: "success", data: { id: 9, title: "新.md" } }),
+    } as Response);
+
+    const file = new File(["# new"], "new.md", { type: "text/markdown" });
+    await knowledge.replace(5, file, "demo");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/knowledge/5/replace");
+    expect(fetchMock.mock.calls[0][1]?.method).toBe("POST");
+    expect(fetchMock.mock.calls[0][1]?.body).toBeInstanceOf(FormData);
+  });
+});
