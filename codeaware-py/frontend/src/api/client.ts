@@ -1,4 +1,5 @@
 // API client - 解包统一响应包络，失败抛 ApiError；SSE 流式单独处理
+import { getToken, onAuthFailure } from "./auth";
 import type {
   AiReadmeCapability,
   AiReadmeVO,
@@ -58,10 +59,14 @@ export async function readApiErrorMessage(response: ErrorResponseLike): Promise<
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
+  const token = getToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}${path}`, { headers, ...init });
+  if (res.status === 401) {
+    onAuthFailure();
+    throw new ApiError("AUTH_TOKEN_REQUIRED");
+  }
   let body: Envelope<T>;
   try {
     body = (await res.json()) as Envelope<T>;
@@ -118,12 +123,19 @@ export async function chatStream(
   handlers: ChatStreamHandlers,
   signal?: AbortSignal,
 ): Promise<ChatStreamOutcome> {
+  const token = getToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${BASE}/api/chat/send/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(p),
     signal,
   });
+  if (res.status === 401) {
+    onAuthFailure();
+    throw new ApiError("AUTH_TOKEN_REQUIRED");
+  }
   if (!res.ok) throw new ApiError(await readApiErrorMessage(res));
   if (!res.body) throw new ApiError(`HTTP ${res.status}: 响应流为空`);
   return consumeChatStream(res.body, handlers, signal);
@@ -140,7 +152,14 @@ export const knowledge = {
     const fd = new FormData();
     fd.append("file", file);
     if (project_name) fd.append("project_name", project_name);
-    const res = await fetch(`${BASE}/api/knowledge/upload-file`, { method: "POST", body: fd });
+    const token = getToken();
+    // 无 token 时不设 headers（让浏览器自动设 multipart Content-Type+boundary）
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const res = await fetch(`${BASE}/api/knowledge/upload-file`, { method: "POST", body: fd, headers });
+    if (res.status === 401) {
+      onAuthFailure();
+      throw new ApiError("AUTH_TOKEN_REQUIRED");
+    }
     if (!res.ok) throw new ApiError(await readApiErrorMessage(res));
     const body = (await res.json()) as Envelope<{ id: number; title: string }>;
     if (body.code !== 1) throw new ApiError(body.msg);

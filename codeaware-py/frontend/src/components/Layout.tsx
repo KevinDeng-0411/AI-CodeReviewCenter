@@ -9,7 +9,9 @@ import {
   ScanSearch,
   Settings2,
   Activity,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "../store/auth";
 
 export type PageId =
   | "chat"
@@ -40,6 +42,8 @@ export default function Layout({
   children: ReactNode;
 }) {
   const [up, setUp] = useState<boolean | null>(null);
+  const user = useAuth((s) => s.user);
+  const logout = useAuth((s) => s.logout);
   useEffect(() => {
     let alive = true;
     const poll = async () => {
@@ -108,14 +112,28 @@ export default function Layout({
           })}
         </nav>
 
-        {/* 健康指示 */}
+        {/* 健康指示 + 用户 */}
         <div className="px-4 py-3 border-t border-paper/10 flex items-center gap-2">
           <Activity
             className={`w-3.5 h-3.5 ${up ? "text-teal" : up === false ? "text-oxblood-soft" : "text-paper/40"}`}
           />
-          <span className="font-mono text-2xs tracking-techy text-paper/50">
+          <span className="font-mono text-2xs tracking-techy text-paper/50 flex-1">
             {up ? "API · ONLINE" : up === false ? "API · OFFLINE" : "API · …"}
           </span>
+          {user && (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-2xs text-paper/60 truncate max-w-[80px]">
+                {user.display_name || user.username}
+              </span>
+              <button
+                onClick={logout}
+                title="退出登录"
+                className="text-paper/40 hover:text-oxblood-soft transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
