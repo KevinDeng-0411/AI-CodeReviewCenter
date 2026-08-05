@@ -1,0 +1,487 @@
+{
+  "route_accuracy": {
+    "mean": 0.914,
+    "correct": 32,
+    "total": 35
+  },
+  "retry_stats": {
+    "n": 32,
+    "retry_triggered": 29,
+    "retry_rate": 0.906,
+    "avg_retries": 1.812,
+    "direct_predictions": 0
+  },
+  "route_rows": [
+    {
+      "query": "缓存击穿如何解决",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "缓存穿透方案",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "缓存雪崩",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "查询重写",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "向量内联存储",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "摘要生成",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "记忆抽取",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "版本化模板",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "how to do hybrid retrieval",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "FastAPI async architecture",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "SQLAlchemy models",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "DeepSeek thinking mode",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "typed SSE protocol",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "safe test runner",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "project snapshot for AIReadMe",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "HybridRetriever",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "summary_message_count",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "conversation_id",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "chat.started",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "assert_safe_targets",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "save_and_activate",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "extract_facts_text",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "knowledge_chunks",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "热点Key失效怎么办",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "布隆过滤器拦截",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "过期时间随机化",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "两级记忆整合",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "流式逐token推送",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "一次性测试环境隔离",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "文档分块检索",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "今天天气怎么样",
+      "category": "negative",
+      "expected": "direct",
+      "predicted": "retrieve",
+      "correct": false
+    },
+    {
+      "query": "如何做红烧肉",
+      "category": "negative",
+      "expected": "direct",
+      "predicted": "retrieve",
+      "correct": false
+    },
+    {
+      "query": "Python GIL 问题",
+      "category": "negative",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "Kubernetes pod 调度",
+      "category": "negative",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "股票投资策略",
+      "category": "negative",
+      "expected": "direct",
+      "predicted": "retrieve",
+      "correct": false
+    }
+  ],
+  "retry_rows": [
+    {
+      "query": "缓存击穿如何解决",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "缓存穿透方案",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "缓存雪崩",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "查询重写",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "向量内联存储",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "摘要生成",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "记忆抽取",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "版本化模板",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "how to do hybrid retrieval",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "FastAPI async architecture",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "SQLAlchemy models",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "DeepSeek thinking mode",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "typed SSE protocol",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "safe test runner",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "project snapshot for AIReadMe",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "HybridRetriever",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "summary_message_count",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "conversation_id",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "chat.started",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "assert_safe_targets",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "save_and_activate",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "extract_facts_text",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "knowledge_chunks",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "热点Key失效怎么办",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "布隆过滤器拦截",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "过期时间随机化",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "两级记忆整合",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "流式逐token推送",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "一次性测试环境隔离",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "文档分块检索",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "Python GIL 问题",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "Kubernetes pod 调度",
+      "retries": 2,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    }
+  ]
+}

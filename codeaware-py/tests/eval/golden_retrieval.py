@@ -23,6 +23,20 @@ class GoldenCase:
     query: str
     expected_doc_ids: list[int]  # 相关文档 id（ Recall@5/MRR 判定用）
     category: str  # chinese_exact / english_natural / rare_identifier / semantic_paraphrase / negative
+    expected_route: str | None = None  # 显式标注 retrieve/direct；None 由 category 推断
+
+    @property
+    def route_expected(self) -> str:
+        """LangGraph 智能路由（ADR-0015）的预期 route。
+
+        - 非 negative：应检索（retrieve）
+        - negative：常识/无关 -> direct；技术问题（Python GIL/K8s）即使库中没有也应检索
+        """
+        if self.expected_route:
+            return self.expected_route
+        if self.category == "negative":
+            return "retrieve" if self.query in ("Python GIL 问题", "Kubernetes pod 调度") else "direct"
+        return "retrieve"
 
 
 # ---------- Fixture 文档（15 篇，覆盖技术领域 + 代码标识符）----------
