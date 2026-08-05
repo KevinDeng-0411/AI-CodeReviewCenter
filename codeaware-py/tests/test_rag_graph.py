@@ -1,0 +1,158 @@
+"""LangGraph 检索增强测试：router / evaluator / graph 集成（mock，无需真实 API）。"""
+
+import pytest
+
+from app.ai.rag.evaluator import RetrievalEvaluator
+from app.ai.rag.rag_graph import RagGraph
+from app.ai.rag.router import RouteRouter
+
+
+class _FakeChunk:
+    def __init__(self, doc_id, content):
+        self.id = doc_id  # ScoredChunk 检索去重用
+        self.document_id = doc_id
+        self.chunk_content = content
+
+
+class _Scored:
+    def __init__(self, score, chunk=None, match_type="vector"):
+        self.score = score
+        self.match_type = match_type
+        self.chunk = chunk or _FakeChunk(1, "test content")
+
+
+# ---------- Evaluator 单测 ----------
+
+async def test_evaluator_clear_result_is_satisfied():
+    ev = RetrievalEvaluator()
+    assert await ev.evaluate([_Scored(0.5), _Scored(0.1), _Scored(0.09)]) is True
+
+
+async def test_evaluator_tiny_score_gap_is_unsatisfied():
+    """最高分与次高分差距极小 -> 检索模糊 -> 不满意（触发重写）。"""
+    ev = RetrievalEvaluator()
+    assert await ev.evaluate([_Scored(0.1), _Scored(0.095), _Scored(0.09)]) is False
+
+
+async def test_evaluator_low_recall_is_unsatisfied():
+    ev = RetrievalEvaluator()
+    assert await ev.evaluate([_Scored(0.3), _Scored(0.2)]) is False
+
+
+# ---------- Router 单测 ----------
+
+class _FakeRouteLLM:
+    def __init__(self, route):
+        self._route = route
+
+    def with_structured_output(self, schema, **kw):
+        owner = self
+
+        class _Structured:
+            async def ainvoke(self, prompt):
+                import json
+
+                return schema.model_validate_json(json.dumps({"route": owner._route}))
+
+        return _Structured()
+
+
+async def test_router_decides_retrieve_and_direct():
+    router = RouteRouter(_FakeRouteLLM("retrieve"))
+    assert await router.decide("缓存击穿如何解决") == "retrieve"
+    router2 = RouteRouter(_FakeRouteLLM("direct"))
+    assert await router2.decide("今天天气怎么样") == "direct"
+
+
+async def test_router_degrades_to_retrieve_on_failure():
+    class _BrokenLLM:
+        def with_structured_output(self, schema, **kw):
+            class _S:
+                async def ainvoke(self, prompt):
+                    raise RuntimeError("llm down")
+
+            return _S()
+
+    router = RouteRouter(_BrokenLLM())
+    # 宁可多检索不漏：失败降级 retrieve
+    assert await router.decide("任何问题") == "retrieve"
+
+
+# ---------- RagGraph 集成（mock） ----------
+
+class _FakeSearchEngine:
+    """可编排检索结果的 fake：按查询次数返回不同结果。"""
+
+    def __init__(self):
+        self.attempts = 0
+        self.router_route = "retrieve"
+
+    async def search(self, query):
+        self.attempts += 1
+        if self.attempts == 1:
+            return [_Scored(0.1), _Scored(0.095), _Scored(0.09)]  # 模糊 -> 重试
+        return [_Scored(0.5), _Scored(0.1), _Scored(0.09)]  # 清晰
+
+
+class _FakeRewriteLLM:
+    async def ainvoke(self, prompt):
+        class _R:
+            content = '["缓存 击穿 解决方案 布隆过滤器"]'
+        return _R()
+
+
+def _make_graph(engine):
+    from app.ai.rag.query_rewriter import QueryRewriter
+
+    class _FakeVR:
+        async def embed(self, text):
+            return [0.0] * 16
+
+    class _FakeRetriever:
+        async def search_by_vector(self, text, vector, top_k=10):
+            return await engine.search(text)
+
+    class _FakeSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def execute(self, *a, **kw):
+            class _R:
+                def all(self):
+                    return []
+            return _R()
+
+    def session_factory():
+        return _FakeSession()
+
+    # router 用 _FakeRouteLLM（控制 route）；rewriter 用 _FakeRewriteLLM（JSON 数组）
+    return RagGraph(
+        chat_model=_FakeRouteLLM(engine.router_route),
+        vector_recall=_FakeVR(),
+        lexical_recall=None,
+        query_rewriter=QueryRewriter(_FakeRewriteLLM()),
+        session_factory=session_factory,
+        retriever_factory=lambda _s: _FakeRetriever(),
+    )
+
+
+async def test_graph_retries_on_unsatisfied_then_satisfies():
+    engine = _FakeSearchEngine()
+    graph = _make_graph(engine)
+    result = await graph.run("缓存击穿")
+    assert result.retries == 1  # 第一次模糊 -> 重试 1 次
+    assert result.route == "retrieve"
+    assert not result.direct
+    assert result.docs  # 重试后命中
+
+
+async def test_graph_direct_path_skips_retrieval():
+    engine = _FakeSearchEngine()
+    engine.router_route = "direct"
+    graph = _make_graph(engine)
+    result = await graph.run("今天天气怎么样")
+    assert result.direct is True
+    assert result.context == ""

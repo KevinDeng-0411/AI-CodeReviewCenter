@@ -575,33 +575,57 @@ class TurnCoordinator:
             rag_ctx = ""
             knowledge_refs: list[dict] = []
             try:
-                # prepare_search 完成 QueryRewriter 和全部 embedding；此 session 从未执行 SQL。
-                async with AsyncSessionLocal() as s:
-                    _, _, rag, _ = self._managers(s)
-                    prepared_queries = await rag.prepare_search(message)
-                # search_prepared 只执行 SQL，多 query 间不再发生外部 await。
-                async with AsyncSessionLocal() as s:
-                    _, _, rag, _ = self._managers(s)
-                    docs = await rag.search_prepared(prepared_queries, top_k=5)
-                    rag_ctx = rag.format_context(docs)
-                    if docs:
-                        doc_ids = {r.chunk.document_id for r in docs}
-                        titles = dict(
-                            (await s.execute(
-                                select(Document.id, Document.title)
-                                .where(Document.id.in_(doc_ids))
-                            )).all()
+                from app.core.config import settings
+
+                if settings.rag_runtime == "graph":
+                    # LangGraph 检索增强：智能路由 + 自我纠错（ADR-0015）
+                    from app.ai.rag.rag_graph import RagGraph
+
+                    graph = RagGraph(
+                        chat_model=self.chat_model,
+                        vector_recall=self.vector_recall,
+                        lexical_recall=self.lexical_recall,
+                        query_rewriter=self.query_rewriter,
+                        chunker=self.chunker,
+                        session_factory=AsyncSessionLocal,
+                    )
+                    result = await graph.run(message)
+                    rag_ctx = result.context
+                    knowledge_refs = result.refs
+                    for component, code, msg in result.warnings:
+                        warnings.append(
+                            self._context_warning(cid, component, code, msg)
                         )
-                        knowledge_refs = [
-                            {
-                                "document_id": r.chunk.document_id,
-                                "title": titles.get(r.chunk.document_id, "未知文档"),
-                                "snippet": r.chunk.chunk_content[:100],
-                                "match_type": r.match_type,
-                                "score": round(float(r.score), 4),
-                            }
-                            for r in docs
-                        ]
+                    # direct 路径：跳过检索，不加 RAG 上下文
+                    if result.direct:
+                        rag_ctx = ""
+                else:
+                    # service 路径（回退）：prepare_search + search_prepared
+                    async with AsyncSessionLocal() as s:
+                        _, _, rag, _ = self._managers(s)
+                        prepared_queries = await rag.prepare_search(message)
+                    async with AsyncSessionLocal() as s:
+                        _, _, rag, _ = self._managers(s)
+                        docs = await rag.search_prepared(prepared_queries, top_k=5)
+                        rag_ctx = rag.format_context(docs)
+                        if docs:
+                            doc_ids = {r.chunk.document_id for r in docs}
+                            titles = dict(
+                                (await s.execute(
+                                    select(Document.id, Document.title)
+                                    .where(Document.id.in_(doc_ids))
+                                )).all()
+                            )
+                            knowledge_refs = [
+                                {
+                                    "document_id": r.chunk.document_id,
+                                    "title": titles.get(r.chunk.document_id, "未知文档"),
+                                    "snippet": r.chunk.chunk_content[:100],
+                                    "match_type": r.match_type,
+                                    "score": round(float(r.score), 4),
+                                }
+                                for r in docs
+                            ]
             except Exception:
                 warnings.append(
                     self._context_warning(

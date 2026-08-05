@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # RAG 词法检索后端（C4-B：pg_trgm 回退 / bm25 ParadeDB pg_search 默认目标）
     rag_lexical_backend: str = "pg_trgm"  # C4-D 通过后切 "bm25"
 
+    # RAG 运行时（LangGraph 检索增强）：graph=智能路由+自我纠错 / service=原路径回退
+    rag_runtime: str = "graph"  # 出问题改 "service" 一键回退
+
     # 认证（团队化升级阶段 A：JWT access token，实验室内部使用）
     jwt_secret_key: str = ""  # 启动时校验非空（fail-closed）；测试由 fixture 注入
     jwt_algorithm: str = "HS256"

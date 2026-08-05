@@ -13,6 +13,9 @@ import os
 os.environ.setdefault("CODEAWARE_TESTING", "1")
 # 团队化升级阶段 A：测试用 JWT 密钥（必须在 settings 导入前设置）
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-testing-only")
+# LangGraph 检索增强（ADR-0015）：现有测试走 service 路径（fake LLM 无 with_structured_output）；
+# graph 路径由 test_rag_graph.py(mock) + live_eval 单独验证。
+os.environ.setdefault("RAG_RUNTIME", "service")
 
 import httpx
 import pytest
