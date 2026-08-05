@@ -22,6 +22,8 @@ class KnowledgeChunk(Base):
     )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_content: Mapped[str] = mapped_column(Text, nullable=False)
+    # jieba 分词列（C4 中文优化：default tokenizer 不拆中文，应用层分词后空格连接）
+    chunk_content_segmented: Mapped[str | None] = mapped_column(Text, nullable=True)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
