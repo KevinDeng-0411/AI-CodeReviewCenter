@@ -1,0 +1,31 @@
+# CodeAware Caddy 反代配置
+# 部署到云服务器后覆盖 /etc/caddy/Caddyfile
+#
+# 使用前修改：
+#   1. 把 codeaware.example.com 替换为你的域名
+#   2. 如果没有域名，用 :80 { ... } 代替第一行（仅 HTTP，无 HTTPS）
+#   3. systemctl restart caddy
+
+# ---- 有域名（推荐）----
+codeaware.example.com {
+    # 前端 + API 都走同一个反代
+    reverse_proxy 127.0.0.1:8000
+
+    # 日志
+    log {
+        output file /var/log/caddy/codeaware.log
+    }
+
+    # SSE 长连接支持
+    @sse {
+        path /api/chat/send/stream
+    }
+    reverse_proxy @sse 127.0.0.1:8000 {
+        flush_interval -1
+    }
+}
+
+# ---- 无域名（临时方案，仅 HTTP）----
+# :80 {
+#     reverse_proxy 127.0.0.1:8000
+# }
