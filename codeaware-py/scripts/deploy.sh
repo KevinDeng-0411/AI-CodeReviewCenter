@@ -27,8 +27,14 @@ err()  { echo -e "${RED}[deploy]${NC} $1"; }
 
 # ---- 1. 启动基础服务（PG + Redis + Ollama）----
 start_services() {
-    say "启动基础服务（PG + Redis + Ollama）..."
+    say "构建/启动基础服务（PG + Redis + Ollama）..."
     cd "$REPO_ROOT"
+    # 首次部署或架构变更时 rebuild pgvector+pg_search 镜像（约 2 分钟）
+    if [ ! -f .docker-pg-built ]; then
+        say "首次构建 pgvector+pg_search 镜像（约 2 分钟）..."
+        docker compose build postgres
+        touch .docker-pg-built
+    fi
     docker compose up -d
 
     # 等待健康检查通过
