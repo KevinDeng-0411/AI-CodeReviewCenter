@@ -9,6 +9,7 @@
 
 | 优化项 | 状态 | 决策记录 | 说明 |
 |---|---|---|---|
+| 生成层评估（RAGAS） | ✅ 已完成 | [ragas-eval.md](ragas-eval.md) | Faithfulness 0.939 / Relevancy 0.812 |
 | 分块策略（chunk_by_title） | ✅ 已实施 | [chunking-strategy.md](chunking-strategy.md) / [ADR-0008](../decisions/adr/0008-document-parsing-element-aware-serialization.md) | 标题切分 + 段落边界 + 500字兜底 |
 | BM25 词法检索 (C4) | ✅ 已实施 | [04 卡](../roadmap/current-release/04-BM25检索增强.md) | pg_trgm → ParadeDB BM25 |
 | 元素感知分块 (C5) | ✅ 已实施 | [ADR-0008](../decisions/adr/0008-document-parsing-element-aware-serialization.md) | DOCX/HTML/PDF 标题穿到分块层 |

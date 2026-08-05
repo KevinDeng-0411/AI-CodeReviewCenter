@@ -1,0 +1,188 @@
+{
+  "n": 35,
+  "faithfulness": {
+    "mean": 0.939,
+    "n": 31
+  },
+  "answer_relevancy": {
+    "mean": 0.812,
+    "n": 35
+  },
+  "rows": [
+    {
+      "query": "缓存击穿如何解决",
+      "faithfulness": null,
+      "answer_relevancy": 0.988
+    },
+    {
+      "query": "缓存穿透方案",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.894
+    },
+    {
+      "query": "缓存雪崩",
+      "faithfulness": 0.75,
+      "answer_relevancy": 0.908
+    },
+    {
+      "query": "查询重写",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.647
+    },
+    {
+      "query": "向量内联存储",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.921
+    },
+    {
+      "query": "摘要生成",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.889
+    },
+    {
+      "query": "记忆抽取",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.804
+    },
+    {
+      "query": "版本化模板",
+      "faithfulness": 0.75,
+      "answer_relevancy": 0.909
+    },
+    {
+      "query": "how to do hybrid retrieval",
+      "faithfulness": null,
+      "answer_relevancy": 0.838
+    },
+    {
+      "query": "FastAPI async architecture",
+      "faithfulness": 0.8,
+      "answer_relevancy": 0.797
+    },
+    {
+      "query": "SQLAlchemy models",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.807
+    },
+    {
+      "query": "DeepSeek thinking mode",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.495
+    },
+    {
+      "query": "typed SSE protocol",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.918
+    },
+    {
+      "query": "safe test runner",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.907
+    },
+    {
+      "query": "project snapshot for AIReadMe",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.929
+    },
+    {
+      "query": "HybridRetriever",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.698
+    },
+    {
+      "query": "summary_message_count",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.874
+    },
+    {
+      "query": "conversation_id",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.829
+    },
+    {
+      "query": "chat.started",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.892
+    },
+    {
+      "query": "assert_safe_targets",
+      "faithfulness": 0.8,
+      "answer_relevancy": 0.849
+    },
+    {
+      "query": "save_and_activate",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.86
+    },
+    {
+      "query": "extract_facts_text",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.837
+    },
+    {
+      "query": "knowledge_chunks",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.756
+    },
+    {
+      "query": "热点Key失效怎么办",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.845
+    },
+    {
+      "query": "布隆过滤器拦截",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.764
+    },
+    {
+      "query": "过期时间随机化",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.82
+    },
+    {
+      "query": "两级记忆整合",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.896
+    },
+    {
+      "query": "流式逐token推送",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.962
+    },
+    {
+      "query": "一次性测试环境隔离",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.912
+    },
+    {
+      "query": "文档分块检索",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.929
+    },
+    {
+      "query": "今天天气怎么样",
+      "faithfulness": null,
+      "answer_relevancy": 0.471
+    },
+    {
+      "query": "如何做红烧肉",
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.417
+    },
+    {
+      "query": "Python GIL 问题",
+      "faithfulness": null,
+      "answer_relevancy": 0.42
+    },
+    {
+      "query": "Kubernetes pod 调度",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.823
+    },
+    {
+      "query": "股票投资策略",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.918
+    }
+  ]
+}
