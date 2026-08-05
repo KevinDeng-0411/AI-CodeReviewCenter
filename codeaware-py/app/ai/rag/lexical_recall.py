@@ -60,7 +60,10 @@ class PgTrgmLexicalRecall(LexicalRecallPort):
 class Bm25LexicalRecall(LexicalRecallPort):
     """ParadeDB pg_search BM25 后端（C4 目标）。
 
-    使用 @@@ 操作符 + chinese_compatible tokenizer。
+    查询含 CJK 字符时自动 jieba 分词（空格连接），配合 BM25 default tokenizer
+    （以空格切分）实现中文词级检索。纯英文/数字查询原样通过。
+
+    默认检索列：chunk_content_segmented（jieba 分词列）。
     扩展/索引不可用时返回空列表（降级为纯向量），不抛异常。
     """
 
@@ -70,12 +73,19 @@ class Bm25LexicalRecall(LexicalRecallPort):
         model: type[ModelT],
         query_text: str,
         *,
-        text_column: str = "content",
+        text_column: str = "chunk_content_segmented",
         top_k: int = 5,
     ) -> list[tuple[ModelT, float]]:
         try:
             # @@@ 右边必须 text literal（不能用参数）；转义单引号后内联
             q = query_text.replace("'", "''")
+            # jieba 分词：仅检索 segmented 列时对含 CJK 查询空格连接，
+            # 配合 default tokenizer 以空格切分。直连老列（如测试）不处理。
+            if "segmented" in text_column:
+                from app.ai.rag.chinese_segmenter import _has_cjk, segment_chinese
+
+                if _has_cjk(q):
+                    q = segment_chinese(q).replace("'", "''")
             stmt = (
                 select(model)
                 .where(

@@ -66,7 +66,7 @@ class HybridRetriever:
             query_vector,
             top_k=top_k,
             hybrid=True,
-            text_column="chunk_content",
+            text_column="chunk_content_segmented",
             lexical_recall=self.lexical_recall,
         )
         return [ScoredChunk(chunk=r[0], score=r[1], match_type=r[2]) for r in results]

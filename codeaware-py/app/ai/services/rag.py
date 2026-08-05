@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.infra.vector_recall import VectorRecallService
+from app.ai.rag.chinese_segmenter import segment_chinese
 from app.ai.rag.hybrid_retriever import HybridRetriever, ScoredChunk
 from app.ai.rag.query_rewriter import QueryRewriter
 from app.ai.rag.semantic_chunker import SemanticChunker
@@ -54,7 +55,12 @@ class RagService:
         self.session.add(doc)
         await self.session.flush()
         for i, (chunk_text, embedding) in enumerate(prepared_chunks):
-            kc = KnowledgeChunk(document_id=doc.id, chunk_index=i, chunk_content=chunk_text)
+            kc = KnowledgeChunk(
+            document_id=doc.id,
+            chunk_index=i,
+            chunk_content=chunk_text,
+            chunk_content_segmented=segment_chinese(chunk_text),
+        )
             await self.vector_recall.store_preembedded(self.session, kc, embedding)
         return doc
 
