@@ -375,6 +375,50 @@ data: {"protocol_version":1,...,"sequence":N}
 
 ---
 
+## 检索评估数据
+
+**评测集**：15 篇 fixture 文档（技术方案 + 代码标识符 + 多语言），35 条 golden cases（中文精确 ×8、英文自然 ×7、稀有标识符 ×8、语义改写 ×7、负例 ×5），真实 bge-m3 embedding。
+
+### 词法腿升级：C3 (pg_trgm) → C4 (BM25)
+
+| 指标 | C3 pg_trgm | C4 BM25 | 变化 |
+|---|---|---|---|
+| 词法腿 R@5 | 0.543 | **0.600** | +0.057 |
+| 词法腿 MRR@10 | 0.529 | **0.600** | +0.071 |
+| 中文精确 R@5 | 0.000 | **0.250** | BM25 首次召回中文词 |
+| 稀有标识符 MRR | 0.938 | **1.000** | BM25 完全命中 |
+
+### 三路对照（C4 当前）
+
+| 路径 | R@5 | MRR@10 | 说明 |
+|---|---|---|---|
+| BM25 only | 0.600 | 0.600 | 词法腿关键词匹配 |
+| vector only | 0.957 | 0.920 | pgvector HNSW cosine 语义召回 |
+| **fused (BM25+vector)** | **0.957** | **0.934** | RRF 融合 — 当前生产 |
+
+**关键洞察**：C3 的 fused MRR=0.906 **低于**纯向量 0.920（pg_trgm 噪声拖累 RRF）。C4 升级 BM25 后 fused MRR=0.934 **反超**纯向量——首次实现 **1+1>2**。
+
+### 按类别（C4 fused）
+
+| 类别 | n | R@5 | MRR@10 | 举例 |
+|---|---|---|---|---|
+| chinese_exact | 8 | 1.000 | 0.906 | 中文精确匹配（向量腿兜底） |
+| english_natural | 7 | 1.000 | 1.000 | 英文自然语言 |
+| rare_identifier | 8 | 1.000 | 1.000 | `summary_message_count`、`TurnCoordinator` 类名 |
+| semantic_paraphrase | 7 | 0.786 | 0.776 | 同义改写，"热点Key失效"→"缓存击穿" |
+| negative | 5 | 1.000 | 1.000 | 不相关查询正确返回空 |
+
+### 已知边界
+
+- 中文精确 MRR=0.906（非满分）：`default` tokenizer 不拆连续中文，中文精确类依赖向量腿兜底
+- 语义改写 R@5=0.786：bge-m3 在中文同义改写场景有提升空间
+- 无 cross-encoder reranker（评估后暂缓，ADR-0009，门禁 MRR+0.01）
+- 评测集 35 条，非百万级——足以验证架构决策，不足以做统计显著性
+
+评测脚本：`tests/eval/test_golden_retrieval.py`，原始数据：`tests/eval/artifacts/baseline_c4_bm25.json`
+
+---
+
 ## 安全测试
 
 后端测试禁止裸跑 `pytest`。安全执行器创建随机 disposable PG/Redis，拒绝开发库和远程目标：
