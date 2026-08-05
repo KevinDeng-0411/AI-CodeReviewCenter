@@ -7,6 +7,7 @@ import type {
   ChatResponseVO,
   CodeReviewVO,
   ConversationItem,
+  DocumentDetailVO,
   DocumentListVO,
   Envelope,
   KnowledgeSearchHit,
@@ -172,6 +173,7 @@ export const knowledge = {
       body: JSON.stringify({ query: p.query, top_k: p.top_k ?? 5 }),
     }),
   remove: (id: number) => call<null>(`/api/knowledge/${id}`, { method: "DELETE" }),
+  getDetail: (id: number) => call<DocumentDetailVO>(`/api/knowledge/${id}`),
   listDocuments: (params: { status?: string; page?: number; size?: number } = {}) => {
     const qs = new URLSearchParams();
     if (params.status) qs.set("status", params.status);

@@ -271,3 +271,38 @@ describe("knowledge.replace", () => {
     expect(fetchMock.mock.calls[0][1]?.body).toBeInstanceOf(FormData);
   });
 });
+
+describe("knowledge.getDetail", () => {
+  it("GET /api/knowledge/:id 返回元数据+全文+分块", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        code: 1,
+        msg: "success",
+        data: {
+          id: 3,
+          title: "详情文档",
+          source_type: "MANUAL",
+          project_name: null,
+          status: "ACTIVE",
+          chunk_count: 2,
+          created_at: "2026-08-05T00:00:00",
+          updated_at: "2026-08-05T00:00:00",
+          deleted_at: null,
+          content: "# 第一章\n缓存击穿方案",
+          chunks: [
+            { chunk_index: 0, chunk_content: "缓存击穿方案" },
+            { chunk_index: 1, chunk_content: "热点Key失效" },
+          ],
+        },
+      }),
+    } as Response);
+
+    const data = await knowledge.getDetail(3);
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/knowledge/3");
+    expect(data.content).toContain("缓存击穿");
+    expect(data.chunks).toHaveLength(2);
+    expect(data.chunks[1].chunk_index).toBe(1);
+  });
+});

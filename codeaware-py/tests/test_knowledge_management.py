@@ -104,3 +104,38 @@ async def test_delete_missing_doc_returns_404(client, db_session, mgmt_overrides
     r = await client.delete("/api/knowledge/99999")
     assert r.status_code == 404
     assert r.json()["msg"] == "KNOWLEDGE_DOCUMENT_NOT_FOUND"
+
+
+async def test_document_detail_returns_metadata_content_and_chunks(client, db_session, mgmt_overrides):
+    doc_id = await _upload(client, "详情文档", "# 第一章\n缓存击穿方案\n## 第二章\n热点Key失效")
+
+    r = await client.get(f"/api/knowledge/{doc_id}")
+    assert r.status_code == 200
+    data = r.json()["data"]
+    assert data["title"] == "详情文档"
+    assert data["status"] == "ACTIVE"
+    assert "# 第一章" in data["content"]
+    assert data["chunk_count"] == len(data["chunks"])
+    assert len(data["chunks"]) >= 1
+    # 分块按 chunk_index 排序
+    indexes = [c["chunk_index"] for c in data["chunks"]]
+    assert indexes == sorted(indexes)
+
+
+async def test_document_detail_visible_after_soft_delete(client, db_session, mgmt_overrides):
+    """已软删文档仍可查看元数据（审计/追溯），chunks 已物理删。"""
+    doc_id = await _upload(client, "审计文档", "# 审计\n内容")
+    await client.delete(f"/api/knowledge/{doc_id}")
+
+    r = await client.get(f"/api/knowledge/{doc_id}")
+    assert r.status_code == 200
+    data = r.json()["data"]
+    assert data["status"] == "DELETED"
+    assert data["chunk_count"] == 0  # chunks 已物理删
+    assert data["content"]  # 全文保留
+
+
+async def test_document_detail_missing_returns_404(client, db_session, mgmt_overrides):
+    r = await client.get("/api/knowledge/99999")
+    assert r.status_code == 404
+    assert r.json()["msg"] == "KNOWLEDGE_DOCUMENT_NOT_FOUND"

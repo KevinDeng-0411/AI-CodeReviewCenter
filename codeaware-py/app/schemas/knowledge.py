@@ -71,3 +71,26 @@ class DocumentListVO(BaseModel):
     page: int
     size: int
     records: list[DocumentVO]
+
+
+class ChunkVO(BaseModel):
+    """文档分块详情（RAG 分块可视化）。"""
+
+    chunk_index: int
+    chunk_content: str
+
+
+class DocumentDetailVO(BaseModel):
+    """文档详情：元数据 + 全文 + 分块列表。"""
+
+    id: int
+    title: str
+    source_type: str
+    project_name: str | None = None
+    status: str
+    chunk_count: int
+    created_at: str
+    updated_at: str
+    deleted_at: str | None = None
+    content: str
+    chunks: list[ChunkVO]

@@ -113,6 +113,17 @@ export interface DocumentListVO {
   records: DocumentVO[];
 }
 
+export interface ChunkVO {
+  chunk_index: number;
+  chunk_content: string;
+}
+
+export interface DocumentDetailVO extends DocumentVO {
+  updated_at: string;
+  content: string;
+  chunks: ChunkVO[];
+}
+
 // ---------- Memory ----------
 export interface MemoryHit {
   id: number;

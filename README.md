@@ -294,9 +294,9 @@ graph TB
 
 | 指标 | 数值 |
 |---|---|
-| 后端测试 | **305 passed**, 0 failed |
-| 前端测试 | **42 passed** |
-| API 端点 | 26 个 |
+| 后端测试 | **308 passed**, 0 failed |
+| 前端测试 | **43 passed** |
+| API 端点 | 27 个 |
 | 数据表 | 9 张 |
 | ADR | 13 篇 (0001-0013) |
 | Alembic head | 0011 |

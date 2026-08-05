@@ -23,6 +23,11 @@
 - 复用 `upload_document`（分块/向量/jieba 分词不变）
 - 旧文档元数据保留（status=DELETED 可审计），新文档独立 id
 
+**4. 详情**：`GET /api/knowledge/{doc_id}` 返回元数据 + 全文 + 分块列表。
+
+- 已软删文档也可查看（审计/追溯），chunks 已物理删则 chunk_count=0
+- 分块可视化：RAG 调试（C5 分块效果可查）与面试 demo 的价值点
+
 ## 表变更
 
 `documents` 加列（迁移 0011）：

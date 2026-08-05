@@ -385,6 +385,25 @@
         "title": "ChatWarning",
         "type": "object"
       },
+      "ChunkVO": {
+        "description": "文档分块详情（RAG 分块可视化）。",
+        "properties": {
+          "chunk_content": {
+            "title": "Chunk Content",
+            "type": "string"
+          },
+          "chunk_index": {
+            "title": "Chunk Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chunk_index",
+          "chunk_content"
+        ],
+        "title": "ChunkVO",
+        "type": "object"
+      },
       "CodeReviewRequest": {
         "properties": {
           "file_path": {
@@ -552,6 +571,85 @@
           "conversation_id"
         ],
         "title": "ConversationItem",
+        "type": "object"
+      },
+      "DocumentDetailVO": {
+        "description": "文档详情：元数据 + 全文 + 分块列表。",
+        "properties": {
+          "chunk_count": {
+            "title": "Chunk Count",
+            "type": "integer"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/ChunkVO"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "source_type",
+          "status",
+          "chunk_count",
+          "created_at",
+          "updated_at",
+          "content",
+          "chunks"
+        ],
+        "title": "DocumentDetailVO",
         "type": "object"
       },
       "DocumentListVO": {
@@ -1289,6 +1387,32 @@
           }
         },
         "title": "Result[CodeReviewVO]",
+        "type": "object"
+      },
+      "Result_DocumentDetailVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentDetailVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[DocumentDetailVO]",
         "type": "object"
       },
       "Result_DocumentListVO_": {
@@ -3009,6 +3133,52 @@
           }
         ],
         "summary": "Delete",
+        "tags": [
+          "Knowledge"
+        ]
+      },
+      "get": {
+        "description": "文档详情（ADR-0013 扩展）：元数据 + 全文 + 分块列表。\n\n已软删的文档也可查看（审计/追溯）。",
+        "operationId": "get_document_api_knowledge__doc_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "doc_id",
+            "required": true,
+            "schema": {
+              "title": "Doc Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_DocumentDetailVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Document",
         "tags": [
           "Knowledge"
         ]

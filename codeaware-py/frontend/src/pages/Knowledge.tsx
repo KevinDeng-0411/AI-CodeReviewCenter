@@ -8,9 +8,11 @@ import {
   FileUp,
   RefreshCw,
   RotateCcw,
+  X,
+  FileText,
 } from "lucide-react";
 import { knowledge } from "../api/client";
-import type { DocumentVO, KnowledgeSearchHit } from "../api/types";
+import type { DocumentDetailVO, DocumentVO, KnowledgeSearchHit } from "../api/types";
 import {
   Button,
   EmptyState,
@@ -52,6 +54,21 @@ export default function KnowledgePage() {
   const [docPage, setDocPage] = useState(1);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [replacingId, setReplacingId] = useState<number | null>(null);
+  // 文档详情抽屉
+  const [detail, setDetail] = useState<DocumentDetailVO | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  const openDetail = async (docId: number) => {
+    setLoadingDetail(true);
+    try {
+      setDetail(await knowledge.getDetail(docId));
+    } catch (e) {
+      toast.show(e);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+  const closeDetail = () => setDetail(null);
 
   // 普通函数（不用 useCallback）：避免 toast 引用不稳定导致 useEffect 无限重跑。
   // useEffect 只依赖 [tab, docStatus] 触发；分页/刷新显式调用 loadDocs。
@@ -247,7 +264,13 @@ export default function KnowledgePage() {
                   {docs.map((d) => (
                     <div key={d.id} className="bg-paper border border-line rounded p-3">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-ink truncate flex-1">{d.title}</span>
+                        <button
+                          onClick={() => void openDetail(d.id)}
+                          className="text-sm text-ink truncate flex-1 text-left hover:text-oxblood hover:underline"
+                          title="查看详情"
+                        >
+                          {d.title}
+                        </button>
                         <span
                           className={`font-mono text-2xs px-1.5 py-0.5 rounded border shrink-0 ${
                             d.status === "ACTIVE"
@@ -386,6 +409,84 @@ export default function KnowledgePage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* 文档详情抽屉（tab=documents 时显示右侧详情区） */}
+      {tab === "documents" && (
+        <div className="flex-1 border-l border-line bg-paper overflow-y-auto p-5">
+          {loadingDetail ? (
+            <p className="font-mono text-2xs text-mute animate-blink">LOADING DETAIL…</p>
+          ) : detail ? (
+            <div className="max-w-3xl">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-oxblood" />
+                    <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>
+                    <span
+                      className={`font-mono text-2xs px-1.5 py-0.5 rounded border ${
+                        detail.status === "ACTIVE"
+                          ? "bg-teal/10 text-teal border-teal/30"
+                          : "bg-oxblood/10 text-oxblood border-oxblood/30"
+                      }`}
+                    >
+                      {detail.status === "ACTIVE" ? "正常" : "已删除"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 font-mono text-2xs text-mute">
+                    <span>DOC #{detail.id}</span>
+                    <span>{detail.chunk_count} 分块</span>
+                    <span>{detail.source_type}</span>
+                    <span>创建 {detail.created_at?.slice(0, 10)}</span>
+                    {detail.deleted_at && <span>删除 {detail.deleted_at.slice(0, 10)}</span>}
+                  </div>
+                </div>
+                <button
+                  onClick={closeDetail}
+                  className="text-mute hover:text-ink"
+                  title="关闭详情"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 全文 */}
+              <div className="mb-5">
+                <p className="font-mono text-2xs uppercase tracking-techy text-mute mb-2">
+                  全文内容
+                </p>
+                <div className="bg-panel border border-line rounded p-4 whitespace-pre-wrap font-mono text-2xs text-ink leading-relaxed max-h-72 overflow-y-auto">
+                  {detail.content}
+                </div>
+              </div>
+
+              {/* 分块列表 */}
+              <div>
+                <p className="font-mono text-2xs uppercase tracking-techy text-mute mb-2">
+                  分块 · {detail.chunks.length}（C5 元素感知分块）
+                </p>
+                <div className="space-y-2">
+                  {detail.chunks.map((c) => (
+                    <div key={c.chunk_index} className="bg-panel border border-line rounded p-3">
+                      <p className="font-mono text-2xs text-mute mb-1">
+                        CHUNK #{c.chunk_index}
+                      </p>
+                      <p className="font-mono text-2xs text-ink whitespace-pre-wrap leading-relaxed">
+                        {c.chunk_content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              icon={<FileText className="w-10 h-10" />}
+              title="文档详情"
+              hint="点击左侧文档标题查看全文与分块"
+            />
+          )}
         </div>
       )}
     </div>

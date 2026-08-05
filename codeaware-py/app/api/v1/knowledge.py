@@ -16,6 +16,8 @@ from app.core.config import settings
 from app.core.exceptions import BusinessException
 from app.core.response import Result
 from app.schemas.knowledge import (
+    ChunkVO,
+    DocumentDetailVO,
     DocumentListVO,
     DocumentVO,
     KnowledgeDocumentVO,
@@ -144,6 +146,44 @@ async def list_documents(
     ]
     return Result.ok(
         DocumentListVO(total=total or 0, page=page, size=size, records=records)
+    )
+
+
+@router.get("/{doc_id}", response_model=Result[DocumentDetailVO])
+async def get_document(doc_id: int, db: AsyncSession = Depends(get_db)):
+    """文档详情（ADR-0013 扩展）：元数据 + 全文 + 分块列表。
+
+    已软删的文档也可查看（审计/追溯）。
+    """
+    from app.models import Document, KnowledgeChunk
+
+    doc = await db.get(Document, doc_id)
+    if doc is None:
+        raise BusinessException("KNOWLEDGE_DOCUMENT_NOT_FOUND", status_code=404)
+    chunks = (
+        await db.execute(
+            select(KnowledgeChunk)
+            .where(KnowledgeChunk.document_id == doc_id)
+            .order_by(KnowledgeChunk.chunk_index.asc())
+        )
+    ).scalars().all()
+    return Result.ok(
+        DocumentDetailVO(
+            id=doc.id,
+            title=doc.title,
+            source_type=doc.source_type,
+            project_name=doc.project_name,
+            status=doc.status,
+            chunk_count=len(chunks),
+            created_at=doc.created_at.isoformat() if doc.created_at else "",
+            updated_at=doc.updated_at.isoformat() if doc.updated_at else "",
+            deleted_at=doc.deleted_at.isoformat() if doc.deleted_at else None,
+            content=doc.content,
+            chunks=[
+                ChunkVO(chunk_index=c.chunk_index, chunk_content=c.chunk_content)
+                for c in chunks
+            ],
+        )
     )
 
 
