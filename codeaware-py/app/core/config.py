@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     # RAG 词法检索后端（C4-B：pg_trgm 回退 / bm25 ParadeDB pg_search 默认目标）
     rag_lexical_backend: str = "pg_trgm"  # C4-D 通过后切 "bm25"
 
+    # 认证（团队化升级阶段 A：JWT access token，实验室内部使用）
+    jwt_secret_key: str = ""  # 启动时校验非空（fail-closed）；测试由 fixture 注入
+    jwt_algorithm: str = "HS256"
+    jwt_expire_hours: int = 168  # 7 天
+
     @property
     def pg_url_async(self) -> str:
         return (

@@ -11,6 +11,8 @@ import os
 
 # 行为标记（非 DB 目标）：main.py 据此跳过前端静态挂载。PG/Redis 目标由 runner 注入，不在此 setdefault。
 os.environ.setdefault("CODEAWARE_TESTING", "1")
+# 团队化升级阶段 A：测试用 JWT 密钥（必须在 settings 导入前设置）
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-testing-only")
 
 import httpx
 import pytest

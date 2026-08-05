@@ -1,7 +1,7 @@
-"""SQLAlchemy ORM 模型 - 8 表，严格遵循 ADR-0001~0007。
+"""SQLAlchemy ORM 模型 - 9 表，严格遵循 ADR-0001~0007 + 团队化升级阶段 A。
 
 表组成（与 Java 不同：合并 CR/UT 记录、拆分 Knowledge 父子、内联向量、conversation_id）：
-  prompt_templates / ai_operation_records / conversations / messages /
+  users / prompt_templates / ai_operation_records / conversations / messages /
   long_term_memories / documents / knowledge_chunks / ai_readme_documents
 """
 
@@ -13,8 +13,10 @@ from app.models.knowledge_chunk import KnowledgeChunk
 from app.models.long_term_memory import LongTermMemory
 from app.models.message import Message
 from app.models.prompt_template import PromptTemplate
+from app.models.user import User
 
 __all__ = [
+    "User",
     "PromptTemplate",
     "AiOperationRecord",
     "Conversation",
