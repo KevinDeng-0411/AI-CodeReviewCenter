@@ -130,7 +130,8 @@ async def test_hybrid_with_pg_trgm_still_works(bm25_ready, db_session, vector_re
 
 async def test_bm25_upsert_index_consistency(bm25_ready, db_session, vector_recall):
     """上传 -> 查到 -> 删除文档 -> 查不到（索引一致性）。"""
-    doc_id = await _upload_doc(db_session, "upsert", "缓存雪崩大量key同时失效方案", vector_recall)
+    # 内容用分隔符让 "缓存雪崩" 成为独立 token（default tokenizer 不拆连续中文）
+    doc_id = await _upload_doc(db_session, "upsert", "缓存雪崩：大量key同时失效方案", vector_recall)
 
     bm25 = Bm25LexicalRecall()
     results_before = await bm25.search(db_session, KnowledgeChunk, "缓存雪崩", text_column="chunk_content", top_k=5)
