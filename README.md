@@ -284,6 +284,7 @@ graph TB
 | 关系 DB | PostgreSQL 16 + asyncpg | PG-first 真相源 |
 | 向量索引 | pgvector HNSW cosine | 内联向量, 同事务 commit |
 | 词法检索 | ParadeDB pg_search BM25 | default tokenizer; pg_trgm 回退 |
+| 检索增强 | LangGraph StateGraph（ADR-0015） | 智能路由 + 自我纠错（match_type 检测） |
 | 缓存 | Redis 7 | 可丢弃, PG fallback |
 | 前端 | React 19 + Vite + TypeScript | 7 模块 SPA（无 router） |
 | 包管理 | uv + Alembic | 依赖锁定 + 迁移回退 |
@@ -294,11 +295,11 @@ graph TB
 
 | 指标 | 数值 |
 |---|---|
-| 后端测试 | **308 passed**, 0 failed |
+| 后端测试 | **315 passed**, 0 failed |
 | 前端测试 | **43 passed** |
 | API 端点 | 27 个 |
 | 数据表 | 9 张 |
-| ADR | 14 篇 (0001-0014) |
+| ADR | 15 篇 (0001-0015) |
 | Alembic head | 0011 |
 | 完成阶段 | C1-C6 + 团队化 A/B/C + 文档管理 |
 

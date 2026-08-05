@@ -6,9 +6,9 @@
   },
   "retry_stats": {
     "n": 32,
-    "retry_triggered": 29,
-    "retry_rate": 0.906,
-    "avg_retries": 1.812,
+    "retry_triggered": 0,
+    "retry_rate": 0.0,
+    "avg_retries": 0.0,
     "direct_predictions": 0
   },
   "route_rows": [
@@ -261,84 +261,84 @@
   "retry_rows": [
     {
       "query": "缓存击穿如何解决",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "缓存穿透方案",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "缓存雪崩",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "查询重写",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "向量内联存储",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "摘要生成",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "记忆抽取",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "版本化模板",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "how to do hybrid retrieval",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "FastAPI async architecture",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "SQLAlchemy models",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "DeepSeek thinking mode",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
@@ -359,35 +359,35 @@
     },
     {
       "query": "project snapshot for AIReadMe",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "HybridRetriever",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "summary_message_count",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "conversation_id",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "chat.started",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
@@ -401,84 +401,84 @@
     },
     {
       "query": "save_and_activate",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "extract_facts_text",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "knowledge_chunks",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "热点Key失效怎么办",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "布隆过滤器拦截",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "过期时间随机化",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "两级记忆整合",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "流式逐token推送",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "一次性测试环境隔离",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "文档分块检索",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "Python GIL 问题",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
     },
     {
       "query": "Kubernetes pod 调度",
-      "retries": 2,
+      "retries": 0,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"

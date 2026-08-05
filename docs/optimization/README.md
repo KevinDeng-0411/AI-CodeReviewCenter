@@ -9,7 +9,8 @@
 
 | 优化项 | 状态 | 决策记录 | 说明 |
 |---|---|---|---|
-| LangChain 薄 adapter / 不引 LangGraph | ✅ 已评估 | [ADR-0014](../decisions/adr/0014-langchain-thin-adapter-no-langgraph.md) | 耦合度极低，升级无收益 |
+| LangGraph 检索增强（路由+纠错） | ✅ 已实施 | [ADR-0015](../decisions/adr/0015-langgraph-retrieval-enhancement.md) / [eval](rag-graph-eval.md) | 路由准确率 0.914 |
+| LangChain 薄 adapter / 完整 Agent 不引 LangGraph | ✅ 已评估 | [ADR-0014](../decisions/adr/0014-langchain-thin-adapter-no-langgraph.md) | 耦合度极低；完整 Agent 仍不做 |
 | 生成层评估（RAGAS） | ✅ 已完成 | [ragas-eval.md](ragas-eval.md) | Faithfulness 0.939 / Relevancy 0.812 |
 | 分块策略（chunk_by_title） | ✅ 已实施 | [chunking-strategy.md](chunking-strategy.md) / [ADR-0008](../decisions/adr/0008-document-parsing-element-aware-serialization.md) | 标题切分 + 段落边界 + 500字兜底 |
 | BM25 词法检索 (C4) | ✅ 已实施 | [04 卡](../roadmap/current-release/04-BM25检索增强.md) | pg_trgm → ParadeDB BM25 |
