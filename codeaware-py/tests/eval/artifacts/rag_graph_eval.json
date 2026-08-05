@@ -1,7 +1,7 @@
 {
   "route_accuracy": {
-    "mean": 0.914,
-    "correct": 32,
+    "mean": 1.0,
+    "correct": 35,
     "total": 35
   },
   "retry_stats": {
@@ -226,15 +226,15 @@
       "query": "今天天气怎么样",
       "category": "negative",
       "expected": "direct",
-      "predicted": "retrieve",
-      "correct": false
+      "predicted": "direct",
+      "correct": true
     },
     {
       "query": "如何做红烧肉",
       "category": "negative",
       "expected": "direct",
-      "predicted": "retrieve",
-      "correct": false
+      "predicted": "direct",
+      "correct": true
     },
     {
       "query": "Python GIL 问题",
@@ -254,8 +254,8 @@
       "query": "股票投资策略",
       "category": "negative",
       "expected": "direct",
-      "predicted": "retrieve",
-      "correct": false
+      "predicted": "direct",
+      "correct": true
     }
   ],
   "retry_rows": [

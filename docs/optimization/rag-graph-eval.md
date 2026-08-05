@@ -4,6 +4,15 @@
 > 脚本：`codeaware-py/tests/eval/test_rag_graph_eval.py`（live_eval）
 > 原始数据：`codeaware-py/tests/eval/artifacts/rag_graph_eval.json`
 
+> **⚠️ 2026-08-05 路由故障修复**：实测发现 Router 自创建起**从未真正决策过**——
+> `with_structured_output(method="json_mode")` 要求 prompt 必须含 "json" 字眼，原 prompt 没有，
+> DeepSeek 每次都返回 400 `BadRequestError` → 降级 retrieve。因此旧 eval 的 **0.914 是"永远返回
+> retrieve"这一降级策略的准确率**（32 条 retrieve + 3 条 direct 的 golden 恰好 32/35），并非路由决策成绩。
+> 修复后（prompt 补 "json" + 输出格式示例），完整 live_eval 重跑：
+> **路由 35/35 = 1.000**；重试触发率 **0.0**（32 条检索全部 `retries=0`、`docs_count=5`——
+> match_type 评估器修复后命中查询评估满意、不重试，符合预期）。
+> 旧 0.914 / 0.906 数据作废，`rag_graph_eval.json` 已为修复后真实数据。
+
 ## 背景
 
 [ADR-0015](../decisions/adr/0015-langgraph-retrieval-enhancement.md) 引入 LangGraph 检索增强：智能路由（区分常识/检索）+ 自我纠错（检索不理想自动改写重试）。本评估量化其数据表现，对比 service（基线）vs graph（新结构）。
@@ -16,25 +25,28 @@
 
 ## 结果
 
-### 路由准确率：0.914（32/35）✅
+### 路由准确率：1.000（35/35）✅（修复后）
 
-门禁通过（≥0.90）。3 个误判：
+修复后仅路由 35 条真实 DeepSeek 判断：**全部正确**。
 
-| 查询 | expected | predicted |
+| 类别 | 数量 | 结果 |
 |---|---|---|
-| 今天天气怎么样 | direct | retrieve |
-| 如何做红烧肉 | direct | retrieve |
-| 股票投资策略 | direct | retrieve |
+| 技术/项目问题 → retrieve | 30 | 30 正确 |
+| negative 技术问题（Python GIL/K8s）→ retrieve | 2 | 2 正确 |
+| negative 常识 → direct | 3 | 3 正确 |
 
-**误判方向全部是"常识问题被误判为 retrieve"——安全方向**（宁可多检索不漏，符合 Router 设计：失败/不确定降级 retrieve）。
+> 旧报告 0.914（32/35）系 Router 故障时"永远降级 retrieve"的产物，见顶部修复说明。修复前 3 条 direct
+> 被误判为 retrieve 并非路由决策，而是 API 400 后的兜底值。
 
-### 重试统计：首次评估触发率 0.906（已修复）⚠️→✅
+### 重试统计：修复后触发率 0.0 ✅
 
-| 指标 | 首次评估（旧阈值） | 修复后 |
+| 指标 | 旧阈值（分数差，已废弃） | 修复后（match_type，重跑） |
 |---|---|---|
-| 重试触发率 | **0.906**（29/32） | 待重跑确认 |
-| 平均重试次数 | 1.812 | — |
-| 重试后 docs | 全部 = 5（命中） | — |
+| 重试触发率 | **0.906**（29/32） | **0.0**（0/32） |
+| 平均重试次数 | 1.812 | 0.0 |
+| 重试后 docs | 全部 = 5（命中） | 全部 = 5（首检即满意） |
+
+修复后 32 条检索全部 `retries=0`、`docs_count=5`——命中查询评估满意、不触发重试，正是 match_type 检测的设计预期（仅弱检索/未捞到才重试）。
 
 **根因（两层）**：
 1. **旧 evaluator 分数差阈值 `max - 2nd < 0.01` 对 RRF 无效**。RRF 分数是 `1/(k+rank)` 累加，相邻排名差恒定 ~`1/61 - 1/62` ≈ 0.0003——任何查询（含 both 命中）的 top 相邻 chunk 差都 < 0.01，永远触发重试。
@@ -60,25 +72,25 @@ return True
 
 | 门禁 | 结果 | 判定 |
 |---|---|---|
-| 路由准确率 ≥ 0.90 | 0.914 | ✅ |
-| 重试收敛 retries ≤ 2 | 全部 ≤ 2 | ✅ |
-| 检索质量不降 | 重试后 docs=5 全命中 | ✅（未测 R@5 对比，见下） |
+| 路由准确率 ≥ 0.90 | **1.000**（修复后，35/35） | ✅ |
+| 重试收敛 retries ≤ 2 | 全部 ≤ 2（mock 断言 + 重跑 0.0） | ✅ |
+| 检索质量不降 | 重跑 32 条全部 docs=5 | ✅（未测 R@5 对比，见下） |
 
 ## 已知边界
 
-1. **evaluator 阈值已修复**（match_type 检测替代分数差）。重试率重跑待确认（预期大幅下降至命中查询不重试、仅弱检索触发）。
+1. **evaluator 阈值已修复**（match_type 检测替代分数差）。修复后重跑触发率 0.0（32 条命中查询全部首检满意），符合预期；弱检索触发路径由 mock 覆盖（tests/test_rag_graph.py）。
 2. **R@5 对比未单独测**：graph 重试后 docs=5 全命中，但未与 service R@5=0.986 精确对比（受 fixture 规模限制）。生产评估需补。
-3. **Router 误判安全**：3 个误判全是 retrieve（安全方向），无"知识问题误判 direct 漏检"情况。
+3. **Router 误判安全**：修复后 0 误判（35/35）；即使失败/不确定也降级 retrieve（宁可多检索不漏），无"知识问题误判 direct 漏检"风险。
 4. **match_type 依赖 BM25 词法腿**：若生产 RAG_LEXICAL_BACKEND=pg_trgm（非 bm25），词法腿仍返回 keyword，检测不受影响；但需确认 pg_trgm 在 segmented 列上可用（pg_trgm 建在 chunk_content 上，segmented 列无 trgm 索引 → 需评估）。
 
 ## 结论
 
-- 智能路由**生效**（0.914，误判安全方向）
-- 自我纠错**机制有效**（重试后 docs=5 全命中）；首次评估 90% 触发率是 evaluator 阈值 bug（分数差检测对 RRF 无效），已修为 match_type 检测
-- 核心机制（路由/重试/收敛/防打转）验证通过
+- 智能路由**生效**（修复后 35/35 = 1.000，真实 DeepSeek 决策）
+- 自我纠错**机制有效**（mock：弱检索 → 改写重试 → 命中收敛，retries ≤ 2）；旧 evaluator 阈值 bug（分数差对 RRF 无效）已修为 match_type 检测
+- **修复后完整 eval 已重跑**：路由 1.000、重试触发率 0.0（命中查询首检满意不重试）
 
 ## 后续候选
 
-- 重跑 graph 评估确认修复后重试率（预期命中不重试、弱检索触发）
 - 生产库规模下补 R@5 before/after 精确对比
-- Router prompt 微调降低常识误判（可选，当前安全方向）
+- 构造"首次检索差、改写后可命中"的真实弱检索样本，实测重试提升（当前 fixture 全部首检命中，重试路径仅 mock 覆盖）
+- Router prompt 微调（可选；当前 1.000，无误判样本）
