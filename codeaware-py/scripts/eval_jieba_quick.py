@@ -17,13 +17,6 @@ async def main():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_search"))
-        await conn.execute(text("DROP INDEX IF EXISTS ix_kc_chunk_content_bm25"))
-        await conn.execute(text(
-            "CREATE INDEX IF NOT EXISTS ix_kc_chunk_content_bm25 "
-            "ON knowledge_chunks USING bm25 (chunk_content) "
-            "WITH (key_field='id', text_fields='{\"chunk_content\": "
-            "{\"tokenizer\": {\"type\": \"default\"}}}')"
-        ))
 
     tests = [
         ("缓存", "## 缓存击穿\n热点Key失效方案：互斥锁、逻辑过期。", "缓存击穿如何解决"),
@@ -43,11 +36,58 @@ async def main():
         await s.commit()
 
     bm25 = Bm25LexicalRecall()
-    print("查询                              | default(col) | jieba(seg) |")
-    print("-" * 75)
+
+    # Round 1: old column (chunk_content, default tokenizer) — switch index temporarily
+    async with engine.begin() as conn:
+        await conn.execute(text("DROP INDEX IF EXISTS ix_kc_chunk_content_segmented_bm25"))
+        await conn.execute(text(
+            "CREATE INDEX ix_kc_chunk_content_bm25 "
+            "ON knowledge_chunks USING bm25 (chunk_content) "
+            "WITH (key_field='id', text_fields='{\"chunk_content\": "
+            "{\"tokenizer\": {\"type\": \"default\"}}}')"
+        ))
+    results_old = {}
     for _, _, query in tests:
-        r_old = await bm25.search(s, KnowledgeChunk, query, text_column="chunk_content", top_k=5)
-        r_new = await bm25.search(s, KnowledgeChunk, query, text_column="chunk_content_segmented", top_k=5)
-        print(f"{query:35} | {len(r_old):>12} | {len(r_new):>10} |")
+        r = await bm25.search(s, KnowledgeChunk, query, text_column="chunk_content", top_k=5)
+        results_old[query] = len(r)
+
+    # Round 2: new column (chunk_content_segmented, default tokenizer, jieba preprocessed)
+    async with engine.begin() as conn:
+        await conn.execute(text("DROP INDEX IF EXISTS ix_kc_chunk_content_bm25"))
+        await conn.execute(text(
+            "CREATE INDEX ix_kc_chunk_content_segmented_bm25 "
+            "ON knowledge_chunks USING bm25 (chunk_content_segmented) "
+            "WITH (key_field='id', text_fields='{\"chunk_content_segmented\": "
+            "{\"tokenizer\": {\"type\": \"default\"}}}')"
+        ))
+    results_new = {}
+    for _, _, query in tests:
+        r = await bm25.search(s, KnowledgeChunk, query, text_column="chunk_content_segmented", top_k=5)
+        results_new[query] = len(r)
+
+    # Print
+    print()
+    print("查询                              | default(col) | jieba(seg) |  提升 |")
+    print("-" * 80)
+    hits_old = hits_new = 0
+    for _, _, query in tests:
+        old = results_old[query]
+        new = results_new[query]
+        hits_old += old; hits_new += new
+        delta = f"+{new - old}" if new > old else (f"{new - old}" if new < old else "  =")
+        print(f"{query:35} | {old:>12} | {new:>10} | {delta:>5} |")
+    print("-" * 80)
+    print(f"{'合计':35} | {hits_old:>12} | {hits_new:>10} | +{hits_new - hits_old:>4} |")
+    print()
+
+    # Cleanup: restore segmented index (matching migration 0010 state)
+    async with engine.begin() as conn:
+        await conn.execute(text("DROP INDEX IF EXISTS ix_kc_chunk_content_segmented_bm25"))
+        await conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_kc_chunk_content_segmented_bm25 "
+            "ON knowledge_chunks USING bm25 (chunk_content_segmented) "
+            "WITH (key_field='id', text_fields='{\"chunk_content_segmented\": "
+            "{\"tokenizer\": {\"type\": \"default\"}}}')"
+        ))
 
 asyncio.run(main())
