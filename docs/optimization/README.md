@@ -9,6 +9,7 @@
 
 | 优化项 | 状态 | 决策记录 | 说明 |
 |---|---|---|---|
+| 分块策略（chunk_by_title） | ✅ 已实施 | [chunking-strategy.md](chunking-strategy.md) / [ADR-0008](../decisions/adr/0008-document-parsing-element-aware-serialization.md) | 标题切分 + 段落边界 + 500字兜底 |
 | BM25 词法检索 (C4) | ✅ 已实施 | [04 卡](../roadmap/current-release/04-BM25检索增强.md) | pg_trgm → ParadeDB BM25 |
 | 元素感知分块 (C5) | ✅ 已实施 | [ADR-0008](../decisions/adr/0008-document-parsing-element-aware-serialization.md) | DOCX/HTML/PDF 标题穿到分块层 |
 | Chat 引用+思考 (C6) | ✅ 已实施 | [ADR-0010](../decisions/adr/0010-chat-references-and-reasoning.md) | 8 事件 typed SSE |
