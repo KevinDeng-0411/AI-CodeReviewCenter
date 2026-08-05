@@ -1,5 +1,5 @@
 // Knowledge - 上传(文本/文件) + RAG 检索 + 文档管理列表(ADR-0013)
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Library,
   Upload,
@@ -53,7 +53,9 @@ export default function KnowledgePage() {
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [replacingId, setReplacingId] = useState<number | null>(null);
 
-  const loadDocs = useCallback(async (status: "ACTIVE" | "DELETED" | "ALL" = docStatus, page = docPage) => {
+  // 普通函数（不用 useCallback）：避免 toast 引用不稳定导致 useEffect 无限重跑。
+  // useEffect 只依赖 [tab, docStatus] 触发；分页/刷新显式调用 loadDocs。
+  const loadDocs = async (status: "ACTIVE" | "DELETED" | "ALL", page: number) => {
     setLoadingDocs(true);
     try {
       const data = await knowledge.listDocuments({ status, page, size: 10 });
@@ -65,11 +67,13 @@ export default function KnowledgePage() {
     } finally {
       setLoadingDocs(false);
     }
-  }, [docStatus, docPage, toast]);
+  };
 
   useEffect(() => {
-    if (tab === "documents") void loadDocs();
-  }, [tab, loadDocs]);
+    if (tab === "documents") void loadDocs(docStatus, 1);
+    // 只在 tab 或状态过滤切换时加载一次（不依赖不稳定引用）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, docStatus]);
 
   const upload = async () => {
     if (!title.trim() || !content.trim()) {
@@ -117,7 +121,7 @@ export default function KnowledgePage() {
     try {
       await knowledge.remove(docId);
       setHits((h) => h.filter((x) => x.document_id !== docId));
-      await loadDocs();
+      await loadDocs(docStatus, docPage);
     } catch (e) {
       toast.show(e);
     }
@@ -128,7 +132,7 @@ export default function KnowledgePage() {
     try {
       await knowledge.replace(docId, file, project);
       showOk(`已更新文档 #${docId}`);
-      await loadDocs();
+      await loadDocs(docStatus, docPage);
     } catch (e) {
       toast.show(e);
     } finally {
@@ -226,7 +230,7 @@ export default function KnowledgePage() {
                   </button>
                 ))}
                 <button
-                  onClick={() => loadDocs()}
+                  onClick={() => void loadDocs(docStatus, docPage)}
                   className="ml-auto px-2 py-1 rounded text-mute hover:text-ink"
                   title="刷新"
                 >
