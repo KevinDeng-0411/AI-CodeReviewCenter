@@ -14,8 +14,9 @@
 | Chat 引用+思考 (C6) | ✅ 已实施 | [ADR-0010](../decisions/adr/0010-chat-references-and-reasoning.md) | 8 事件 typed SSE |
 | jieba 中文分词 | ✅ 已实施 | [ADR-0011](../decisions/adr/0011-jieba-chinese-bm25-segmentation.md) | 中文 BM25 R@5 0.25→1.000 |
 | **top_k 敏感性分析** | ✅ 已完成 | [topk-sensitivity.md](topk-sensitivity.md) / [ADR-0012](../decisions/adr/0012-topk-sensitivity-keep-5.md) | 保持 k=5，数据驱动 |
+| 文档管理（软删+列表+更新） | ✅ 已实施 | [ADR-0013](../decisions/adr/0013-document-management-soft-delete.md) | 软删行+物理删分块 |
 | Reranker 二阶段精排 | ⏸ 评估后暂缓 | [ADR-0009](../decisions/adr/0009-reranker-deferred.md) | 门禁 MRR+0.01，torch 依赖 |
-| 意图识别 | ❌ 评估后不做 | 面试指南 §6.14 | 90% 知识问题，加分类引入漏检 |
+| 意图识别 | ❌ 评估后不做 | 面试指南 §6.15 | 90% 知识问题，加分类引入漏检 |
 
 ## 决策优先级原则
 
@@ -31,7 +32,7 @@ jieba 中文 BM25（R@5 +0.34） > top_k 敏感性（待测） > reranker（门�
 
 ## 面试交叉引用
 
-- 面试指南：[§6.12 reranker 暂缓](../interview/面试准备指南.md)、[§6.14 jieba](../interview/面试准备指南.md)、决策 7/8
+- 面试指南：[§6.12 reranker 暂缓](../interview/面试准备指南.md)、[§6.14 jieba](../interview/面试准备指南.md)、[§6.15 意图识别](../interview/面试准备指南.md)、[§6.16 top_k](../interview/面试准备指南.md)、[§6.17 文档管理](../interview/面试准备指南.md)、决策 7/8
 - 面试速通版：Q3 检索追问（reranker + 意图识别一句带过）
 
 ## 评测数据

@@ -201,6 +201,8 @@ erDiagram
         text content "全文存一次"
         string source_type
         string project_name
+        string status "ACTIVE|DELETED (ADR-0013)"
+        datetime deleted_at
     }
     knowledge_chunks {
         int id PK
@@ -292,17 +294,17 @@ graph TB
 
 | 指标 | 数值 |
 |---|---|
-| 后端测试 | **301 passed**, 0 failed |
-| 前端测试 | **39 passed** |
-| API 端点 | 25 个 |
+| 后端测试 | **305 passed**, 0 failed |
+| 前端测试 | **42 passed** |
+| API 端点 | 26 个 |
 | 数据表 | 9 张 |
-| ADR | 10 篇 (0001-0010) |
-| Alembic head | 0008 |
-| 完成阶段 | C1-C6 + 团队化 A/B/C |
+| ADR | 13 篇 (0001-0013) |
+| Alembic head | 0011 |
+| 完成阶段 | C1-C6 + 团队化 A/B/C + 文档管理 |
 
-**最新交付**：C6 Chat 引用+思考（8 事件 typed SSE）、团队化升级（JWT 认证 + 会话隔离 + 前端登录）。
+**最新交付**：C6 Chat 引用+思考（8 事件 typed SSE）、团队化升级（JWT + 会话隔离）、jieba 中文分词（ADR-0011）、top_k 敏感性（ADR-0012）、文档管理（ADR-0013）。
 
-详见 [当前版本路线](docs/roadmap/current-release/README.md) 和 [团队化升级计划](docs/roadmap/团队化升级计划.md)。
+详见 [当前版本路线](docs/roadmap/current-release/README.md)、[团队化升级计划](docs/roadmap/团队化升级计划.md)、[优化索引](docs/optimization/README.md)。
 
 ---
 
