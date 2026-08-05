@@ -1,81 +1,343 @@
 # CodeAware
 
-AI 驱动的研发效能平台。当前目标实现位于 `codeaware-py/`，核心域是 Chat：多轮对话、
-短期窗口与增量摘要、长期记忆、Knowledge RAG 和版本化 Prompt 在同一条问答链路中收敛。
-Code Review、Unit Test、AIReadMe 是复用同一 AI 基建的薄工具。
+AI 驱动的研发效能平台，为**软件工程实验室团队**设计（代码评审、新人培训、团队知识检索）。
+从 Java（Spring Boot + LangChain4j）全量重构为 Python，以 **Chat 为核心域**。
 
-仓库中的 `ai-center-*` Java 模块是迁移前的 legacy 参考，不再作为当前 API、启动方式或
-阶段验收依据。
+> 当前是 **Chat/RAG 应用**（不是 Agent），含 JWT 认证 + 会话隔离的团队化升级已完成。
+> Agent 路线文档已就绪，保持锁定待授权。
 
-## 当前状态
+---
 
-- 当前版本：`0.1.0`
-- Python HTTP 契约：27 个 paths、29 个 operations，以
-  [OpenAPI 快照](codeaware-py/openapi/current-release.json)为准
-- C1 真实缺口修复：[Evidence](docs/roadmap/current-release/evidence/C1/report.md)
-- C2 七域 API/持久化/UI 闭环：[Evidence](docs/roadmap/current-release/evidence/C2/report.md)
-- C3 版本冻结与交接：[Evidence](docs/roadmap/current-release/evidence/C3/report.md)
-- 当前冻结基线：C3 已完成
-- 下一阶段：C4 真实 BM25 词法召回增强，未开始
-- Agent：未来方向，尚未实现且保持锁定
+## 系统架构
 
-完整顺序见[当前版本与检索增强路线](docs/roadmap/current-release/README.md)。
+```mermaid
+graph TB
+    subgraph Frontend["前端 :5173"]
+        React["React 19 + Vite"]
+        SSE["SSE Parser<br/>8 事件 类型校验"]
+    end
 
-## 已实现能力
+    subgraph Backend["FastAPI :8000"]
+        Router["API Router<br/>25 endpoints"]
+        Auth["Auth<br/>JWT + bcrypt"]
+        TC["TurnCoordinator<br/>⚡ 核心状态机"]
 
-| 领域 | 当前能力 |
-|---|---|
-| Chat | 同步/typed SSE、多轮持久化、取消/并发保护、PG 真相源与 Redis 缓存 |
-| 短期记忆 | 最近消息窗口、增量摘要、水位线、PG/Redis 一致性与 fallback |
-| 长期记忆 | FACT/REFERENCE 原子事实、bge-m3 向量召回、对话来源追踪 |
-| Knowledge / RAG | 文本与文件上传、Document/Chunk 父子表、pgvector + `pg_trgm` + RRF |
-| Prompt | 四类模板、append-only 版本、预览、激活和回滚 |
-| Code Review | 选定/active Prompt、Pydantic 结构化结果、审计记录 |
-| Unit Test | 生成并保存 JUnit5 测试代码；不执行生成代码 |
-| AIReadMe | allowlist 内有界只读快照、稳定 hash、版本递增 |
+        subgraph Context["上下文构建"]
+            STM["ShortTermMemory<br/>PG 消息 + Redis 窗口 + 增量摘要"]
+            LTM["LongTermMemory<br/>原子事实 + pgvector 1024-d 召回"]
+            RAG["RagService<br/>查询改写 → BM25+pgvector → RRF"]
+            PT["PromptTemplate<br/>版本化 + 激活/回滚"]
+        end
+    end
 
-当前关键词腿是 PostgreSQL `pg_trgm similarity`，属于模糊字符串召回，**不是 BM25**。
-真正的 BM25 实施边界见[C4 计划](docs/roadmap/current-release/04-BM25检索增强.md)。
+    subgraph Data["数据层"]
+        PG["PostgreSQL 16<br/>pgvector + pg_search BM25"]
+        Redis["Redis 7<br/>msgs:{cid} / summary:{cid}"]
+        Ollama["Ollama<br/>bge-m3 1024-d"]
+    end
+
+    React -->|"typed SSE (8 events)"| Router
+    Router --> Auth
+    Auth --> TC
+    TC --> Context
+    STM --> PG
+    STM --> Redis
+    LTM --> PG
+    LTM --> Ollama
+    RAG --> PG
+    RAG --> Ollama
+    PT --> PG
+    TC -->|"ChatDeepSeek<br/>astream"| DS["DeepSeek v4-flash<br/>API"]
+```
+
+**核心原则**：PG 是真相源 → Redis 只做可丢弃缓存 → typed SSE 把生成/降级/完成语义显式交给前端。
+
+---
+
+## Chat 一条请求全链路
+
+```mermaid
+sequenceDiagram
+    participant U as 前端
+    participant A as FastAPI
+    participant T as TurnCoordinator
+    participant P as PostgreSQL
+    participant R as Redis
+    participant M as Memory / RAG
+    participant L as DeepSeek
+
+    U->>A: POST /api/chat/send/stream
+    A->>T: prepare_turn(cid, msg, user_id)
+
+    Note over T: Transaction A
+    T->>P: 建 Conversation + 写 USER
+    P-->>T: commit
+    T->>R: 刷新 msgs:{cid}
+    T-->>U: ⚡ chat.started
+
+    Note over T: 构建上下文（不在事务内）
+    T->>R: 读消息窗口 + 摘要
+    alt Redis miss
+        T->>P: 回查 PG
+        T-->>U: context.warning
+    end
+    T->>M: 长期记忆召回 + RAG 检索
+    M-->>T: memory + rag_context
+    T-->>U: context.references
+
+    Note over T: 模型生成（不在事务内）
+    T->>P: 读 active CHAT Prompt
+    T->>L: astream(rendered prompt)
+    loop 每个 chunk
+        L-->>T: reasoning_content / text
+        T-->>U: reasoning.delta
+        T-->>U: token.delta
+    end
+
+    Note over T: Transaction B
+    T->>P: 写 ASSISTANT
+    P-->>T: commit
+    T->>R: 刷新缓存
+    T->>T: 增量摘要 + 抽取长期记忆
+
+    T-->>U: post_turn.warning (如有)
+    T-->>U: ✅ chat.completed
+```
+
+**关键设计**：模型等待期间不持有数据库事务 → 连接池不被长时间占用。
+
+---
+
+## 知识库 RAG 流水线
+
+```mermaid
+flowchart LR
+    subgraph Write["写入链"]
+        U1["上传文件<br/>MD/DOCX/HTML/PDF"] --> Parse["元素感知解析<br/>Title→# ListItem→-"]
+        Parse --> Chunk["chunk_by_title<br/>500字/overlap 50"]
+        Chunk --> Embed["bge-m3 embedding<br/>1024 维向量"]
+        Embed --> Store["documents + knowledge_chunks<br/>全文一次 + chunks 内联向量"]
+    end
+
+    subgraph Read["查询链"]
+        Q["用户问题"] --> Rewrite["QueryRewriter<br/>口语→多检索表达"]
+        Rewrite --> PreEmbed["预生成全部向量<br/>(SQL 前完成外部 IO)"]
+        PreEmbed --> Vector["向量腿<br/>pgvector HNSW cosine<br/>top_k × 3"]
+        PreEmbed --> Lexical["词法腿<br/>ParadeDB BM25<br/>@@@ 操作符"]
+        Vector --> RRF["RRF 融合<br/>1/(60+rank)"]
+        Lexical --> RRF
+        RRF --> Dedup["按 chunk id 去重"]
+        Dedup --> Format["format_context<br/>注入 Chat Prompt"]
+    end
+
+    Store -.-> Vector
+    Store -.-> Lexical
+```
+
+**PDF 分支**：pypdf 文本层探针 → 有文本层：pdfminer 字号标题检测；无文本层：显式拒绝 `KNOWLEDGE_PDF_NO_TEXT_LAYER`（不引 OCR）。
+
+---
+
+## 数据模型
+
+```mermaid
+erDiagram
+    users ||--o{ conversations : "user_id (nullable)"
+    conversations ||--o{ messages : "conversation_id FK CASCADE"
+    conversations ||--o{ long_term_memories : "conversation_id"
+    documents ||--o{ knowledge_chunks : "document_id FK CASCADE"
+    prompt_templates {
+        int id PK
+        string type
+        int version
+        string name
+        text template_body
+        bool is_active
+    }
+    ai_operation_records {
+        int id PK
+        string operation_type
+        jsonb result
+    }
+    ai_readme_documents {
+        int id PK
+        string project_name
+        text content
+        string snapshot_hash
+    }
+
+    users {
+        int id PK
+        string username UK
+        string password_hash
+        string role "admin|member"
+        string display_name
+        bool is_active
+    }
+    conversations {
+        int id PK
+        string conversation_id UK
+        int user_id FK "nullable"
+        string title
+        text summary
+        int summary_message_count
+    }
+    messages {
+        int id PK
+        string conversation_id FK
+        string role
+        text content
+    }
+    long_term_memories {
+        int id PK
+        string conversation_id FK
+        string content
+        string memory_type
+        vector embedding "1024-d"
+    }
+    documents {
+        int id PK
+        string title
+        text content "全文存一次"
+        string source_type
+        string project_name
+    }
+    knowledge_chunks {
+        int id PK
+        int document_id FK
+        int chunk_index
+        text chunk_content
+        vector embedding "1024-d"
+    }
+```
+
+**核心关系**：会话归属用户（user_id nullable 兼容直连测试）；知识库/记忆**不加 user_id**——全员共享（实验室场景）。
+
+---
+
+## Typed SSE 协议（8 事件）
+
+```mermaid
+flowchart TD
+    S["chat.started<br/>Conversation + USER 已提交"] --> R["context.references<br/>知识/记忆参考来源"]
+    R --> RD["reasoning.delta<br/>模型思考过程流式"]
+    RD --> T["token.delta<br/>回答内容流式"]
+    T --> C{"成功?"}
+    C -->|是| CC["chat.completed<br/>ASSISTANT 已提交 + post-turn 收口"]
+    C -->|否| CF["chat.failed<br/>不保存 partial assistant"]
+
+    S -.-> CW["context.warning<br/>增强降级"]
+    CC -.-> PW["post_turn.warning<br/>后处理降级"]
+
+    style S fill:#4a9,stroke:#333
+    style CC fill:#4a9,stroke:#333
+    style CF fill:#c44,stroke:#333
+    style CW fill:#e8a400,stroke:#333
+    style PW fill:#e8a400,stroke:#333
+```
+
+每个事件带 `protocol_version=1` + `sequence`（严格递增）+ `turn_id`。同步接口 drain 同一事件流——核心状态机只有一份。
+
+---
+
+## 部署架构（实验室云服务器）
+
+```mermaid
+graph TB
+    subgraph Lab["实验室局域网 / 公网"]
+        Browser["浏览器"]
+    end
+
+    subgraph Server["云服务器 (Ubuntu 22.04 x86_64)"]
+        Caddy["Caddy<br/>HTTPS 反代 + 自动证书"]
+        Uvicorn["uvicorn :8000<br/>2 workers systemd 守护"]
+        Uvicorn -->|"127.0.0.1"| Caddy
+
+        subgraph Docker["docker compose"]
+            PG2["PostgreSQL :5433<br/>pgvector + pg_search"]
+            Redis2["Redis :6380"]
+            Ollama2["Ollama :11434<br/>bge-m3"]
+        end
+        Uvicorn --> Docker
+    end
+
+    Browser -->|"HTTPS :443"| Caddy
+    Uvicorn -->|"公网 API"| DeepSeek["DeepSeek API"]
+```
+
+| 方案 | 适用 | 启动方式 |
+|---|---|---|
+| 本地开发 | 单机 | `bash codeaware-py/scripts/start.sh` |
+| 云部署 | 团队 | `sudo bash codeaware-py/scripts/deploy.sh bootstrap` |
+
+---
 
 ## 技术栈
 
-- Python 3.12、FastAPI、Pydantic v2
-- LangChain model/embedding adapter、DeepSeek
-- SQLAlchemy 2.0 async、Alembic、asyncpg
-- PostgreSQL 16、pgvector、`pg_trgm`
-- Redis 7、Ollama bge-m3（1024 维）
-- React 19、Vite、TypeScript、Vitest、Playwright
-- uv、pytest、httpx
+| 层 | 选型 | 备注 |
+|---|---|---|
+| 框架 | FastAPI + Pydantic v2 | async HTTP + typed SSE |
+| LLM | DeepSeek v4-flash (langchain-deepseek) | ChatDeepSeek 提取 reasoning_content |
+| 向量 | Ollama bge-m3 1024-d | 本地 CPU embedding, 零 API 费 |
+| 关系 DB | PostgreSQL 16 + asyncpg | PG-first 真相源 |
+| 向量索引 | pgvector HNSW cosine | 内联向量, 同事务 commit |
+| 词法检索 | ParadeDB pg_search BM25 | default tokenizer; pg_trgm 回退 |
+| 缓存 | Redis 7 | 可丢弃, PG fallback |
+| 前端 | React 19 + Vite + TypeScript | 7 模块 SPA（无 router） |
+| 包管理 | uv + Alembic | 依赖锁定 + 迁移回退 |
+
+---
+
+## 当前状态
+
+| 指标 | 数值 |
+|---|---|
+| 后端测试 | **301 passed**, 0 failed |
+| 前端测试 | **39 passed** |
+| API 端点 | 25 个 |
+| 数据表 | 9 张 |
+| ADR | 10 篇 (0001-0010) |
+| Alembic head | 0008 |
+| 完成阶段 | C1-C6 + 团队化 A/B/C |
+
+**最新交付**：C6 Chat 引用+思考（8 事件 typed SSE）、团队化升级（JWT 认证 + 会话隔离 + 前端登录）。
+
+详见 [当前版本路线](docs/roadmap/current-release/README.md) 和 [团队化升级计划](docs/roadmap/团队化升级计划.md)。
+
+---
 
 ## 快速启动
 
-需要 Docker Desktop/Compose、Python 3.12、uv 和 Node.js/npm；七域浏览器验收还需要
-Chrome。所有命令从仓库根执行。全新 Compose volume 会创建 Java `ai_center` 和 Python
-`ai_center_py`；已有 volume 用幂等脚本补建 Python 数据库，不删除现有数据。
+### 本地开发
+
+```bash
+# 一键启动（docker + 迁移 + admin 引导 + 后端 + 前端）
+bash codeaware-py/scripts/start.sh
+
+# 首次启动会引导创建 admin 账号，之后访问:
+#   前端: http://localhost:5173
+#   OpenAPI: http://localhost:8000/docs
+#   健康: http://localhost:8000/api/ai/health
+```
+
+### 停止
+
+```bash
+bash codeaware-py/scripts/stop.sh                    # 停止后端+前端, docker 保留
+cd /path/to/ai-center && docker compose down          # 全停（含数据服务）
+```
+
+### 手动启动（分步）
 
 ```bash
 docker compose up -d
-./codeaware-py/scripts/ensure_python_db.sh
-docker compose exec ollama ollama pull bge-m3
-(cd codeaware-py && cp .env.example .env)
-# 编辑 codeaware-py/.env，填写有效 LLM_API_KEY
-(cd codeaware-py && uv sync)
-(cd codeaware-py && uv run alembic upgrade head)
+(cd codeaware-py && uv sync && uv run alembic upgrade head)
+(cd codeaware-py && uv run python -m scripts.create_admin)  # 首次
 (cd codeaware-py && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000)
+(cd codeaware-py/frontend && npm ci && npm run dev)
 ```
 
-另开终端启动前端：
-
-```bash
-(cd codeaware-py/frontend && npm ci)
-(cd codeaware-py/frontend && npm run dev)
-```
-
-- 前端：http://localhost:5173
-- OpenAPI：http://localhost:8000/docs
-- liveness：http://localhost:8000/health/live
-- readiness：http://localhost:8000/health/ready
-- AI 依赖诊断：http://localhost:8000/api/ai/health
+---
 
 ## typed SSE 示例
 
@@ -84,7 +346,8 @@ docker compose exec ollama ollama pull bge-m3
 ```bash
 curl -N http://localhost:8000/api/chat/send/stream \
   -H 'Content-Type: application/json' \
-  -d '{"conversation_id":null,"message":"解释当前 RAG 完整链路"}'
+  -H 'Authorization: Bearer <token>' \
+  -d '{"conversation_id":null,"message":"解释 RAG 完整链路"}'
 ```
 
 响应是版本化事件，不是裸 token 或 `[DONE]`：
@@ -92,80 +355,85 @@ curl -N http://localhost:8000/api/chat/send/stream \
 ```text
 id: 1
 event: chat.started
-data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":1,"created":true}
+data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":1}
 
 id: 2
+event: context.references
+data: {"protocol_version":1,...,"knowledge_refs":[...],"memory_refs":[...],"sequence":2}
+
+id: 3
+event: reasoning.delta
+data: {"protocol_version":1,...,"sequence":3,"delta":"首先分析..."}
+
+id: 4
 event: token.delta
-data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":2,"delta":"..."}
+data: {"protocol_version":1,...,"sequence":4,"delta":"RAG 完整链路包括..."}
 
 event: chat.completed
-data: {"protocol_version":1,"conversation_id":"...","turn_id":"...","sequence":4,"assistant_message_id":1,"warning_count":0}
+data: {"protocol_version":1,...,"sequence":N}
 ```
 
-后续请求把该 `conversation_id` 原样传回；项目中不使用 `session_id`。
+---
 
-## 安全测试与演示
+## 安全测试
 
-后端测试禁止裸跑 `pytest`。安全执行器会创建带随机 identity 的一次性 PostgreSQL/Redis，
-拒绝开发库、Redis DB 0、远程目标和伪造 sentinel，并在成功、失败或中断后精确清理。
+后端测试禁止裸跑 `pytest`。安全执行器创建随机 disposable PG/Redis，拒绝开发库和远程目标：
 
 ```bash
-./codeaware-py/scripts/verify_current_release.sh
+# 全量测试（安全）
 (cd codeaware-py && uv run python scripts/run_tests_safe.py -q)
+
+# 覆盖率
 (cd codeaware-py && uv run python scripts/run_tests_safe.py --cov=app --cov-report=term-missing -q)
-(cd codeaware-py/frontend && npm run test)
-(cd codeaware-py/frontend && npm run lint)
-(cd codeaware-py/frontend && npm run build)
-./codeaware-py/scripts/demo_c2_mocked.sh
-./codeaware-py/scripts/demo_c3_handoff.sh
+
+# 前端
+(cd codeaware-py/frontend && npm run test && npm run lint && npm run build)
 ```
 
-空 volume 验证：
+---
 
-```bash
-./codeaware-py/scripts/verify_fresh_bootstrap.sh
-```
+## 技术决策一览
 
-真实 DeepSeek/Ollama smoke 会产生实际 API 调用，只在本地显式执行：
+| 决策 | 选了 | 评估后没选 |
+|---|---|---|
+| LLM adapter | ChatDeepSeek（提取 reasoning） | ChatOpenAI（丢弃第三方字段） |
+| 词法检索 | ParadeDB BM25 (default tokenizer) | pg_trgm（C3 噪声拖累 RRF） |
+| PDF 解析 | pdfminer.six（字号标题检测） | unstructured.partition.pdf（拖 torch） |
+| Reranker | 评估后暂缓 (ADR-0009) | 盲目加（MRR 0.934 已高） |
+| 意图识别 | 不做（90% 知识问题） | 加分类引入漏检风险 |
+| LangGraph / Agent | 不做（无模型自主选工具需求） | 等真实需求触发 |
+| Refresh token | 不要（access 7 天） | 实验室不需要 refresh 轮换 |
+| 并发 guard | 进程内 set[str] | PG advisory lock（多 worker 时再做） |
 
-```bash
-./codeaware-py/scripts/demo_c2_live.sh
-```
+---
 
-冻结版本的安全回退演练只使用 detached 临时 worktree 和一次性数据库：
+## 当前边界
 
-```bash
-./codeaware-py/scripts/verify_c3_rollback.sh
-```
+| 有 | 没有 |
+|---|---|
+| JWT 认证 + 会话按用户隔离 | 项目管理（X-Project-ID） |
+| 知识库/记忆全员共享 | 知识库按人权限 |
+| 8 事件 typed SSE | WebSocket |
+| BM25 + pgvector RRF 混合检索 | Reranker 二阶段精排 |
+| 元素感知分块 + 扫描 PDF 拒绝 | OCR |
+| fail-closed disposable 测试栈 | 裸 pytest |
+| 单 worker local-first | 多 worker / K8s |
+| 确定性 Chat 状态机 | Agent 工具循环 |
 
-完整预期输出和交接顺序见[C3 交接运行手册](docs/roadmap/current-release/C3-交接运行手册.md)，
-版本变化与限制见[0.1.0 发布说明](docs/releases/0.1.0.md)。
-
-## AIReadMe 与文件安全
-
-AIReadMe 快照默认关闭。启用时 `LOCAL_PROJECT_ROOTS` 只能配置专用、无敏感信息的服务端
-绝对目录；扫描拒绝越界、symlink、密钥、二进制、超限文件和项目命令执行。
-
-Knowledge 文件上传支持 PDF、DOCX、HTML、Markdown、TXT，默认限制为 5 MiB 原始文件和
-200,000 个解析后字符。上传内容不会被执行。
-
-## 当前限制
-
-- local-first、单用户；尚无认证、RBAC 或多租户隔离。
-- 同一会话 turn guard 是进程内实现，当前只支持单 worker；多 worker 前需改为 PG lease。
-- Unit Test 只生成并保存测试源码，不运行测试。
-- 普通 CI 使用 fake LLM/embedder；真实依赖只由显式 live smoke 验证。
-- Knowledge 词法腿当前是 `pg_trgm`，C4 才实施真实 BM25。
-- 没有 Agent Tool loop、Citation、仓库索引、shell、patch、Git 写入或多 Agent。
+---
 
 ## 文档入口
 
-- 通用开发规则：[AGENTS.md](AGENTS.md)
-- 文档索引：[docs/INDEX.md](docs/INDEX.md)
-- ADR：[docs/decisions/adr/](docs/decisions/adr/)
-- 当前路线：[docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)
-- 面试准备：[docs/interview/面试准备指南.md](docs/interview/面试准备指南.md)
-- DeepSeek 集成：[docs/integration/deepseek-notes.md](docs/integration/deepseek-notes.md)
-- 当前发布说明：[docs/releases/0.1.0.md](docs/releases/0.1.0.md)
-- Java → Python 历史迁移：[docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md)
-- Java legacy 模块：`java-legacy/ai-center-common`、`ai-center-model`、`ai-center-ai`、`ai-center-server`
+| 文档 | 用途 |
+|---|---|
+| [AGENTS.md](AGENTS.md) | 开发规则 |
+| [docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md) | 当前路线 (C1-C6) |
+| [docs/roadmap/团队化升级计划.md](docs/roadmap/团队化升级计划.md) | 团队化设计 |
+| [docs/roadmap/团队化升级-实施计划.md](docs/roadmap/团队化升级-实施计划.md) | 团队化落地 |
+| [docs/roadmap/部署上线指南.md](docs/roadmap/部署上线指南.md) | 部署 (局域网 + 云) |
+| [docs/roadmap/chat-to-agent/personal/README.md](docs/roadmap/chat-to-agent/personal/README.md) | Agent 路线（锁定） |
+| [docs/decisions/adr/](docs/decisions/adr/) | 10 篇架构决策 |
+| [docs/interview/面试准备指南.md](docs/interview/面试准备指南.md) | 面试深挖 |
+| [docs/interview/面试速通版.md](docs/interview/面试速通版.md) | 面试速通 |
+| [docs/interview/项目简历介绍.md](docs/interview/项目简历介绍.md) | 简历粘贴 |
+| [docs/migration/Python重构迁移文档.md](docs/migration/Python重构迁移文档.md) | 迁移历史 |
