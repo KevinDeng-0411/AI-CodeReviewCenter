@@ -3,6 +3,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.infra.vector_recall import VectorRecallService
@@ -15,6 +16,8 @@ from app.core.config import settings
 from app.core.exceptions import BusinessException
 from app.core.response import Result
 from app.schemas.knowledge import (
+    DocumentListVO,
+    DocumentVO,
     KnowledgeDocumentVO,
     KnowledgeSearchHit,
     KnowledgeSearchRequest,
@@ -99,14 +102,65 @@ async def search(
     )
 
 
+@router.get("/documents", response_model=Result[DocumentListVO])
+async def list_documents(
+    status: str = Query("ACTIVE", pattern="^(ACTIVE|DELETED|ALL)$"),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """文档列表（ADR-0013）：status 过滤 + 分页 + chunk_count。"""
+    from app.models import Document, KnowledgeChunk
+
+    chunk_count_subq = (
+        select(func.count(KnowledgeChunk.id))
+        .where(KnowledgeChunk.document_id == Document.id)
+        .correlate(Document)
+        .scalar_subquery()
+    )
+    base = select(
+        Document.id, Document.title, Document.source_type, Document.project_name,
+        Document.status, chunk_count_subq.label("chunk_count"),
+        Document.created_at, Document.deleted_at,
+    )
+    count_stmt = select(func.count()).select_from(Document)
+    if status != "ALL":
+        base = base.where(Document.status == status)
+        count_stmt = count_stmt.where(Document.status == status)
+    total = await db.scalar(count_stmt)
+    rows = (
+        await db.execute(
+            base.order_by(Document.id.desc()).offset((page - 1) * size).limit(size)
+        )
+    ).all()
+    records = [
+        DocumentVO(
+            id=r.id, title=r.title, source_type=r.source_type,
+            project_name=r.project_name, status=r.status, chunk_count=r.chunk_count,
+            created_at=r.created_at.isoformat() if r.created_at else "",
+            deleted_at=r.deleted_at.isoformat() if r.deleted_at else None,
+        )
+        for r in rows
+    ]
+    return Result.ok(
+        DocumentListVO(total=total or 0, page=page, size=size, records=records)
+    )
+
+
 @router.delete("/{doc_id}", response_model=Result[None])
-async def delete(doc_id: int, db: AsyncSession = Depends(get_db)):
-    from app.models import Document
-    doc = await db.get(Document, doc_id)
-    if doc is None:
-        raise BusinessException("KNOWLEDGE_DOCUMENT_NOT_FOUND", status_code=404)
-    await db.delete(doc)
-    await db.commit()
+async def delete(
+    doc_id: int,
+    db: AsyncSession = Depends(get_db),
+    llm=Depends(get_chat_model),
+    vr: VectorRecallService = Depends(get_vector_recall_service),
+    lr=Depends(get_lexical_recall),
+):
+    """软删文档（ADR-0013）：标 DELETED + 物理删 chunks。
+
+    commit 由 get_db 统一处理（override 到测试 db_session 时不提交，保证隔离）。
+    """
+    rag = _rag_service(db, llm, vr, lr)
+    await rag.delete_document(doc_id)
     return Result.ok()
 
 
@@ -182,5 +236,77 @@ async def upload_file(
                 status_code=502,
             ) from exc
         return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title))
+    finally:
+        await file.close()
+
+
+@router.post(
+    "/{doc_id}/replace",
+    response_model=Result[KnowledgeDocumentVO],
+    responses={
+        404: {"description": "doc_id 不存在", "model": Result[None]},
+        400: {"description": "文件为空/格式不支持/超限/解析失败", "model": Result[None]},
+    },
+)
+async def replace(
+    doc_id: int,
+    file: UploadFile = File(
+        ...,
+        description="PDF/DOCX/HTML/Markdown/TXT，原始文件最大 5 MiB",
+    ),
+    project_name: str | None = Form(default=None, max_length=100),
+    db: AsyncSession = Depends(get_db),
+    llm=Depends(get_chat_model),
+    vr: VectorRecallService = Depends(get_vector_recall_service),
+    lr=Depends(get_lexical_recall),
+):
+    """更新文档（ADR-0013）：解析新文件 -> 软删旧文档 -> 上传新文档。"""
+    from app.ai.services.document_parser import DocumentParserService
+
+    parser = DocumentParserService()
+    filename = parser.safe_filename(file.filename)
+    extension = parser.extension(filename) or "none"
+    try:
+        if not filename or not parser.supports_upload(filename, file.content_type):
+            raise BusinessException(FILE_TYPE_UNSUPPORTED)
+
+        content = await _read_limited_upload(file)
+        if not content or not content.strip():
+            raise BusinessException(FILE_EMPTY)
+
+        try:
+            text = (await parser.parse(content, filename)).strip()
+        except Exception as exc:
+            logger.warning(
+                "knowledge replace parse failed code=%s extension=%s",
+                FILE_PARSE_FAILED,
+                extension,
+            )
+            raise BusinessException(FILE_PARSE_FAILED) from exc
+        if not text:
+            raise BusinessException(
+                PDF_NO_TEXT_LAYER if extension == ".pdf" else FILE_PARSE_FAILED
+            )
+        if len(text) > settings.knowledge_parsed_max_chars:
+            raise BusinessException(FILE_CONTENT_TOO_LARGE)
+
+        rag = _rag_service(db, llm, vr, lr)
+        try:
+            new_doc = await rag.replace_document(
+                doc_id,
+                filename,
+                text,
+                source_type="DOC",
+                project_name=project_name,
+            )
+        except BusinessException:
+            raise
+        except Exception as exc:
+            raise BusinessException(
+                "KNOWLEDGE_EMBEDDING_FAILED",
+                status_code=502,
+            ) from exc
+        # commit 由 get_db 统一处理（测试 override 时不提交，保证隔离）
+        return Result.ok(KnowledgeDocumentVO(id=new_doc.id, title=new_doc.title))
     finally:
         await file.close()

@@ -33,12 +33,15 @@ async def test_search_finds_relevant(rag_service, db_session):
     assert any("穿透" in r.chunk.chunk_content or "布隆" in r.chunk.chunk_content for r in results)
 
 
-async def test_delete_document_cascades(rag_service, db_session):
+async def test_delete_document_soft_deletes_rows_and_removes_chunks(rag_service, db_session):
     doc = await rag_service.upload_document("t", "# A\n内容一", "MANUAL", "p")
     doc_id = doc.id
     await rag_service.delete_document(doc_id)
     chunks = (
         await db_session.execute(select(KnowledgeChunk).where(KnowledgeChunk.document_id == doc_id))
     ).scalars().all()
-    assert len(chunks) == 0  # CASCADE
-    assert await db_session.get(Document, doc_id) is None
+    assert len(chunks) == 0  # chunks 物理删除（ADR-0013）
+    deleted = await db_session.get(Document, doc_id)
+    assert deleted is not None  # documents 行保留（软删，可审计）
+    assert deleted.status == "DELETED"
+    assert deleted.deleted_at is not None

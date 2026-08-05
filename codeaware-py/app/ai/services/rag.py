@@ -5,6 +5,7 @@
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,11 +57,11 @@ class RagService:
         await self.session.flush()
         for i, (chunk_text, embedding) in enumerate(prepared_chunks):
             kc = KnowledgeChunk(
-            document_id=doc.id,
-            chunk_index=i,
-            chunk_content=chunk_text,
-            chunk_content_segmented=segment_chinese(chunk_text),
-        )
+                document_id=doc.id,
+                chunk_index=i,
+                chunk_content=chunk_text,
+                chunk_content_segmented=segment_chinese(chunk_text),
+            )
             await self.vector_recall.store_preembedded(self.session, kc, embedding)
         return doc
 
@@ -107,7 +108,37 @@ class RagService:
         return "\n".join(parts)
 
     async def delete_document(self, doc_id: int) -> None:
+        """软删文档（ADR-0013）：标 status=DELETED + 物理删 chunks（释放向量存储）。
+
+        documents 行保留（列表可审计/可追溯），chunks 删除后检索不再命中。
+        """
+        from sqlalchemy import delete as sa_delete
+
+        from app.core.exceptions import BusinessException
+
         doc = await self.session.get(Document, doc_id)
-        if doc:
-            await self.session.delete(doc)  # CASCADE 删 chunks（ADR-0002）
-            await self.session.flush()
+        if doc is None or doc.status == "DELETED":
+            # 不存在或已软删都视为 404（幂等删除语义）
+            raise BusinessException("KNOWLEDGE_DOCUMENT_NOT_FOUND", status_code=404)
+        doc.status = "DELETED"
+        doc.deleted_at = datetime.now()  # DateTime 无时区列
+        # 物理删 chunks（符合"删除文档 = 删该文档全部分块"策略）
+        await self.session.execute(
+            sa_delete(KnowledgeChunk).where(KnowledgeChunk.document_id == doc_id)
+        )
+        await self.session.flush()
+
+    async def replace_document(
+        self,
+        doc_id: int,
+        title: str,
+        content: str,
+        source_type: str = "DOC",
+        project_name: str | None = None,
+        content_type: str = "md",
+    ) -> Document:
+        """更新文档（ADR-0013）：软删旧文档 + 上传新文档（新 doc_id，ACTIVE）。"""
+        await self.delete_document(doc_id)
+        return await self.upload_document(
+            title, content, source_type=source_type, project_name=project_name, content_type=content_type
+        )

@@ -110,7 +110,10 @@ async def test_knowledge_text_file_search_and_cascade_closure(client, c2d_contex
     deleted = await client.delete(f"/api/knowledge/{text_id}")
     assert deleted.status_code == 200
     async with AsyncSessionLocal() as session:
-        assert await session.get(Document, text_id) is None
+        # ADR-0013 软删：documents 行保留（status=DELETED），chunks 物理删
+        soft_deleted = await session.get(Document, text_id)
+        assert soft_deleted is not None
+        assert soft_deleted.status == "DELETED"
         assert (
             await session.scalar(
                 select(func.count())

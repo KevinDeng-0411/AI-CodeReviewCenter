@@ -213,6 +213,33 @@
         "title": "AiReadmeVO",
         "type": "object"
       },
+      "Body_replace_api_knowledge__doc_id__replace_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "PDF/DOCX/HTML/Markdown/TXT，原始文件最大 5 MiB",
+            "title": "File",
+            "type": "string"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_replace_api_knowledge__doc_id__replace_post",
+        "type": "object"
+      },
       "Body_upload_file_api_knowledge_upload_file_post": {
         "properties": {
           "file": {
@@ -525,6 +552,98 @@
           "conversation_id"
         ],
         "title": "ConversationItem",
+        "type": "object"
+      },
+      "DocumentListVO": {
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentVO"
+            },
+            "title": "Records",
+            "type": "array"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "size",
+          "records"
+        ],
+        "title": "DocumentListVO",
+        "type": "object"
+      },
+      "DocumentVO": {
+        "description": "文档列表项（ADR-0013 文档管理）。",
+        "properties": {
+          "chunk_count": {
+            "title": "Chunk Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "source_type",
+          "status",
+          "chunk_count",
+          "created_at"
+        ],
+        "title": "DocumentVO",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1170,6 +1289,32 @@
           }
         },
         "title": "Result[CodeReviewVO]",
+        "type": "object"
+      },
+      "Result_DocumentListVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentListVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[DocumentListVO]",
         "type": "object"
       },
       "Result_KnowledgeDocumentVO_": {
@@ -2599,6 +2744,79 @@
         ]
       }
     },
+    "/api/knowledge/documents": {
+      "get": {
+        "description": "文档列表（ADR-0013）：status 过滤 + 分页 + chunk_count。",
+        "operationId": "list_documents_api_knowledge_documents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "ACTIVE",
+              "pattern": "^(ACTIVE|DELETED|ALL)$",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_DocumentListVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Documents",
+        "tags": [
+          "Knowledge"
+        ]
+      }
+    },
     "/api/knowledge/search": {
       "post": {
         "operationId": "search_api_knowledge_search_post",
@@ -2750,6 +2968,7 @@
     },
     "/api/knowledge/{doc_id}": {
       "delete": {
+        "description": "软删文档（ADR-0013）：标 DELETED + 物理删 chunks。\n\ncommit 由 get_db 统一处理（override 到测试 db_session 时不提交，保证隔离）。",
         "operationId": "delete_api_knowledge__doc_id__delete",
         "parameters": [
           {
@@ -2790,6 +3009,84 @@
           }
         ],
         "summary": "Delete",
+        "tags": [
+          "Knowledge"
+        ]
+      }
+    },
+    "/api/knowledge/{doc_id}/replace": {
+      "post": {
+        "description": "更新文档（ADR-0013）：解析新文件 -> 软删旧文档 -> 上传新文档。",
+        "operationId": "replace_api_knowledge__doc_id__replace_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "doc_id",
+            "required": true,
+            "schema": {
+              "title": "Doc Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_replace_api_knowledge__doc_id__replace_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_KnowledgeDocumentVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "文件为空/格式不支持/超限/解析失败"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_NoneType_"
+                }
+              }
+            },
+            "description": "doc_id 不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace",
         "tags": [
           "Knowledge"
         ]

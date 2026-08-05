@@ -51,3 +51,23 @@ class KnowledgeSearchHit(BaseModel):
     match_type: Literal["vector", "keyword", "both"]
     document_id: int
     chunk_content: str
+
+
+class DocumentVO(BaseModel):
+    """文档列表项（ADR-0013 文档管理）。"""
+
+    id: int
+    title: str
+    source_type: str
+    project_name: str | None = None
+    status: str  # ACTIVE / DELETED
+    chunk_count: int
+    created_at: str
+    deleted_at: str | None = None
+
+
+class DocumentListVO(BaseModel):
+    total: int
+    page: int
+    size: int
+    records: list[DocumentVO]
