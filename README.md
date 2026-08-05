@@ -31,8 +31,17 @@ AI 驱动的研发效能平台，为**软件工程实验室团队**设计（代�
 
 ## 界面截图
 
-> ⏳ 待补充：Chat 对话界面（含引用来源与思考流）、知识库管理界面、登录页。
-> 截图清单与流程见 [docs/screenshots/](docs/screenshots/README.md)。
+![Chat 对话](./docs/screenshots/chat.png)
+
+*Chat：流式回答 + 引用来源 + 思考过程*
+
+![知识库管理](./docs/screenshots/knowledge.png)
+
+*知识库：文档列表 + 分块可视化 + 上传/替换/软删*
+
+![登录页](./docs/screenshots/login.png)
+
+*登录：JWT 团队认证*
 
 ---
 
