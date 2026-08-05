@@ -28,11 +28,15 @@ from app.models import Document, KnowledgeChunk
 
 @pytest.fixture
 def upload_overrides(db_session, mock_llm, vector_recall):
+    _set = {"get_db", "get_chat_model", "get_vector_recall_service"}
     app.dependency_overrides[get_db] = lambda: db_session
     app.dependency_overrides[get_chat_model] = lambda: mock_llm
     app.dependency_overrides[get_vector_recall_service] = lambda: vector_recall
     yield
-    app.dependency_overrides.clear()
+    # 只清理本 fixture 设置的，保留 default_user 的 get_current_user override
+    app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_chat_model, None)
+    app.dependency_overrides.pop(get_vector_recall_service, None)
 
 
 class _TrackedUploadFile(UploadFile):

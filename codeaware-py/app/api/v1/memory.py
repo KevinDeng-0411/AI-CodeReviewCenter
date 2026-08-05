@@ -5,13 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.memory.long_term import LongTermMemoryManager
-from app.api.v1.deps import get_db, get_vector_recall_service
+from app.api.v1.deps import get_db, get_vector_recall_service, get_current_user
 from app.core.exceptions import BusinessException
 from app.core.response import Result
 from app.models import Conversation, LongTermMemory
 from app.schemas.memory import MemoryHit, MemorySaveRequest, MemorySaveVO
 
-router = APIRouter(prefix="/api/memory", tags=["Memory"])
+router = APIRouter(prefix="/api/memory", tags=["Memory"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/long-term", response_model=Result[MemorySaveVO])

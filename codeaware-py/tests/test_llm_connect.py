@@ -4,6 +4,7 @@ from langchain_deepseek import ChatDeepSeek
 
 from app.ai.config import get_chat_model, get_embedding_model
 from app.main import app
+from conftest import clear_overrides_keep_auth  # noqa: E402
 
 
 async def test_get_chat_model_singleton(monkeypatch):
@@ -34,4 +35,4 @@ async def test_ai_health_endpoint_mocked(client, setup_db, mock_llm, mock_embedd
         assert data["dim"] == 1024
         assert data["pgvector"] is True
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()

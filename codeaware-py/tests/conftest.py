@@ -31,6 +31,19 @@ import redis.asyncio as aioredis
 from _safeguard import assert_safe_target_identity
 
 
+def clear_overrides_keep_auth():
+    """清空 dependency_overrides 但保留 default_user 的 get_current_user override。
+
+    供各测试 fixture teardown 使用（替代 app.dependency_overrides.clear()）。
+    """
+    from app.api.v1.deps import get_current_user
+
+    saved = app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.clear()
+    if saved is not None:
+        app.dependency_overrides[get_current_user] = saved
+
+
 class FakeEmbedder:
     """确定性 1024 维 embedder：同文本同向量（sim≈1），不同文本近正交（sim≈0）。"""
 
@@ -156,8 +169,35 @@ async def turn_coordinator(db_session, mock_llm, redis_client, vector_recall, ch
     return TurnCoordinator(mock_llm, redis_client, vector_recall, chunker, QueryRewriter(mock_llm), lexical_recall)
 
 
+@pytest.fixture(scope="session")
+async def default_user(setup_db):
+    """团队化升级阶段 B：session 级提交一个测试 admin 用户，override get_current_user 返回它。
+
+    所有走 HTTP client 的测试自动获得认证（285 老测试零改动）。
+    隔离测试 pop override 走真实 token。session 级避免重复创建同名用户冲突。
+    """
+    from app.api.v1.deps import get_current_user
+    from app.core.security import hash_password
+    from app.db.session import AsyncSessionLocal
+    from app.models import User
+
+    async with AsyncSessionLocal() as session:
+        user = User(
+            username="test-admin",
+            password_hash=hash_password("test-password"),
+            role="admin",
+            display_name="Test Admin",
+        )
+        session.add(user)
+        await session.commit()
+        # expire_on_commit=False -> user 仍可用
+    app.dependency_overrides[get_current_user] = lambda: user
+    yield user
+    app.dependency_overrides.pop(get_current_user, None)
+
+
 @pytest.fixture
-async def client():
-    """ASGI 测试客户端，不打真实端口。"""
+async def client(default_user):
+    """ASGI 测试客户端，不打真实端口。依赖 default_user 以获得认证 override。"""
     async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c

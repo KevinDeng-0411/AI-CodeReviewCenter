@@ -10,6 +10,7 @@ from app.ai.services.prompt import PromptService
 from app.core.enums import PromptType
 from app.db.session import AsyncSessionLocal, get_db
 from app.main import app
+from conftest import clear_overrides_keep_auth  # noqa: E402
 from app.models import PromptTemplate
 from app.schemas.prompt import PromptCreateRequest
 
@@ -42,7 +43,7 @@ async def c2c_context(db_session):
     try:
         yield seeds
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()
 
 
 def _create_payload(

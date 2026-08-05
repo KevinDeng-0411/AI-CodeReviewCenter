@@ -10,6 +10,7 @@ from app.ai.prompt.template_manager import PromptTemplateManager
 from app.core.enums import PromptType
 from app.db.session import get_db
 from app.main import app
+from conftest import clear_overrides_keep_auth  # noqa: E402
 from app.models import AiOperationRecord
 from app.schemas.code_review import CodeReviewResult, ReviewIssue
 from app.schemas.unit_test import UnitTestResult
@@ -112,7 +113,7 @@ async def c2b_context(db_session):
             "unit_template": unit_template,
         }
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()
 
 
 def _review_payload(project_name: str = "c2b-project") -> dict:

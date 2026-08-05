@@ -7,14 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.config import get_chat_model
 from app.ai.prompt.template_manager import PromptTemplateManager
 from app.ai.services.unit_test import UnitTestService
-from app.api.v1.deps import get_db
+from app.api.v1.deps import get_db, get_current_user
 from app.core.exceptions import BusinessException
 from app.core.response import PageResult, Result
 from app.models import AiOperationRecord
 from app.schemas.entities import AiOperationRecordRead, record_to_dict
 from app.schemas.unit_test import UnitTestRequest, UnitTestVO
 
-router = APIRouter(prefix="/api/unit-test", tags=["UnitTest"])
+router = APIRouter(prefix="/api/unit-test", tags=["UnitTest"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/generate", response_model=Result[UnitTestVO])

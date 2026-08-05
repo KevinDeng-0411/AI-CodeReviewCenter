@@ -222,7 +222,7 @@ class _EndpointCoordinator:
     def __init__(self) -> None:
         self.calls: list[tuple] = []
 
-    async def prepare_turn(self, cid, message):
+    async def prepare_turn(self, cid, message, user_id=None):
         self.calls.append(("prepare_turn", cid, message))
         return PreparedTurn(conversation_id=cid or "new-cid", created=cid is None)
 
@@ -246,7 +246,7 @@ class _RejectingEndpointCoordinator:
     def __init__(self, error) -> None:
         self.error = error
 
-    async def prepare_turn(self, _cid, _message):
+    async def prepare_turn(self, _cid, _message, user_id=None):
         raise self.error
 
 
@@ -339,6 +339,7 @@ async def test_stream_preflight_session_exits_before_response_is_returned(
     response = await send_stream(
         ChatRequest(conversation_id=cid, message="事务边界检查"),
         coordinator=coord,
+        user=None,
     )
     try:
         assert isinstance(response, _ClosingStreamingResponse)
@@ -373,7 +374,7 @@ async def test_sync_and_stream_endpoints_share_prepare_path():
     req = ChatRequest(conversation_id="shared-cid", message="same path")
 
     sync_coord = _EndpointCoordinator()
-    sync_result = await send(req, coordinator=sync_coord)
+    sync_result = await send(req, coordinator=sync_coord, user=None)
     assert sync_result.data.conversation_id == "shared-cid"
     assert sync_coord.calls == [
         ("prepare_turn", "shared-cid", "same path"),
@@ -381,7 +382,7 @@ async def test_sync_and_stream_endpoints_share_prepare_path():
     ]
 
     stream_coord = _EndpointCoordinator()
-    stream_result = await send_stream(req, coordinator=stream_coord)
+    stream_result = await send_stream(req, coordinator=stream_coord, user=None)
     assert isinstance(stream_result, _ClosingStreamingResponse)
     assert stream_coord.calls == [
         ("prepare_turn", "shared-cid", "same path"),
@@ -429,6 +430,7 @@ async def test_transaction_a_failure_is_http_error_and_releases_guard(
         response = await send_stream(
             ChatRequest(message="sensitive user message"),
             coordinator=coord,
+            user=None,
         )
 
     assert response.status_code == 500
@@ -1046,12 +1048,14 @@ async def test_real_stream_endpoint_returns_409_before_second_same_cid_stream(
     first_response = await send_stream(
         ChatRequest(conversation_id=cid, message="first"),
         coordinator=coord,
+        user=None,
     )
     try:
         assert isinstance(first_response, _ClosingStreamingResponse)
         second_response = await send_stream(
             ChatRequest(conversation_id=cid, message="second"),
             coordinator=coord,
+            user=None,
         )
         assert second_response.status_code == 409
         assert json.loads(second_response.body)["msg"] == "CHAT_TURN_IN_PROGRESS"

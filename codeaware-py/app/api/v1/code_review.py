@@ -6,14 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.prompt.template_manager import PromptTemplateManager
 from app.ai.services.code_review import CodeReviewService
-from app.api.v1.deps import get_chat_model, get_db
+from app.api.v1.deps import get_chat_model, get_db, get_current_user
 from app.core.exceptions import BusinessException
 from app.core.response import PageResult, Result
 from app.models import AiOperationRecord
 from app.schemas.code_review import CodeReviewRequest, CodeReviewVO
 from app.schemas.entities import AiOperationRecordRead, record_to_dict
 
-router = APIRouter(prefix="/api/code-review", tags=["Code Review"])
+router = APIRouter(prefix="/api/code-review", tags=["Code Review"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/review", response_model=Result[CodeReviewVO])

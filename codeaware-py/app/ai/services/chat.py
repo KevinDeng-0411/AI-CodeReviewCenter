@@ -19,14 +19,24 @@ class ChatService:
         self.session = session
         self.redis = redis_client
 
-    async def conversation_exists(self, cid: str) -> bool:
-        r = await self.session.scalar(
-            select(Conversation.id).where(Conversation.conversation_id == cid)
-        )
+    async def conversation_exists(self, cid: str, user_id: int | None = None) -> bool:
+        """存在性 + 归属校验。user_id=None 时只校验存在性（直连服务测试）。"""
+        stmt = select(Conversation.id).where(Conversation.conversation_id == cid)
+        if user_id is not None:
+            # 归属校验：user_id 为 null 的会话（直连测试/遗留）对所有用户可见
+            stmt = stmt.where(
+                (Conversation.user_id == user_id) | (Conversation.user_id.is_(None))
+            )
+        r = await self.session.scalar(stmt)
         return r is not None
 
-    async def list_conversations(self) -> list[Conversation]:
-        r = await self.session.execute(select(Conversation).order_by(Conversation.id.desc()))
+    async def list_conversations(self, user_id: int | None = None) -> list[Conversation]:
+        """列出会话。user_id=None 时返回全部（直连服务测试）；否则按归属过滤。"""
+        stmt = select(Conversation)
+        if user_id is not None:
+            stmt = stmt.where(Conversation.user_id == user_id)
+        stmt = stmt.order_by(Conversation.id.desc())
+        r = await self.session.execute(stmt)
         return list(r.scalars().all())
 
     async def get_messages(self, cid: str) -> list[Message]:
@@ -35,10 +45,13 @@ class ChatService:
         )
         return list(r.scalars().all())
 
-    async def delete_conversation(self, cid: str) -> None:
-        exists = await self.session.scalar(
-            select(Conversation.id).where(Conversation.conversation_id == cid)
-        )
+    async def delete_conversation(self, cid: str, user_id: int | None = None) -> None:
+        stmt = select(Conversation.id).where(Conversation.conversation_id == cid)
+        if user_id is not None:
+            stmt = stmt.where(
+                (Conversation.user_id == user_id) | (Conversation.user_id.is_(None))
+            )
+        exists = await self.session.scalar(stmt)
         if exists is None:
             raise BusinessException(
                 "CHAT_CONVERSATION_NOT_FOUND",

@@ -5,12 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.prompt.template_manager import PromptTemplateManager
 from app.ai.services.prompt import PromptService
-from app.api.v1.deps import get_db
+from app.api.v1.deps import get_current_user, get_db, require_admin
 from app.core.enums import PromptType
 from app.core.response import Result
+from app.models import User
 from app.schemas.prompt import PromptCreateRequest, PromptPreviewVO, PromptTemplateVO
 
-router = APIRouter(prefix="/api/prompts", tags=["Prompt"])
+# 全员可读（list/preview）；写操作（create/activate）需 admin
+router = APIRouter(prefix="/api/prompts", tags=["Prompt"], dependencies=[Depends(get_current_user)])
 
 
 def _to_vo(template) -> PromptTemplateVO:
@@ -31,6 +33,7 @@ async def list_prompts(
 async def create_prompt(
     request: PromptCreateRequest,
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ):
     svc = PromptService(db, PromptTemplateManager(db))
     return Result.ok(_to_vo(await svc.create(request)))
@@ -48,7 +51,7 @@ async def preview(
 
 
 @router.post("/{template_id}/activate", response_model=Result[PromptTemplateVO])
-async def activate(template_id: int, db: AsyncSession = Depends(get_db)):
+async def activate(template_id: int, db: AsyncSession = Depends(get_db), _admin: User = Depends(require_admin)):
     svc = PromptService(db, PromptTemplateManager(db))
     tpl = await svc.activate(template_id)
     return Result.ok(_to_vo(tpl))

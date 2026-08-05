@@ -29,6 +29,7 @@ from app.core.enums import PromptType
 from app.core.exceptions import BusinessException
 from app.db.session import AsyncSessionLocal, get_db
 from app.main import app
+from conftest import clear_overrides_keep_auth  # noqa: E402
 from app.models import AiReadmeDocument, PromptTemplate
 from app.schemas.ai_readme import AiReadmeResult
 
@@ -424,7 +425,7 @@ async def test_capabilities_route_has_only_public_state(client, db_session, tmp_
             }
             assert str(tmp_path) not in response.text
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()
 
 
 async def test_generate_route_rejects_outside_path_without_leaking_it(
@@ -451,7 +452,7 @@ async def test_generate_route_rejects_outside_path_without_leaking_it(
         assert response.json()["msg"] == PROJECT_OUTSIDE_ROOTS
         assert str(outside) not in response.text
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()
 
 
 async def test_generate_route_validation_redacts_oversized_absolute_path(
@@ -475,7 +476,7 @@ async def test_generate_route_validation_redacts_oversized_absolute_path(
             },
         )
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()
 
     assert response.status_code == 422
     assert response.json() == {
@@ -642,7 +643,7 @@ async def test_c1e_demo_route_snapshot_versions_latest_and_rejections(
             json={"project_name": "rejected-symlink", "project_path": str(symlink)},
         )
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()
 
     assert first_response.status_code == 200
     assert second_response.status_code == 200

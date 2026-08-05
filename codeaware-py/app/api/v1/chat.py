@@ -13,9 +13,9 @@ from app.ai.services.turn_coordinator import (
     ChatTurnStartFailed,
     TurnCoordinator,
 )
-from app.api.v1.deps import get_chat_service, get_db, get_turn_coordinator
+from app.api.v1.deps import get_chat_service, get_current_user, get_db, get_turn_coordinator
 from app.core.response import Result
-from app.models import Conversation, Message
+from app.models import Conversation, Message, User
 from app.schemas.chat import (
     ChatMessageVO,
     ChatRequest,
@@ -169,10 +169,14 @@ async def _format_sse(event_gen):
     response_model=Result[ChatResponseVO],
     responses=_SYNC_CHAT_ERROR_RESPONSES,
 )
-async def send(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn_coordinator)):
-    """同步对话：drain TurnCoordinator -> ChatResponseVO。"""
+async def send(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn_coordinator), user: User | None = Depends(get_current_user)):
+    """同步对话：drain TurnCoordinator -> ChatResponseVO。
+
+    user 经 DI 解析为 User（HTTP）；直连调用时为 Depends 实例或 None，跳过归属校验。
+    """
+    uid = user.id if isinstance(user, User) else None
     try:
-        prepared = await coordinator.prepare_turn(req.conversation_id, req.message)
+        prepared = await coordinator.prepare_turn(req.conversation_id, req.message, user_id=uid)
     except ChatConversationNotFound:
         return _error(404, "CHAT_CONVERSATION_NOT_FOUND")
     except ChatTurnInProgress:
@@ -201,10 +205,11 @@ async def send(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn
         **_STREAM_CHAT_ERROR_RESPONSES,
     },
 )
-async def send_stream(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn_coordinator)):
-    """流式对话：typed SSE。"""
+async def send_stream(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn_coordinator), user: User | None = Depends(get_current_user)):
+    """流式对话：typed SSE。user 经 DI 解析；直连调用时跳过归属校验。"""
+    uid = user.id if isinstance(user, User) else None
     try:
-        prepared = await coordinator.prepare_turn(req.conversation_id, req.message)
+        prepared = await coordinator.prepare_turn(req.conversation_id, req.message, user_id=uid)
     except ChatConversationNotFound:
         return _error(404, "CHAT_CONVERSATION_NOT_FOUND")
     except ChatTurnInProgress:
@@ -225,8 +230,8 @@ async def send_stream(req: ChatRequest, coordinator: TurnCoordinator = Depends(g
 
 
 @router.get("/conversations", response_model=Result[list[ConversationItem]])
-async def list_conversations(svc: ChatService = Depends(get_chat_service)):
-    convs = await svc.list_conversations()
+async def list_conversations(svc: ChatService = Depends(get_chat_service), user: User = Depends(get_current_user)):
+    convs = await svc.list_conversations(user_id=user.id)
     return Result.ok(
         [
             {"id": c.id, "conversation_id": c.conversation_id, "title": c.title, "summary": c.summary}
@@ -239,13 +244,15 @@ async def list_conversations(svc: ChatService = Depends(get_chat_service)):
     "/conversations/{conversation_id}",
     response_model=Result[list[ChatMessageVO]],
 )
-async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_db)):
-    """会话消息历史（PG 真相，按时间正序）。"""
+async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """会话消息历史（PG 真相，按时间正序）。归属不匹配返回 404（不泄露存在性）。"""
     from sqlalchemy import select
 
     exists = await db.scalar(
         select(Conversation.id).where(
-            Conversation.conversation_id == conversation_id
+            Conversation.conversation_id == conversation_id,
+            # 归属校验：user_id 为 null 的会话（直连测试/遗留）对所有用户可见
+            (Conversation.user_id == user.id) | (Conversation.user_id.is_(None)),
         )
     )
     if exists is None:
@@ -261,6 +268,6 @@ async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_
     "/conversations/{conversation_id}",
     response_model=Result[None],
 )
-async def delete_conversation(conversation_id: str, svc: ChatService = Depends(get_chat_service)):
-    await svc.delete_conversation(conversation_id)
+async def delete_conversation(conversation_id: str, svc: ChatService = Depends(get_chat_service), user: User = Depends(get_current_user)):
+    await svc.delete_conversation(conversation_id, user_id=user.id)
     return Result.ok()

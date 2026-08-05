@@ -1,6 +1,7 @@
 """C2-E：Chat 核心域与 AIReadMe 安全快照的 route-level 回归闭环。"""
 
 import hashlib
+from conftest import clear_overrides_keep_auth  # noqa: E402
 import json
 
 import pytest
@@ -143,7 +144,7 @@ async def c2e_context(setup_db, redis_client, tmp_path):
             "outside": outside,
         }
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()
         async with AsyncSessionLocal() as session:
             conversation_ids = list(
                 (

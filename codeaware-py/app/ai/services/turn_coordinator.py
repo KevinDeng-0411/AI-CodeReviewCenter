@@ -164,21 +164,29 @@ class TurnCoordinator:
             self._release(cid)
 
     async def prepare_turn(
-        self, conversation_id: str | None, message: str
+        self, conversation_id: str | None, message: str, user_id: int | None = None
     ) -> PreparedTurn:
         """响应创建前完成 existence preflight、guard 与 Transaction A。
 
         成功返回时 Conversation 和 USER Message 已 commit，且所有自管 session 均已
         退出；失败使用 HTTP 前置错误语义，并幂等释放已领取的 guard。
+
+        user_id：路由层注入当前用户 id；None 时跳过归属校验（直连服务测试）。
         """
         if conversation_id is not None:
             try:
                 async with AsyncSessionLocal() as session:
-                    exists = await session.scalar(
-                        select(Conversation.id).where(
-                            Conversation.conversation_id == conversation_id
-                        )
+                    stmt = select(Conversation.id).where(
+                        Conversation.conversation_id == conversation_id
                     )
+                    if user_id is not None:
+                        # 归属校验：不匹配的会话视为不存在（404，不泄露存在性）。
+                        # user_id 为 null 的会话（直连测试/遗留）对所有用户可见。
+                        stmt = stmt.where(
+                            (Conversation.user_id == user_id)
+                            | (Conversation.user_id.is_(None))
+                        )
+                    exists = await session.scalar(stmt)
             except Exception as exc:
                 logger.warning(
                     "chat turn prepare failed code=conversation_preflight_failed "
@@ -198,7 +206,7 @@ class TurnCoordinator:
 
         self.acquire_turn(cid)
         try:
-            warnings = await self._txn_user(cid, message, created=created)
+            warnings = await self._txn_user(cid, message, created=created, user_id=user_id)
         except BaseException as exc:
             self.release_turn(cid)
             if isinstance(exc, asyncio.CancelledError):
@@ -385,7 +393,7 @@ class TurnCoordinator:
         finally:
             self._release(cid)
 
-    async def _txn_user(self, cid: str, message: str, *, created: bool) -> list[dict]:
+    async def _txn_user(self, cid: str, message: str, *, created: bool, user_id: int | None = None) -> list[dict]:
         """Transaction A：必要时创建 Conversation，写 USER 并显式 commit。"""
         warns: list[dict] = []
         async with AsyncSessionLocal() as s:
@@ -395,6 +403,7 @@ class TurnCoordinator:
                     Conversation(
                         conversation_id=cid,
                         title=(message[:30] if message else "新对话"),
+                        user_id=user_id,
                     )
                 )
                 await s.flush()

@@ -10,6 +10,7 @@ from app.ai.config import get_chat_model, get_vector_recall_service
 from app.ai.infra.vector_recall import VectorRecallService
 from app.db.session import AsyncSessionLocal
 from app.main import app
+from conftest import clear_overrides_keep_auth  # noqa: E402
 from app.models import Document, KnowledgeChunk, LongTermMemory
 
 
@@ -46,7 +47,7 @@ async def c2d_context(setup_db):
     try:
         yield {"model": model, "recall": recall}
     finally:
-        app.dependency_overrides.clear()
+        clear_overrides_keep_auth()
         async with AsyncSessionLocal() as session:
             await session.execute(
                 delete(Document).where(Document.project_name.like("c2d-%"))

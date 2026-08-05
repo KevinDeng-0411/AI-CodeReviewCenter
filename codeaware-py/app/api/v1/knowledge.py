@@ -10,7 +10,7 @@ from app.ai.rag.hybrid_retriever import HybridRetriever
 from app.ai.rag.query_rewriter import QueryRewriter
 from app.ai.rag.semantic_chunker import SemanticChunker
 from app.ai.services.rag import RagService
-from app.api.v1.deps import get_chat_model, get_db, get_lexical_recall, get_vector_recall_service
+from app.api.v1.deps import get_chat_model, get_db, get_lexical_recall, get_vector_recall_service, get_current_user
 from app.core.config import settings
 from app.core.exceptions import BusinessException
 from app.core.response import Result
@@ -21,7 +21,7 @@ from app.schemas.knowledge import (
     KnowledgeUploadRequest,
 )
 
-router = APIRouter(prefix="/api/knowledge", tags=["Knowledge"])
+router = APIRouter(prefix="/api/knowledge", tags=["Knowledge"], dependencies=[Depends(get_current_user)])
 logger = logging.getLogger(__name__)
 
 FILE_EMPTY = "KNOWLEDGE_FILE_EMPTY"

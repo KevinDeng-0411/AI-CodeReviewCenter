@@ -18,6 +18,7 @@ from app.ai.prompt.template_manager import PromptTemplateManager
 from app.core.enums import PromptType
 from app.db.session import AsyncSessionLocal, get_db
 from app.main import app
+from conftest import clear_overrides_keep_auth  # noqa: E402
 from app.models import Document, LongTermMemory, PromptTemplate
 from app.schemas.code_review import CodeReviewResult, ReviewIssue
 
@@ -108,7 +109,7 @@ async def e2e_overrides(db_session):
     # TurnCoordinator 使用自管短 session；生产模板由 Alembic 已提交 seed 提供。
     await db_session.commit()
     yield
-    app.dependency_overrides.clear()
+    clear_overrides_keep_auth()
     await db_session.rollback()
     # delete_conversation 按生产语义显式 commit，测试中复用的 db_session 会连带提交
     # 前序 E2E 数据；精确清理由本 fixture 创建的项目/模板，避免污染后续测试。

@@ -13,6 +13,7 @@ from app.ai.prompt.template_manager import PromptTemplateManager
 from app.core.enums import PromptType
 from app.db.session import get_db
 from app.main import app
+from conftest import clear_overrides_keep_auth  # noqa: E402
 
 
 class _FakeLLM:
@@ -35,7 +36,7 @@ def api_overrides(db_session):
     app.dependency_overrides[get_chat_model] = lambda: _FakeLLM()
     app.dependency_overrides[get_vector_recall_service] = lambda: VectorRecallService(_FakeEmbedder())
     yield
-    app.dependency_overrides.clear()
+    clear_overrides_keep_auth()
 
 
 async def test_knowledge_upload_and_search(client, api_overrides):

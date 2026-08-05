@@ -7,11 +7,11 @@ from app.ai.config import get_chat_model
 from app.ai.prompt.template_manager import PromptTemplateManager
 from app.ai.services.ai_readme import AiReadmeService
 from app.ai.services.project_snapshot import ProjectSnapshotService
-from app.api.v1.deps import get_db
+from app.api.v1.deps import get_db, get_current_user
 from app.core.response import Result
 from app.schemas.ai_readme import AiReadmeCapability, AiReadmeRequest, AiReadmeVO
 
-router = APIRouter(prefix="/api/ai-readme", tags=["AIReadMe"])
+router = APIRouter(prefix="/api/ai-readme", tags=["AIReadMe"], dependencies=[Depends(get_current_user)])
 
 
 def get_project_snapshot_service() -> ProjectSnapshotService:

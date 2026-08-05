@@ -7,7 +7,7 @@
 import pytest
 from sqlalchemy import select
 
-from app.api.v1.deps import get_current_user, get_db
+from app.api.v1.deps import get_db
 from app.core.security import create_access_token, hash_password
 from app.models import User
 
@@ -16,14 +16,21 @@ pytestmark = pytest.mark.usefixtures("setup_db")
 
 @pytest.fixture
 def api_overrides(db_session):
-    """让 router 用测试 session（seed 的用户可见）。不 override get_current_user。"""
-    app_dependency_overrides = {get_db: lambda: db_session}
+    """让 router 用测试 session（seed 的用户可见）。
+
+    auth 测试走真实认证链路：临时移除 default_user 设置的 get_current_user override，
+    测完恢复。
+    """
+    from app.api.v1.deps import get_current_user
     from app.main import app
 
-    app.dependency_overrides.update(app_dependency_overrides)
+    saved_override = app.dependency_overrides.get(get_current_user)
+    app.dependency_overrides.pop(get_current_user, None)  # 走真实认证
+    app.dependency_overrides[get_db] = lambda: db_session
     yield
-    for k in app_dependency_overrides:
-        app.dependency_overrides.pop(k, None)
+    app.dependency_overrides.pop(get_db, None)
+    if saved_override is not None:
+        app.dependency_overrides[get_current_user] = saved_override
 
 
 async def _seed_user(db_session, *, username="alice", password="password123", role="admin"):

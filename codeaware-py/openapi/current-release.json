@@ -1853,6 +1853,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Capabilities",
         "tags": [
           "AIReadMe"
@@ -1894,6 +1899,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Generate",
         "tags": [
           "AIReadMe"
@@ -1936,6 +1946,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Readme",
         "tags": [
           "AIReadMe"
@@ -2089,6 +2104,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Conversations",
         "tags": [
           "Chat"
@@ -2131,13 +2151,18 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Delete Conversation",
         "tags": [
           "Chat"
         ]
       },
       "get": {
-        "description": "会话消息历史（PG 真相，按时间正序）。",
+        "description": "会话消息历史（PG 真相，按时间正序）。归属不匹配返回 404（不泄露存在性）。",
         "operationId": "get_conversation_api_chat_conversations__conversation_id__get",
         "parameters": [
           {
@@ -2172,6 +2197,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Conversation",
         "tags": [
           "Chat"
@@ -2180,7 +2210,7 @@
     },
     "/api/chat/send": {
       "post": {
-        "description": "同步对话：drain TurnCoordinator -> ChatResponseVO。",
+        "description": "同步对话：drain TurnCoordinator -> ChatResponseVO。\n\nuser 经 DI 解析为 User（HTTP）；直连调用时为 Depends 实例或 None，跳过归属校验。",
         "operationId": "send_api_chat_send_post",
         "requestBody": {
           "content": {
@@ -2293,6 +2323,11 @@
             "description": "初始化失败或同步 Chat 核心失败"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Send",
         "tags": [
           "Chat"
@@ -2301,7 +2336,7 @@
     },
     "/api/chat/send/stream": {
       "post": {
-        "description": "流式对话：typed SSE。",
+        "description": "流式对话：typed SSE。user 经 DI 解析；直连调用时跳过归属校验。",
         "operationId": "send_stream_api_chat_send_stream_post",
         "requestBody": {
           "content": {
@@ -2381,6 +2416,11 @@
             "description": "SSE 响应建立前 Transaction A 初始化失败"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Send Stream",
         "tags": [
           "Chat"
@@ -2455,6 +2495,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Records",
         "tags": [
           "Code Review"
@@ -2497,6 +2542,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Record",
         "tags": [
           "Code Review"
@@ -2538,6 +2588,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Review",
         "tags": [
           "Code Review"
@@ -2579,6 +2634,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Search",
         "tags": [
           "Knowledge"
@@ -2620,6 +2680,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Upload",
         "tags": [
           "Knowledge"
@@ -2672,6 +2737,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Upload File",
         "tags": [
           "Knowledge"
@@ -2714,6 +2784,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Delete",
         "tags": [
           "Knowledge"
@@ -2755,6 +2830,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Save Long Term",
         "tags": [
           "Memory"
@@ -2823,6 +2903,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Search Long Term",
         "tags": [
           "Memory"
@@ -2865,6 +2950,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Delete Long Term",
         "tags": [
           "Memory"
@@ -2914,6 +3004,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Prompts",
         "tags": [
           "Prompt"
@@ -2953,6 +3048,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create Prompt",
         "tags": [
           "Prompt"
@@ -2995,6 +3095,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Activate",
         "tags": [
           "Prompt"
@@ -3048,6 +3153,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Preview",
         "tags": [
           "Prompt"
@@ -3089,6 +3199,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Generate",
         "tags": [
           "UnitTest"
@@ -3163,6 +3278,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Records",
         "tags": [
           "UnitTest"
@@ -3205,6 +3325,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Record",
         "tags": [
           "UnitTest"
