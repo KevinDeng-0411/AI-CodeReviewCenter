@@ -23,15 +23,20 @@ class _Scored:
 
 # ---------- Evaluator 单测 ----------
 
-async def test_evaluator_clear_result_is_satisfied():
+async def test_evaluator_with_both_legs_is_satisfied():
+    """命中查询：两腿叠加（both）-> 满意，不重试。"""
     ev = RetrievalEvaluator()
-    assert await ev.evaluate([_Scored(0.5), _Scored(0.1), _Scored(0.09)]) is True
+    assert await ev.evaluate([_Scored(0.03, match_type="both"),
+                              _Scored(0.03, match_type="both"),
+                              _Scored(0.016, match_type="vector")]) is True
 
 
-async def test_evaluator_tiny_score_gap_is_unsatisfied():
-    """最高分与次高分差距极小 -> 检索模糊 -> 不满意（触发重写）。"""
+async def test_evaluator_all_single_leg_is_unsatisfied():
+    """无关/弱检索：全纯 vector（无 both/keyword）-> 不满意（触发重写）。"""
     ev = RetrievalEvaluator()
-    assert await ev.evaluate([_Scored(0.1), _Scored(0.095), _Scored(0.09)]) is False
+    assert await ev.evaluate([_Scored(0.016, match_type="vector"),
+                              _Scored(0.016, match_type="vector"),
+                              _Scored(0.016, match_type="vector")]) is False
 
 
 async def test_evaluator_low_recall_is_unsatisfied():
@@ -90,8 +95,12 @@ class _FakeSearchEngine:
     async def search(self, query):
         self.attempts += 1
         if self.attempts == 1:
-            return [_Scored(0.1), _Scored(0.095), _Scored(0.09)]  # 模糊 -> 重试
-        return [_Scored(0.5), _Scored(0.1), _Scored(0.09)]  # 清晰
+            # 全纯 vector（无 both/keyword）-> 弱检索 -> 触发重试
+            return [_Scored(0.016, match_type="vector"), _Scored(0.016, match_type="vector"),
+                    _Scored(0.016, match_type="vector")]
+        # 重试后命中 -> 含 both -> 满意
+        return [_Scored(0.03, match_type="both"), _Scored(0.03, match_type="both"),
+                _Scored(0.016, match_type="vector")]
 
 
 class _FakeRewriteLLM:

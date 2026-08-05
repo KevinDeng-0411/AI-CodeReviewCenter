@@ -1,6 +1,6 @@
 # ADR-0014: LangChain 保持薄 adapter、不引入 LangGraph
 
-**状态**: 已实施（决策记录）
+**状态**: 已实施（决策记录）——**2026-08-05 决策变更见文末**
 **日期**: 2026-08-05
 **决策者**: Kevin
 
@@ -55,3 +55,16 @@ Chat 状态机（当前）
 
 - 若出现工具循环需求：手写 while 循环（S4-lite 卡），不引 LangGraph
 - 若出现多 Agent/长任务/断点恢复需求：重新评估（当前无信号）
+
+---
+
+## 决策变更（2026-08-05）
+
+用户明确要求引入 LangGraph 用于**检索层增强**（智能路由 + 自我纠错），见
+[ADR-0015](0015-langgraph-retrieval-enhancement.md)。
+
+**变更范围**：原"不引入 LangGraph"结论针对**完整 Agent 能力**（工具循环/checkpoint/多 Agent）——该结论不变。本次引入的是**检索层的模型决策形态**（贴近 Agent）：LangGraph StateGraph 表达智能路由 + 自我纠错，不执行工具、无 checkpoint。
+
+**为什么不变更完整 Agent 结论**：ADR-0014 的核心判断（Chat 状态机手写足够、完整 Agent 超定位）仍然成立。LangGraph 本次只用于 RAG 检索决策，不改 Chat 状态机结构。
+
+**LangChain 薄 adapter 结论不变**：仍只有 config.py import LangChain，领域逻辑 duck-typing 不受影响。
