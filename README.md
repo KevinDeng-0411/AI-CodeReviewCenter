@@ -379,7 +379,9 @@ data: {"protocol_version":1,...,"sequence":N}
 
 **评测集**：15 篇 fixture 文档（技术方案 + 代码标识符 + 多语言），35 条 golden cases（中文精确 ×8、英文自然 ×7、稀有标识符 ×8、语义改写 ×7、负例 ×5），真实 bge-m3 embedding。
 
-### 词法腿升级：C3 (pg_trgm) → C4 (BM25)
+> ⚠️ C4 基线评测使用 `chinese_compatible` tokenizer，但生产迁移 0006 使用 `default`——已公布的 C4 数据不完全反映生产行为。jieba 优化（ADR-0011）修正了这一不一致。
+
+### 词法腿升级：C3 (pg_trgm) → C4 (BM25) → C4+ jieba
 
 | 指标 | C3 pg_trgm | C4 BM25 | 变化 |
 |---|---|---|---|
@@ -396,7 +398,7 @@ data: {"protocol_version":1,...,"sequence":N}
 | vector only | 0.957 | 0.920 | pgvector HNSW cosine 语义召回 |
 | **fused (BM25+vector)** | **0.957** | **0.934** | RRF 融合 — 当前生产 |
 
-**关键洞察**：C3 的 fused MRR=0.906 **低于**纯向量 0.920（pg_trgm 噪声拖累 RRF）。C4 升级 BM25 后 fused MRR=0.934 **反超**纯向量——首次实现 **1+1>2**。
+**关键洞察**：C3 的 fused MRR=0.906 **低于**纯向量 0.920（pg_trgm 噪声拖累 RRF）。C4 升级 BM25 后 fused MRR=0.934 **反超**纯向量——首次实现 **1+1>2**。C4+ jieba 分词让 BM25 腿中文从残废变可用。
 
 ### 按类别（C4 fused）
 
@@ -410,9 +412,10 @@ data: {"protocol_version":1,...,"sequence":N}
 
 ### 已知边界
 
-- 中文精确 MRR=0.906（非满分）：`default` tokenizer 不拆连续中文，中文精确类依赖向量腿兜底
+- 中文精确 MRR=0.906（非满分）：`default` tokenizer 不拆连续中文，中文精确类依赖向量腿兜底。**C4+ jieba 分词（ADR-0011）已缓解**——中文词被空格分割，BM25 腿中文从残废变可用
 - 语义改写 R@5=0.786：bge-m3 在中文同义改写场景有提升空间
 - 无 cross-encoder reranker（评估后暂缓，ADR-0009，门禁 MRR+0.01）
+- BM25 中文优化通过 jieba 应用层分词（ADR-0011），非 ParadeDB 级 tokenizer 替换
 - 评测集 35 条，非百万级——足以验证架构决策，不足以做统计显著性
 
 评测脚本：`tests/eval/test_golden_retrieval.py`，原始数据：`tests/eval/artifacts/baseline_c4_bm25.json`
@@ -441,7 +444,7 @@ data: {"protocol_version":1,...,"sequence":N}
 | 决策 | 选了 | 评估后没选 |
 |---|---|---|
 | LLM adapter | ChatDeepSeek（提取 reasoning） | ChatOpenAI（丢弃第三方字段） |
-| 词法检索 | ParadeDB BM25 (default tokenizer) | pg_trgm（C3 噪声拖累 RRF） |
+| 词法检索 | ParadeDB BM25 (default tokenizer) + jieba 中文分词 | pg_trgm（C3 噪声拖累 RRF） |
 | PDF 解析 | pdfminer.six（字号标题检测） | unstructured.partition.pdf（拖 torch） |
 | Reranker | 评估后暂缓 (ADR-0009) | 盲目加（MRR 0.934 已高） |
 | 意图识别 | 不做（90% 知识问题） | 加分类引入漏检风险 |
