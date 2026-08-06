@@ -362,7 +362,9 @@
               "memory_recall",
               "rag_retrieval",
               "summary",
-              "memory_extraction"
+              "memory_extraction",
+              "route",
+              "rag_graph"
             ],
             "title": "Component",
             "type": "string"
@@ -1591,6 +1593,32 @@
         "title": "Result[PromptTemplateVO]",
         "type": "object"
       },
+      "Result_TaskStatusVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskStatusVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[TaskStatusVO]",
+        "type": "object"
+      },
       "Result_TokenResponse_": {
         "properties": {
           "code": {
@@ -1898,6 +1926,54 @@
           "suggestion"
         ],
         "title": "ReviewIssue",
+        "type": "object"
+      },
+      "TaskStatusVO": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "result": {
+            "title": "Result"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "successful": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successful"
+          },
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "status",
+          "ready"
+        ],
+        "title": "TaskStatusVO",
         "type": "object"
       },
       "TestFramework": {
@@ -3628,6 +3704,48 @@
         "summary": "Preview",
         "tags": [
           "Prompt"
+        ]
+      }
+    },
+    "/api/tasks/{task_id}": {
+      "get": {
+        "operationId": "get_task_status_api_tasks__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_TaskStatusVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Task Status",
+        "tags": [
+          "Tasks"
         ]
       }
     },

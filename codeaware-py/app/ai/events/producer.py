@@ -6,9 +6,12 @@ Producer 在应用启动时惰性初始化，初始化失败不阻塞应用启�
 
 import json
 import logging
+import os
 import uuid
 from typing import Any
+
 from kafka import KafkaProducer
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -24,12 +27,24 @@ def get_producer() -> KafkaProducer | None:
     return _producer if _producer is not None else None
 
 
+def _json_serialize(value: dict[str, Any]) -> bytes:
+    return json.dumps(value, ensure_ascii=False).encode("utf-8")
+
+
+def _str_serialize(value: str | None) -> bytes | None:
+    return value.encode("utf-8") if value else None
+
+
 def _init_producer() -> KafkaProducer | None:
+    # 测试环境跳过 Kafka 连接
+    import os
+    if os.environ.get("CODEAWARE_TESTING") == "1":
+        return None
     try:
         producer = KafkaProducer(
             bootstrap_servers=settings.kafka_bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
-            key_serializer=lambda k: k.encode("utf-8") if k else None,
+            value_serializer=_json_serialize,
+            key_serializer=_str_serialize,
             acks="all",
             retries=3,
             enable_idempotence=True,

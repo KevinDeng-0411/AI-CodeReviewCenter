@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import uuid
 from dataclasses import dataclass, field
 
@@ -809,6 +810,34 @@ class TurnCoordinator:
             if len(msgs) < MEMORY_EXTRACT_THRESHOLD:
                 return
             from app.ai.tasks.memory_extract import extract_memory_task
+
+            # 测试环境（CODEAWARE_TESTING=1）无 Celery Worker，降级同步执行
+            if os.environ.get("CODEAWARE_TESTING") == "1":
+                logger.info("memory extraction running synchronously (test mode)")
+                from app.ai.config import get_embedding_model, get_chat_model
+                from app.ai.infra.vector_recall import VectorRecallService
+                from app.ai.memory.long_term import LongTermMemoryManager
+
+                vector_recall = VectorRecallService(get_embedding_model())
+                chat_model = get_chat_model()
+                async with AsyncSessionLocal() as s:
+                    lt = LongTermMemoryManager(s, vector_recall)
+                    has_mem = await lt.has_memories(cid)
+                    if has_mem:
+                        return
+                    messages = await lt.read_recent_messages(cid)
+                    if len(messages) < MEMORY_EXTRACT_THRESHOLD:
+                        return
+                    tuples = [(m[0], m[1]) for m in messages]
+                    facts = await lt.extract_facts_text(tuples, chat_model)
+                    if not facts:
+                        return
+                    prepared = await lt.prepare_facts(facts)
+                async with AsyncSessionLocal() as s2:
+                    lt2 = LongTermMemoryManager(s2, vector_recall)
+                    await lt2.save_prepared_facts(cid, prepared)
+                    await s2.commit()
+                return
 
             extract_memory_task.delay(cid, MEMORY_EXTRACT_THRESHOLD)
         except Exception as exc:
