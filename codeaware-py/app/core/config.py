@@ -70,6 +70,14 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 168  # 7 天
 
+    # Celery 异步任务队列
+    celery_broker_url: str = ""
+    celery_result_backend: str = ""
+
+    # Kafka 事件流
+    kafka_bootstrap_servers: str = "localhost:9093"
+    kafka_topic_prefix: str = "codeaware."
+
     @property
     def pg_url_async(self) -> str:
         return (
@@ -80,6 +88,14 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def celery_broker(self) -> str:
+        return self.celery_broker_url or f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def celery_backend(self) -> str:
+        return self.celery_result_backend or f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
 
 settings = Settings()
