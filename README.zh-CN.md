@@ -13,6 +13,9 @@ AI 驱动的研发效能平台，为**软件工程实验室团队**设计（代�
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
 ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1)
 ![Redis 7](https://img.shields.io/badge/Redis-7-DC382D)
+![Celery](https://img.shields.io/badge/Celery-async-37814A)
+![Kafka](https://img.shields.io/badge/Kafka-event--driven-231F20)
+![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-FF6F00)
 ![embedding](https://img.shields.io/badge/embedding-bge--m3-FFA500)
 
 > 项目从 Java（Spring Boot + LangChain4j）全量重构为 Python（FastAPI），Java 旧实现保留在 [java-legacy/](java-legacy/) 仅供参照。
@@ -76,8 +79,8 @@ cp .env.example .env        # 复制模板
 
 ```bash
 cd ..                       # 回到仓库根
-docker compose up -d        # PG(:5433) + Redis(:6380) + Ollama(:11434)
-docker exec ai-center-ollama ollama pull bge-m3   # 首次需拉取嵌入模型
+docker compose up -d        # PG(:5433) + Redis(:6380) + Kafka(:9093) + Celery Worker + Flower(:5555)
+# Ollama 本地运行 (macOS Metal GPU): brew install ollama && ollama pull bge-m3
 ```
 
 ### 第 3 步：一键启动（迁移 + admin 引导 + 后端 + 前端）
@@ -135,10 +138,20 @@ graph TB
         end
     end
 
+    subgraph Tasks["异步任务队列"]
+        Celery["Celery Worker<br/>document.parse<br/>memory.extract"]
+        Flower["Flower 监控<br/>:5555"]
+    end
+
+    subgraph Events["事件流"]
+        Kafka["Kafka<br/>audit.document<br/>metrics.retrieval<br/>ops.error"]
+        Consumer["Kafka Consumer<br/>审计日志归档"]
+    end
+
     subgraph Data["数据层"]
         PG["PostgreSQL 16<br/>pgvector + pg_search BM25"]
-        Redis["Redis 7<br/>msgs:{cid} / summary:{cid}"]
-        Ollama["Ollama<br/>bge-m3 1024-d"]
+        Redis["Redis 7<br/>msgs:{cid} / summary:{cid}<br/>Celery Broker"]
+        Ollama["Ollama<br/>bge-m3 1024-d<br/>Metal GPU"]
     end
 
     React -->|"typed SSE (8 events)"| Router
@@ -153,6 +166,13 @@ graph TB
     RAG --> Ollama
     PT --> PG
     TC -->|"ChatDeepSeek<br/>astream"| DS["DeepSeek v4-flash<br/>API"]
+    TC -->|"提交任务"| Celery
+    Celery --> Redis
+    Celery -->|"embedding"| Ollama
+    Celery -->|"写分块"| PG
+    Flower --> Celery
+    TC -->|"发送事件"| Kafka
+    Kafka --> Consumer
 ```
 
 **核心原则**：
@@ -208,7 +228,7 @@ data: {"protocol_version":1,...,"sequence":N}
 |---|---|---|
 | 框架 | FastAPI + Pydantic v2 | async HTTP + typed SSE |
 | LLM | DeepSeek v4-flash (langchain-deepseek) | ChatDeepSeek 提取 reasoning_content |
-| 向量 | Ollama bge-m3 1024-d | 本地 CPU embedding, 零 API 费 |
+| 向量 | Ollama bge-m3 1024-d | 本地 Metal GPU embedding, ~128ms/次, 零 API 费 |
 | 关系 DB | PostgreSQL 16 + asyncpg | PG-first 真相源 |
 | 向量索引 | pgvector HNSW cosine | 内联向量, 同事务 commit |
 | 词法检索 | ParadeDB pg_search BM25 | default tokenizer; pg_trgm 回退 |
@@ -229,7 +249,7 @@ data: {"protocol_version":1,...,"sequence":N}
 | 数据表 | 9 张 |
 | ADR | 15 篇 (0001-0015) |
 | Alembic head | 0011 |
-| 完成阶段 | C1-C6 + 团队化 A/B/C + 文档管理 |
+| 完成阶段 | C1-C6 + 团队化 A/B/C + 文档管理 + 异步任务队列 + Kafka 事件流 |
 
 **检索评估摘要**（真实 bge-m3，35 条 golden）：
 
@@ -270,6 +290,8 @@ data: {"protocol_version":1,...,"sequence":N}
 | Reranker | 评估后暂缓 (ADR-0009) | 盲目加（MRR 0.934 已高） |
 | 意图识别 | 不做（90% 知识问题） | 加分类引入漏检风险 |
 | LangGraph | 检索层智能路由 + 自我纠错（ADR-0015） | 完整 Agent 工具循环（无需求触发） |
+| 任务队列 | Celery + Redis | 异步文档解析/记忆抽取, Flower 监控 |
+| 事件流 | Kafka (Confluent) | 审计日志/检索指标/异常事件 |
 | Refresh token | 不要（access 7 天） | 实验室不需要 refresh 轮换 |
 | 并发 guard | 进程内 set[str] | PG advisory lock（多 worker 时再做） |
 
@@ -286,6 +308,9 @@ data: {"protocol_version":1,...,"sequence":N}
 | 元素感知分块 + 扫描 PDF 拒绝 | OCR |
 | fail-closed disposable 测试栈 | 裸 pytest |
 | 单 worker local-first | 多 worker / K8s |
+| Celery 异步任务队列 | Agent 工具循环 |
+| Kafka 事件流 (审计/指标) | Grafana / Loki 面板 |
+| Flower 任务监控面板 | — |
 | 确定性 Chat 状态机 | Agent 工具循环 |
 
 ---

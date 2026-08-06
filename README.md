@@ -13,6 +13,9 @@ The current core deliverable is a **Chat/RAG knowledge-base Q&A app**: upload te
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
 ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1)
 ![Redis 7](https://img.shields.io/badge/Redis-7-DC382D)
+![Celery](https://img.shields.io/badge/Celery-async-37814A)
+![Kafka](https://img.shields.io/badge/Kafka-event--driven-231F20)
+![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-FF6F00)
 ![embedding](https://img.shields.io/badge/embedding-bge--m3-FFA500)
 
 > The project was fully refactored from Java (Spring Boot + LangChain4j) to Python (FastAPI); the legacy Java implementation is kept in [java-legacy/](java-legacy/) for reference only.
@@ -76,8 +79,8 @@ cp .env.example .env        # copy the template
 
 ```bash
 cd ..                       # back to repo root
-docker compose up -d        # PG(:5433) + Redis(:6380) + Ollama(:11434)
-docker exec ai-center-ollama ollama pull bge-m3   # first time only
+docker compose up -d        # PG(:5433) + Redis(:6380) + Kafka(:9093) + Celery Worker + Flower(:5555)
+# Ollama runs natively (macOS Metal GPU): brew install ollama && ollama pull bge-m3
 ```
 
 ### Step 3: One-command startup (migrations + admin bootstrap + backend + frontend)
@@ -135,10 +138,20 @@ graph TB
         end
     end
 
+    subgraph Tasks["Async Task Queue"]
+        Celery["Celery Worker<br/>document.parse<br/>memory.extract"]
+        Flower["Flower<br/>:5555"]
+    end
+
+    subgraph Events["Event Streaming"]
+        Kafka["Kafka<br/>audit.document<br/>metrics.retrieval<br/>ops.error"]
+        Consumer["Kafka Consumer<br/>audit log archive"]
+    end
+
     subgraph Data["Data layer"]
         PG["PostgreSQL 16<br/>pgvector + pg_search BM25"]
-        Redis["Redis 7<br/>msgs:{cid} / summary:{cid}"]
-        Ollama["Ollama<br/>bge-m3 1024-d"]
+        Redis["Redis 7<br/>msgs:{cid} / summary:{cid}<br/>Celery Broker"]
+        Ollama["Ollama<br/>bge-m3 1024-d<br/>Metal GPU"]
     end
 
     React -->|"typed SSE (8 events)"| Router
@@ -153,6 +166,13 @@ graph TB
     RAG --> Ollama
     PT --> PG
     TC -->|"ChatDeepSeek<br/>astream"| DS["DeepSeek v4-flash<br/>API"]
+    TC -->|"submit task"| Celery
+    Celery --> Redis
+    Celery -->|"embedding"| Ollama
+    Celery -->|"write chunks"| PG
+    Flower --> Celery
+    TC -->|"emit event"| Kafka
+    Kafka --> Consumer
 ```
 
 **Core principles**:
@@ -208,11 +228,13 @@ data: {"protocol_version":1,...,"sequence":N}
 |---|---|---|
 | Framework | FastAPI + Pydantic v2 | async HTTP + typed SSE |
 | LLM | DeepSeek v4-flash (langchain-deepseek) | ChatDeepSeek extracts reasoning_content |
-| Embeddings | Ollama bge-m3 1024-d | local CPU embedding, zero API cost |
+| Embeddings | Ollama bge-m3 1024-d | local Metal GPU embedding, ~128ms/query, zero API cost |
 | Relational DB | PostgreSQL 16 + asyncpg | PG-first source of truth |
 | Vector index | pgvector HNSW cosine | inline vectors, same-transaction commit |
 | Lexical search | ParadeDB pg_search BM25 | default tokenizer; pg_trgm fallback |
 | Retrieval enhancement | LangGraph StateGraph (ADR-0015) | smart routing + self-correction (match_type detection) |
+| Task queue | Celery + Redis | async document parsing, memory extraction, Flower monitoring |
+| Event streaming | Kafka (Confluent) | audit trail, retrieval metrics, error events |
 | Cache | Redis 7 | disposable, PG fallback |
 | Frontend | React 19 + Vite + TypeScript | 8-module SPA (no router) |
 | Tooling | uv + Alembic | locked dependencies + reversible migrations |
@@ -223,13 +245,13 @@ data: {"protocol_version":1,...,"sequence":N}
 
 | Metric | Value |
 |---|---|
-| Backend tests | **315 passed**, 0 failed |
+| Backend tests | **315 passed**, 0 failed (async tasks + Kafka + LangGraph) |
 | Frontend tests | **43 passed** |
 | API endpoints | 32 |
 | Tables | 9 |
 | ADRs | 15 (0001-0015) |
 | Alembic head | 0011 |
-| Delivered | C1-C6 + team A/B/C + document management |
+| Delivered | C1-C6 + team A/B/C + document management + async task queue + Kafka event streaming |
 
 **Retrieval evaluation summary** (real bge-m3, 35 golden cases):
 
@@ -272,6 +294,8 @@ Running bare `pytest` is forbidden for the backend — a safe runner creates dis
 | LangGraph | retrieval-layer routing + self-correction (ADR-0015) | full Agent tool loop (no demand) |
 | Refresh token | none (7-day access) | lab doesn't need rotation |
 | Concurrency guard | in-process set[str] | PG advisory lock (when multi-worker) |
+| Task queue | Celery + Redis | Kafka (event stream, not task queue) |
+| Ollama deployment | native macOS (Metal GPU) | Docker container (CPU-only) |
 
 ---
 
@@ -286,6 +310,9 @@ Running bare `pytest` is forbidden for the backend — a safe runner creates dis
 | element-aware chunking + scanned-PDF rejection | OCR |
 | fail-closed disposable test stack | bare pytest |
 | single-worker local-first | multi-worker / K8s |
+| Celery async task queue | Agent tool loop |
+| Kafka event streaming (audit/metrics) | Grafana / Loki dashboard |
+| Flower task monitoring | — |
 | deterministic Chat state machine | Agent tool loop |
 
 ---
