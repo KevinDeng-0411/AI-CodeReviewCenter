@@ -21,6 +21,7 @@ from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.memory import router as memory_router
 from app.api.v1.prompt import router as prompt_router
 from app.api.v1.system_health import router as system_health_router
+from app.api.v1.tasks import router as tasks_router
 from app.api.v1.unit_test import router as unit_test_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -53,6 +54,7 @@ app.include_router(knowledge_router)
 app.include_router(memory_router)
 app.include_router(prompt_router)
 app.include_router(system_health_router)
+app.include_router(tasks_router)
 
 if os.environ.get("CODEAWARE_BROWSER_E2E") == "1":
     stack_id = os.environ.get("CODEWARE_TEST_STACK_ID", "")
