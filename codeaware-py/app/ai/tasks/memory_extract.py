@@ -5,7 +5,6 @@ from app.ai.celery_app import celery_app
 from app.ai.infra.vector_recall import VectorRecallService
 from app.ai.tasks.base import CodeAwareTask
 from app.db.session import AsyncSessionLocal
-from app.models import Message
 
 logger = logging.getLogger(__name__)
 
