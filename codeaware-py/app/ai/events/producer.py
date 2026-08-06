@@ -13,14 +13,15 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-_producer: KafkaProducer | None = None
+_INIT_SENTINEL = object()
+_producer: KafkaProducer | object = _INIT_SENTINEL
 
 
 def get_producer() -> KafkaProducer | None:
     global _producer
-    if _producer is None:
+    if _producer is _INIT_SENTINEL:
         _producer = _init_producer()
-    return _producer
+    return _producer if _producer is not None else None
 
 
 def _init_producer() -> KafkaProducer | None:
@@ -82,3 +83,23 @@ def emit_error_event(component: str, code: str, message: str, **kwargs) -> None:
         message=message, details=kwargs or None,
     )
     emit_event("ops.error", key=code, data=event.model_dump())
+
+
+def emit_conversation_audit(action: str, conversation_id: str, turn_id: str,
+                            user_id: str | None = None, **kwargs) -> None:
+    from app.ai.events.schemas import ConversationAuditEvent
+    event = ConversationAuditEvent(
+        event_id=uuid.uuid4().hex, action=action,
+        conversation_id=conversation_id, turn_id=turn_id,
+        user_id=user_id, **kwargs,
+    )
+    emit_event("audit.conversation", key=conversation_id, data=event.model_dump())
+
+
+def emit_task_metrics(task_id: str, task_name: str, status: str, **kwargs) -> None:
+    from app.ai.events.schemas import TaskMetricsEvent
+    event = TaskMetricsEvent(
+        event_id=uuid.uuid4().hex, task_id=task_id,
+        task_name=task_name, status=status, **kwargs,
+    )
+    emit_event("metrics.task", key=task_id, data=event.model_dump())
