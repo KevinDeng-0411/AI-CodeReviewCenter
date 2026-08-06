@@ -64,27 +64,8 @@ services:
     volumes:
       - ./codeaware-py:/app
     working_dir: /app
-    command: >
-      celery -A app.ai.celery_app worker
-      --loglevel=info
-      --concurrency=2
-      --max-tasks-per-child=50
     restart: unless-stopped
 
-  # ============================================================
-  # Flower — Celery 监控面板
-  # ============================================================
-  flower:
-    image: mher/flower:2.0
-    container_name: ${CODEAWARE_FLOWER_CONTAINER_NAME:-ai-center-flower}
-    depends_on:
-      - celery_worker
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-    ports:
-      - "${CODEAWARE_FLOWER_HOST_PORT:-5555}:5555"
-    restart: unless-stopped
 
   # ============================================================
   # Kafka — 事件流（Kraft 模式，单节点）
