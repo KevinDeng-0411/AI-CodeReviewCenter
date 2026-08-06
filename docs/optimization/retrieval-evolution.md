@@ -1,7 +1,7 @@
 # 检索与查询质量演进报告
 
 > 本文档追踪 CodeAware 项目从 C3 基线到当前版本的检索质量与查询质量完整演进历程，包含每个阶段的优化动机、方法、数据结果和关键决策。
-> 评估基线：35 条 golden 查询用例，15 篇 fixture 文档，真实 bge-m3 embedding（Ollama 本地 CPU），真实 DeepSeek v4-flash。
+> 评估基线：35 条 golden 查询用例，15 篇 fixture 文档，真实 bge-m3 embedding（Ollama 本地 Metal GPU，128ms/次），真实 DeepSeek v4-flash。
 
 ---
 
@@ -261,6 +261,16 @@ ADR-0015 引入 LangGraph StateGraph 编排检索层：
 | C4 BM25 | BM25 default | 0.957 | 0.934 | 0.250 | 0.000 |
 | C4 + jieba | BM25 + jieba | **0.986** | **0.938** | **1.000** | **0.929** |
 | + LangGraph 路由 | 同上 | 1.000（路由准确率） | — | — | — |
+| + Ollama Metal GPU | 同上 | 同上 | 同上 | 同上 | 同上 |
+
+### 延迟（2026-08-06 更新）
+
+| 阶段 | 组件 | 延迟 | 提升 |
+|---|---|---|---|
+| 异步任务（Celery） | 文档上传（6 chunks） | 35.1s → **1.0s** | 35x |
+| 异步任务（Celery） | Chat 完成事件 | 14s 阻塞 → **1ms** | 立即返回 |
+| Ollama Metal GPU | 单次 embedding | 5,800ms → **128ms** | 45x |
+| 检索总延迟 | BM25+vector+RRF | 6,000ms → **~420ms** | 14x |
 
 ### 生成质量
 
@@ -274,10 +284,11 @@ ADR-0015 引入 LangGraph StateGraph 编排检索层：
 | 组件 | 延迟 | 瓶颈 |
 |---|---|---|
 | BM25 词法检索 | ~90ms | — |
-| 向量 embedding（Ollama CPU） | ~5,800ms | 🔴 **主要瓶颈** |
+| 向量 embedding（Ollama Metal GPU） | **~128ms** | — |
+| 向量 embedding（Docker CPU，历史） | ~5,800ms | 🔴 **原主要瓶颈，已消除** |
 | pgvector HNSW 查询 | ~200ms | — |
 | RRF 融合 | <1ms | — |
-| **单次检索总延迟** | **~6,000ms** | 其中 5.8s 是 embedding |
+| **单次检索总延迟** | **~420ms** | 较之前 ~6,000ms 提升 14x |
 | Router 判断 | ~300ms | LLM 单次调用 |
 | Chat 生成（首 token） | ~1,000ms | DeepSeek API |
 
