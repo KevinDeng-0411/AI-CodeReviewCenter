@@ -44,6 +44,7 @@ class KnowledgeSearchRequest(BaseModel):
 class KnowledgeDocumentVO(BaseModel):
     id: int
     title: str
+    task_id: str | None = None  # 异步模式时返回 Celery 任务 ID
 
 
 class KnowledgeSearchHit(BaseModel):

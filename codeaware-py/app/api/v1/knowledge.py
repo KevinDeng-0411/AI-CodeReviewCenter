@@ -69,13 +69,14 @@ async def upload(
             req.content,
             req.source_type,
             req.project_name,
+            async_mode=True,
         )
     except BusinessException:
         raise
     except Exception as exc:
         raise BusinessException("KNOWLEDGE_EMBEDDING_FAILED", status_code=502) from exc
     emit_document_event("CREATED", doc.id, doc.title, source_type=req.source_type)
-    return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title))
+    return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title, task_id=getattr(doc, "_task_id", None)))
 
 
 @router.post("/search", response_model=Result[list[KnowledgeSearchHit]])
@@ -272,6 +273,7 @@ async def upload_file(
                 text,
                 source_type="DOC",
                 project_name=project_name,
+                async_mode=True,
             )
         except Exception as exc:
             raise BusinessException(
@@ -279,7 +281,7 @@ async def upload_file(
                 status_code=502,
             ) from exc
         emit_document_event("CREATED", doc.id, doc.title, source_type="DOC", project_name=project_name)
-        return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title))
+        return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title, task_id=getattr(doc, "_task_id", None)))
     finally:
         await file.close()
 

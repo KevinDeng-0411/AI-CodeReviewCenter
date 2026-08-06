@@ -94,4 +94,6 @@ def run_consumer(bootstrap_servers: str = "localhost:9093",
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    run_consumer()
+    run_consumer(
+        bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9093"),
+    )

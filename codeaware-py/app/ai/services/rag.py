@@ -45,8 +45,20 @@ class RagService:
         source_type: str = "MANUAL",
         project_name: str | None = None,
         content_type: str = "md",
+        async_mode: bool = False,
     ) -> Document:
-        """上传知识文档：先完成外部 embedding，再以短事务写父子表。"""
+        """上传知识文档：先完成外部 embedding，再以短事务写父子表。
+
+        async_mode=True 时，只存父文档并提交 Celery 任务，分块和 embedding 异步执行。
+        """
+        if async_mode:
+            doc = Document(title=title, source_type=source_type, project_name=project_name, content=content)
+            self.session.add(doc)
+            await self.session.flush()
+            from app.ai.tasks.document_parse import parse_document_task
+            async_result = parse_document_task.delay(doc.id, title, content, source_type, project_name)
+            doc._task_id = async_result.task_id
+            return doc
         chunks = self.chunker.chunk(content, content_type=content_type)
         prepared_chunks = [
             (chunk_text, await self.vector_recall.embed(chunk_text))
