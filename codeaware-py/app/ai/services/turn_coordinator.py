@@ -814,14 +814,11 @@ class TurnCoordinator:
             # 测试环境（CODEAWARE_TESTING=1）无 Celery Worker，降级同步执行
             if os.environ.get("CODEAWARE_TESTING") == "1":
                 logger.info("memory extraction running synchronously (test mode)")
-                from app.ai.config import get_embedding_model, get_chat_model
-                from app.ai.infra.vector_recall import VectorRecallService
                 from app.ai.memory.long_term import LongTermMemoryManager
 
-                vector_recall = VectorRecallService(get_embedding_model())
-                chat_model = get_chat_model()
+                # 读消息 + 抽取事实（LLM 调用，不持 DB 事务）
                 async with AsyncSessionLocal() as s:
-                    lt = LongTermMemoryManager(s, vector_recall)
+                    lt = LongTermMemoryManager(s, self.vector_recall)
                     has_mem = await lt.has_memories(cid)
                     if has_mem:
                         return
@@ -829,12 +826,16 @@ class TurnCoordinator:
                     if len(messages) < MEMORY_EXTRACT_THRESHOLD:
                         return
                     tuples = [(m[0], m[1]) for m in messages]
-                    facts = await lt.extract_facts_text(tuples, chat_model)
+                    facts = await lt.extract_facts_text(tuples, self.chat_model)
                     if not facts:
                         return
-                    prepared = await lt.prepare_facts(facts)
+                # 所有 embedding 在无事务的 session 中完成
+                async with AsyncSessionLocal() as prepare_session:
+                    preparer = LongTermMemoryManager(prepare_session, self.vector_recall)
+                    prepared = await preparer.prepare_facts(facts)
+                # 写入独立事务
                 async with AsyncSessionLocal() as s2:
-                    lt2 = LongTermMemoryManager(s2, vector_recall)
+                    lt2 = LongTermMemoryManager(s2, self.vector_recall)
                     await lt2.save_prepared_facts(cid, prepared)
                     await s2.commit()
                 return
