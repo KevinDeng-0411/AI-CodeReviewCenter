@@ -44,24 +44,6 @@ services:
       retries: 5
 
   # ============================================================
-  # Ollama — 本地 Embedding 模型 (bge-m3)
-  # ============================================================
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ${CODEAWARE_OLLAMA_CONTAINER_NAME:-ai-center-ollama}
-    restart: unless-stopped
-    ports:
-      - "${CODEAWARE_OLLAMA_HOST_PORT:-11434}:11434"
-    volumes:
-      - ollamadata:/root/.ollama
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list || exit 1"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
-
-  # ============================================================
   # Celery Worker — 异步任务队列
   # ============================================================
   celery_worker:
@@ -76,7 +58,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6380
       LLM_API_KEY: ${LLM_API_KEY}
-      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
     volumes:
       - ./codeaware-py:/app
     working_dir: /app
@@ -152,5 +134,4 @@ services:
 volumes:
   pgdata:
   redisdata:
-  ollamadata:
   kafkadata:

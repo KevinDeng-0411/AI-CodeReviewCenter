@@ -1196,18 +1196,25 @@ cd frontend && npm run test && npm run lint && npm run build
 
 ### 改动
 
-```yaml
-# docker-compose.yml — Linux 方案
-ollama:
-  image: ollama/ollama:latest
-  deploy:
-    resources:
-      reservations:
-        devices:
-          - driver: nvidia
-            count: 1
-            capabilities: [gpu]
-```
+- macOS 原生安装（推荐，使用 Metal GPU 加速）：
+  ```bash
+  brew install ollama
+  ollama pull bge-m3
+  ```
+  删除 docker-compose 中的 Ollama 服务，`OLLAMA_BASE_URL` 指向 `http://host.docker.internal:11434`（Celery Worker）或 `http://localhost:11434`（FastAPI 直连）。
+
+- Linux Docker 方案：
+  ```yaml
+  ollama:
+    image: ollama/ollama:latest
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  ```
 
 macOS 直接用宿主机原生 Ollama，改 `OLLAMA_BASE_URL=http://host.docker.internal:11434`。
 
