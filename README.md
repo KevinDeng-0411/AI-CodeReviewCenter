@@ -233,6 +233,7 @@ data: {"protocol_version":1,...,"sequence":N}
 
 **Retrieval evaluation summary** (real bge-m3, 35 golden cases):
 
+- Full evolution tracking (C3→C4→jieba→LangGraph→RAGAS): [retrieval-evolution.md](docs/optimization/retrieval-evolution.md)
 - Hybrid retrieval R@5 = 0.986 ([top_k sensitivity](docs/optimization/topk-sensitivity.md))
 - jieba Chinese BM25: exact Chinese R@5 0.25 → **1.000** ([ADR-0011](docs/decisions/adr/0011-jieba-chinese-bm25-segmentation.md))
 - LangGraph routing accuracy **35/35 = 1.000**, retry rate 0.0 (hits don't retry) ([eval report](docs/optimization/rag-graph-eval.md))

@@ -9,6 +9,7 @@
 
 | 优化项 | 状态 | 决策记录 | 说明 |
 |---|---|---|---|
+| **检索质量演进总览** | ✅ 持续更新 | [retrieval-evolution.md](retrieval-evolution.md) | 全阶段 R@5/MRR/延迟/决策对比 |
 | LangGraph 检索增强（路由+纠错） | ✅ 已实施 | [ADR-0015](../decisions/adr/0015-langgraph-retrieval-enhancement.md) / [eval](rag-graph-eval.md) | 路由准确率 1.000（修复 json_mode 400 后） |
 | LangChain 薄 adapter / 完整 Agent 不引 LangGraph | ✅ 已评估 | [ADR-0014](../decisions/adr/0014-langchain-thin-adapter-no-langgraph.md) | 耦合度极低；完整 Agent 仍不做 |
 | 生成层评估（RAGAS） | ✅ 已完成 | [ragas-eval.md](ragas-eval.md) | Faithfulness 0.939 / Relevancy 0.812 |

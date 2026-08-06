@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     ai_readme_snapshot_timeout_seconds: float = Field(default=5.0, gt=0)
 
     # RAG 词法检索后端（C4-B：pg_trgm 回退 / bm25 ParadeDB pg_search 默认目标）
-    rag_lexical_backend: str = "pg_trgm"  # C4-D 通过后切 "bm25"
+    rag_lexical_backend: str = "bm25"  # 默认 BM25（ParadeDB pg_search），改 "pg_trgm" 回退
 
     # RAG 运行时（LangGraph 检索增强）：graph=智能路由+自我纠错 / service=原路径回退
     rag_runtime: str = "graph"  # 出问题改 "service" 一键回退

@@ -233,6 +233,7 @@ data: {"protocol_version":1,...,"sequence":N}
 
 **检索评估摘要**（真实 bge-m3，35 条 golden）：
 
+- 全阶段演进追踪（C3→C4→jieba→LangGraph→RAGAS）：[retrieval-evolution.md](docs/optimization/retrieval-evolution.md)
 - 混合检索 R@5 = 0.986（[top_k 敏感性](docs/optimization/topk-sensitivity.md)）
 - jieba 中文 BM25：中文精确 R@5 0.25 → **1.000**（[ADR-0011](docs/decisions/adr/0011-jieba-chinese-bm25-segmentation.md)）
 - LangGraph 路由准确率 **35/35 = 1.000**，重试触发率 0.0（命中不重试）（[评估报告](docs/optimization/rag-graph-eval.md)）
