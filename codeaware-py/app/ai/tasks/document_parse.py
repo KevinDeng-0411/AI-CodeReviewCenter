@@ -1,5 +1,4 @@
 """文档解析+分块+embedding 异步任务。"""
-import logging
 import asyncio
 from app.ai.celery_app import celery_app
 from app.ai.infra.vector_recall import VectorRecallService
@@ -8,8 +7,6 @@ from app.ai.rag.semantic_chunker import SemanticChunker
 from app.ai.tasks.base import CodeAwareTask
 from app.db.session import AsyncSessionLocal
 from app.models import Document, KnowledgeChunk
-
-logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, base=CodeAwareTask, name="document.parse")
@@ -37,4 +34,4 @@ def parse_document_task(self, doc_id: int, title: str, content: str,
                 await vector_recall.store_preembedded(session, kc, embedding)
             await session.commit()
         return {"doc_id": doc_id, "chunk_count": len(prepared)}
-    return asyncio.get_event_loop().run_until_complete(_run())
+    return asyncio.run(_run())

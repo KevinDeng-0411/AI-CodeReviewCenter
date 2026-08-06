@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -6,5 +8,5 @@ class TaskStatusVO(BaseModel):
     status: str
     ready: bool
     successful: bool | None = None
-    result: dict | list | str | None = None
+    result: Any = None
     error: str | None = None

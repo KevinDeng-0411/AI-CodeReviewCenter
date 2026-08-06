@@ -1,5 +1,4 @@
 """任务状态查询 API。"""
-import logging
 from celery.result import AsyncResult
 from fastapi import APIRouter
 from app.ai.celery_app import celery_app
@@ -7,7 +6,6 @@ from app.core.response import Result
 from app.schemas.task import TaskStatusVO
 
 router = APIRouter(prefix="/api/tasks", tags=["Tasks"])
-logger = logging.getLogger(__name__)
 
 
 @router.get("/{task_id}", response_model=Result[TaskStatusVO])
