@@ -803,30 +803,19 @@ class TurnCoordinator:
                         "消息缓存回填失败，已使用 PostgreSQL 真相",
                     )
                 )
-            async with AsyncSessionLocal() as s:
-                lt = LongTermMemoryManager(s, self.vector_recall)
-                has_mem = await lt.has_memories(cid)
-            if len(msgs) < MEMORY_EXTRACT_THRESHOLD or has_mem:
+            if len(msgs) < MEMORY_EXTRACT_THRESHOLD:
                 return
-            tuples = [(m.role, m.content) for m in msgs]
-            facts = await lt.extract_facts_text(tuples, self.chat_model)  # 纯 LLM
-            if not facts:
-                return
-            # 所有 embedding 在一个从未执行 SQL 的 session 中完成。
-            async with AsyncSessionLocal() as prepare_session:
-                preparer = LongTermMemoryManager(prepare_session, self.vector_recall)
-                prepared_facts = await preparer.prepare_facts(facts)
-            async with AsyncSessionLocal() as s2:
-                lt2 = LongTermMemoryManager(s2, self.vector_recall)
-                await lt2.save_prepared_facts(cid, prepared_facts)
-                await s2.commit()
-        except Exception:
+            from app.ai.tasks.memory_extract import extract_memory_task
+
+            extract_memory_task.delay(cid, MEMORY_EXTRACT_THRESHOLD)
+        except Exception as exc:
+            logger.warning("memory extraction submit failed conversation_id=%s error=%s", cid, exc)
             warnings.append(
                 self._post_warning(
                     cid,
                     "memory_extraction",
                     "EXTRACTION_FAILED",
-                    "记忆抽取降级",
+                    "记忆抽取任务提交失败",
                 )
             )
 
