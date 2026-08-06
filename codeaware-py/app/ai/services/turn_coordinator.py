@@ -115,6 +115,9 @@ class TurnCoordinator:
             code,
             cid,
         )
+        from app.ai.events.producer import emit_error_event
+
+        emit_error_event(component=component, code=code, message="", details={"conversation_id": cid})
 
     def _context_warning(
         self, cid: str, component: str, code: str, message: str

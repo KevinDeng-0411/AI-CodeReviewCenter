@@ -11,6 +11,7 @@ from app.ai.rag.hybrid_retriever import HybridRetriever
 from app.ai.rag.query_rewriter import QueryRewriter
 from app.ai.rag.semantic_chunker import SemanticChunker
 from app.ai.services.rag import RagService
+from app.ai.events.producer import emit_document_event
 from app.api.v1.deps import get_chat_model, get_db, get_lexical_recall, get_vector_recall_service, get_current_user
 from app.core.config import settings
 from app.core.exceptions import BusinessException
@@ -73,6 +74,7 @@ async def upload(
         raise
     except Exception as exc:
         raise BusinessException("KNOWLEDGE_EMBEDDING_FAILED", status_code=502) from exc
+    emit_document_event("CREATED", doc.id, doc.title, source_type=req.source_type)
     return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title))
 
 
@@ -201,6 +203,7 @@ async def delete(
     """
     rag = _rag_service(db, llm, vr, lr)
     await rag.delete_document(doc_id)
+    emit_document_event("DELETED", doc_id, "", user_id=None)
     return Result.ok()
 
 
@@ -275,6 +278,7 @@ async def upload_file(
                 "KNOWLEDGE_EMBEDDING_FAILED",
                 status_code=502,
             ) from exc
+        emit_document_event("CREATED", doc.id, doc.title, source_type="DOC", project_name=project_name)
         return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title))
     finally:
         await file.close()
