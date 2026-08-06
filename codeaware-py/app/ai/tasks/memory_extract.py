@@ -45,4 +45,9 @@ def extract_memory_task(self, conversation_id: str, message_count: int) -> dict:
 
         return {"conversation_id": conversation_id, "facts_count": len(prepared)}
 
-    return asyncio.run(_run())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_run())
+    finally:
+        loop.close()

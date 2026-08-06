@@ -1,4 +1,4 @@
 FROM python:3.12-slim
 WORKDIR /app
-# 运行时依赖通过 volume 挂载 pyproject.toml 安装，此处只装 Celery 和 Kafka 包
-RUN pip install --no-cache-dir "celery>=5.4" "kafka-python>=2.0"
+COPY codeaware-py/pyproject.toml .
+RUN pip install --no-cache-dir -e ".[dev]"

@@ -48,15 +48,17 @@ services:
   # ============================================================
   celery_worker:
     build:
-      context: ./docker
-      dockerfile: Dockerfile.worker
+      context: .
+      dockerfile: docker/Dockerfile.worker
     container_name: ${CODEAWARE_CELERY_WORKER_CONTAINER_NAME:-ai-center-celery-worker}
     depends_on:
       redis:
         condition: service_healthy
     environment:
       REDIS_HOST: redis
-      REDIS_PORT: 6380
+      REDIS_PORT: 6379
+      PG_HOST: postgres
+      PG_PORT: 5432
       LLM_API_KEY: ${LLM_API_KEY}
       OLLAMA_BASE_URL: http://host.docker.internal:11434
     volumes:
@@ -78,8 +80,8 @@ services:
     depends_on:
       - celery_worker
     environment:
-      CELERY_BROKER_URL: redis://redis:6380/0
-      CELERY_RESULT_BACKEND: redis://redis:6380/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     ports:
       - "${CODEAWARE_FLOWER_HOST_PORT:-5555}:5555"
     restart: unless-stopped
@@ -118,8 +120,8 @@ services:
   # ============================================================
   kafka_consumer:
     build:
-      context: ./docker
-      dockerfile: Dockerfile.worker
+      context: .
+      dockerfile: docker/Dockerfile.worker
     container_name: ${CODEAWARE_KAFKA_CONSUMER_CONTAINER_NAME:-ai-center-kafka-consumer}
     depends_on:
       kafka:
