@@ -65,6 +65,8 @@ services:
       - ./codeaware-py:/app
     working_dir: /app
     restart: unless-stopped
+    ports:
+      - "${CODEAWARE_FLOWER_HOST_PORT:-5555}:5555"
 
 
   # ============================================================

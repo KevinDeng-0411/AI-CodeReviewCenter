@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 
 from sqlalchemy import select
 
+from app.ai.config import get_reranker
 from app.ai.memory.long_term import LongTermMemoryManager
 from app.ai.memory.short_term import ShortTermMemoryManager, MessageEntry
 from app.ai.prompt.template_manager import PromptTemplateManager
@@ -98,7 +99,8 @@ class TurnCoordinator:
         self.chunker = chunker
         self.query_rewriter = query_rewriter
         self.lexical_recall = lexical_recall
-        self.context_builder = ContextBuilder(chat_model, redis_client, vector_recall, lexical_recall, query_rewriter, chunker)
+        self.reranker = get_reranker()
+        self.context_builder = ContextBuilder(chat_model, redis_client, vector_recall, lexical_recall, query_rewriter, chunker, self.reranker)
         self.post_turn_processor = PostTurnProcessor(chat_model, redis_client, vector_recall)
         self._owned_guards: set[str] = set()
 

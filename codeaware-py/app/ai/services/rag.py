@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.infra.vector_recall import VectorRecallService
 from app.ai.rag.chinese_segmenter import segment_chinese
 from app.ai.rag.hybrid_retriever import HybridRetriever, ScoredChunk
+from app.ai.rag.reranker import RerankerPort
 from app.ai.rag.query_rewriter import QueryRewriter
 from app.ai.rag.semantic_chunker import SemanticChunker
 from app.models import Document, KnowledgeChunk
@@ -31,12 +32,14 @@ class RagService:
         vector_recall: VectorRecallService,
         query_rewriter: QueryRewriter,
         hybrid_retriever: HybridRetriever,
+        reranker: RerankerPort | None = None,
     ) -> None:
         self.session = session
         self.chunker = chunker
         self.vector_recall = vector_recall
         self.query_rewriter = query_rewriter
         self.hybrid_retriever = hybrid_retriever
+        self.reranker = reranker
 
     async def upload_document(
         self,
@@ -84,7 +87,7 @@ class RagService:
         前一次检索已开启事务后继续等待下一次 embedding。
         """
         prepared = await self.prepare_search(query)
-        return await self.search_prepared(prepared, top_k=top_k)
+        return await self.search_prepared(prepared, top_k=top_k, rerank_query=query)
 
     async def prepare_search(self, query: str) -> list[PreparedSearchQuery]:
         """纯外部调用阶段：改写查询并生成全部向量，不执行 SQL。"""
@@ -95,19 +98,33 @@ class RagService:
         ]
 
     async def search_prepared(
-        self, queries: list[PreparedSearchQuery], top_k: int = 5
+        self, queries: list[PreparedSearchQuery], top_k: int = 5,
+        rerank_query: str | None = None,
     ) -> list[ScoredChunk]:
-        """纯数据库阶段：消费预生成向量并完成混合召回与去重。"""
+        """纯数据库阶段：消费预生成向量并完成混合召回与去重。
+
+        rerank_query 提供时启用 reranker：扩大候选池（top_k*4）→ 去重 → 语义精排 → top_k。
+        """
+        from app.core.config import settings
+
+        use_rerank = (
+            self.reranker is not None
+            and rerank_query is not None
+            and settings.reranker_enabled
+        )
+        pool_k = top_k * 4 if use_rerank else top_k * 2
         seen: set[int] = set()
         all_results: list[ScoredChunk] = []
         for query in queries:
             results = await self.hybrid_retriever.search_by_vector(
-                query.text, query.vector, top_k=top_k * 2
+                query.text, query.vector, top_k=pool_k
             )
             for r in results:
                 if r.chunk.id not in seen:
                     seen.add(r.chunk.id)
                     all_results.append(r)
+        if use_rerank:
+            return await self.reranker.rerank(rerank_query, all_results, top_k)
         all_results.sort(key=lambda x: x.score, reverse=True)
         return all_results[:top_k]
 

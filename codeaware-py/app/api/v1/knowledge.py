@@ -100,7 +100,9 @@ async def search(
     vr: VectorRecallService = Depends(get_vector_recall_service),
     lr=Depends(get_lexical_recall),
 ):
+    from app.ai.config import get_reranker
     rag = _rag_service(db, llm, vr, lr)
+    rag.reranker = get_reranker()
     try:
         results = await rag.search(req.query, top_k=req.top_k)
     except BusinessException:

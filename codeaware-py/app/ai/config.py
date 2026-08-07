@@ -11,6 +11,7 @@ from langchain_deepseek import ChatDeepSeek
 from langchain_ollama import OllamaEmbeddings
 
 from app.ai.infra.vector_recall import VectorRecallService
+from app.ai.rag.reranker import CrossEncoderReranker, RerankerPort
 from app.core.config import settings
 
 
@@ -44,3 +45,15 @@ def get_embedding_model() -> OllamaEmbeddings:
 def get_vector_recall_service() -> VectorRecallService:
     """共享向量召回服务（Memory/Knowledge 共用，ADR-0001）。"""
     return VectorRecallService(get_embedding_model())
+
+
+@lru_cache
+def get_reranker() -> RerankerPort | None:
+    """bge-reranker-v2-m3 cross-encoder（ONNX Runtime，ADR-0009 重新评估）。
+
+    配置 reranker_enabled=False 时返回 None（纯 RRF 回退）。
+    ONNX 模型在 models/bge-reranker-v2-m3/ 下（本地推理，无 torch/Ollama 依赖）。
+    """
+    if not settings.reranker_enabled:
+        return None
+    return CrossEncoderReranker()

@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     # RAG 运行时（LangGraph 检索增强）：graph=智能路由+自我纠错 / service=原路径回退
     rag_runtime: str = "graph"  # 出问题改 "service" 一键回退
 
+    # Reranker（检索后语义精排，ADR-0009 重新评估引入）：Ollama bge-reranker-v2-m3
+    reranker_enabled: bool = True  # 出问题改 False 一键关闭，回退纯 RRF
+    reranker_model: str = "bge-reranker-v2-m3"
+    reranker_top_n: int = 20  # rerank 前候选池大小（检索 top_k*4）
+
     # 认证（团队化升级阶段 A：JWT access token，实验室内部使用）
     jwt_secret_key: str = ""  # 启动时校验非空（fail-closed）；测试由 fixture 注入
     jwt_algorithm: str = "HS256"

@@ -32,6 +32,8 @@ dependencies = [
     "langgraph>=0.2",
     "celery>=5.4",
     "kafka-python>=2.0",
+    "onnxruntime>=1.28.0",
+    "tokenizers>=0.23.1",
 ]
 
 [dependency-groups]

@@ -66,6 +66,7 @@ class RagGraph:
         chunker: SemanticChunker | None = None,
         session_factory=None,
         retriever_factory=None,
+        reranker=None,
     ) -> None:
         self.chat_model = chat_model
         self.vector_recall = vector_recall
@@ -73,6 +74,7 @@ class RagGraph:
         self.query_rewriter = query_rewriter
         self.chunker = chunker or SemanticChunker()
         self.session_factory = session_factory
+        self.reranker = reranker
         # retriever_factory(session) -> HybridRetriever；测试注入 fake，生产默认真实
         self.retriever_factory = retriever_factory
         self.router = RouteRouter(chat_model)
@@ -133,6 +135,7 @@ class RagGraph:
             self.vector_recall,
             self.query_rewriter,
             hybrid,
+            self.reranker,
         )
         prepared = await rag.prepare_search(query)
         docs = await rag.search_prepared(prepared, top_k=5)
@@ -219,6 +222,7 @@ class RagGraph:
             self.vector_recall,
             self.query_rewriter,
             hybrid,
+            self.reranker,
         )
         result.context = rag.format_context(docs)
         if docs:

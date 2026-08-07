@@ -1,0 +1,71 @@
+{
+  "n": 52,
+  "rrf_only": {
+    "n": 52,
+    "recall@5_mean": 0.9711538461538461,
+    "mrr@10_mean": 0.8830128205128205,
+    "by_category": {
+      "chinese_exact": {
+        "n": 12,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 0.7916666666666666
+      },
+      "english_natural": {
+        "n": 10,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 0.9333333333333333
+      },
+      "rare_identifier": {
+        "n": 12,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      },
+      "semantic_paraphrase": {
+        "n": 15,
+        "recall@5_mean": 0.9,
+        "mrr@10_mean": 0.8555555555555556
+      },
+      "cross_doc": {
+        "n": 3,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 0.75
+      }
+    }
+  },
+  "rrf_rerank": {
+    "n": 52,
+    "recall@5_mean": 0.9807692307692307,
+    "mrr@10_mean": 0.9413461538461539,
+    "by_category": {
+      "chinese_exact": {
+        "n": 12,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 0.9333333333333332
+      },
+      "english_natural": {
+        "n": 10,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 0.95
+      },
+      "rare_identifier": {
+        "n": 12,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      },
+      "semantic_paraphrase": {
+        "n": 15,
+        "recall@5_mean": 0.9333333333333333,
+        "mrr@10_mean": 0.8833333333333333
+      },
+      "cross_doc": {
+        "n": 3,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      }
+    }
+  },
+  "delta": {
+    "recall_delta": 0.0096,
+    "mrr_delta": 0.0583
+  }
+}

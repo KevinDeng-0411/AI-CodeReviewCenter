@@ -27,13 +27,14 @@ logger = logging.getLogger(__name__)
 
 class ContextBuilder:
     def __init__(self, chat_model, redis_client, vector_recall, lexical_recall,
-                 query_rewriter, chunker) -> None:
+                 query_rewriter, chunker, reranker=None) -> None:
         self.chat_model = chat_model
         self.redis = redis_client
         self.vector_recall = vector_recall
         self.lexical_recall = lexical_recall
         self.query_rewriter = query_rewriter
         self.chunker = chunker
+        self.reranker = reranker
 
     # ---------- 消息加载 ----------
 
@@ -164,6 +165,7 @@ class ContextBuilder:
                     query_rewriter=self.query_rewriter,
                     chunker=self.chunker,
                     session_factory=AsyncSessionLocal,
+                    reranker=self.reranker,
                 )
                 result = await graph.run(message)
                 rag_ctx = result.context
@@ -175,12 +177,12 @@ class ContextBuilder:
             else:
                 async with AsyncSessionLocal() as s:
                     hybrid = HybridRetriever(s, self.vector_recall, self.lexical_recall)
-                    rag = RagService(s, self.chunker, self.vector_recall, self.query_rewriter, hybrid)
+                    rag = RagService(s, self.chunker, self.vector_recall, self.query_rewriter, hybrid, self.reranker)
                     prepared_queries = await rag.prepare_search(message)
                 async with AsyncSessionLocal() as s:
                     hybrid = HybridRetriever(s, self.vector_recall, self.lexical_recall)
-                    rag = RagService(s, self.chunker, self.vector_recall, self.query_rewriter, hybrid)
-                    docs = await rag.search_prepared(prepared_queries, top_k=5)
+                    rag = RagService(s, self.chunker, self.vector_recall, self.query_rewriter, hybrid, self.reranker)
+                    docs = await rag.search_prepared(prepared_queries, top_k=5, rerank_query=message)
                     rag_ctx = rag.format_context(docs)
                     if docs:
                         doc_ids = {r.chunk.document_id for r in docs}
