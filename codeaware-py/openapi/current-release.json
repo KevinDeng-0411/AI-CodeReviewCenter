@@ -765,6 +765,17 @@
             "title": "Id",
             "type": "integer"
           },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -939,6 +950,80 @@
           "similarity"
         ],
         "title": "MemoryHit",
+        "type": "object"
+      },
+      "MemoryListItem": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "created_at": {
+            "default": "",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "memory_type": {
+            "$ref": "#/components/schemas/MemoryType"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "memory_type",
+          "source"
+        ],
+        "title": "MemoryListItem",
+        "type": "object"
+      },
+      "MemoryListVO": {
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryListItem"
+            },
+            "title": "Records",
+            "type": "array"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "size",
+          "records"
+        ],
+        "title": "MemoryListVO",
         "type": "object"
       },
       "MemorySaveRequest": {
@@ -1467,6 +1552,32 @@
           }
         },
         "title": "Result[KnowledgeDocumentVO]",
+        "type": "object"
+      },
+      "Result_MemoryListVO_": {
+        "properties": {
+          "code": {
+            "default": 1,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryListVO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg": {
+            "default": "success",
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "title": "Result[MemoryListVO]",
         "type": "object"
       },
       "Result_MemorySaveVO_": {
@@ -3339,6 +3450,77 @@
       }
     },
     "/api/memory/long-term": {
+      "get": {
+        "description": "列出全部长期记忆，支持按类型过滤 + 分页。",
+        "operationId": "list_long_term_api_memory_long_term_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "memory_type",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "pattern": "^(ALL|FACT|REFERENCE)$",
+              "title": "Memory Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result_MemoryListVO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Long Term",
+        "tags": [
+          "Memory"
+        ]
+      },
       "post": {
         "operationId": "save_long_term_api_memory_long_term_post",
         "requestBody": {

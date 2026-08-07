@@ -134,6 +134,22 @@ export interface MemoryHit {
   similarity: number;
 }
 
+export interface MemoryListItem {
+  id: number;
+  content: string;
+  memory_type: string;
+  conversation_id?: string | null;
+  source: string;
+  created_at: string;
+}
+
+export interface MemoryListVO {
+  total: number;
+  page: number;
+  size: number;
+  records: MemoryListItem[];
+}
+
 // ---------- Prompt ----------
 export interface PromptTemplateItem {
   id: number;

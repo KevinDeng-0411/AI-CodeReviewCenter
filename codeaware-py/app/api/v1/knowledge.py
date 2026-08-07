@@ -3,6 +3,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+import os
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,13 +64,14 @@ async def upload(
     lr=Depends(get_lexical_recall),
 ):
     rag = _rag_service(db, llm, vr, lr)
+    _async = os.environ.get("CODEAWARE_TESTING") != "1"
     try:
         doc = await rag.upload_document(
             req.title,
             req.content,
             req.source_type,
             req.project_name,
-            async_mode=True,
+            async_mode=_async,
         )
     except BusinessException:
         raise
@@ -267,13 +269,14 @@ async def upload_file(
             raise BusinessException(FILE_CONTENT_TOO_LARGE)
 
         rag = _rag_service(db, llm, vr, lr)
+        _async = os.environ.get("CODEAWARE_TESTING") != "1"
         try:
             doc = await rag.upload_document(
                 filename,
                 text,
                 source_type="DOC",
                 project_name=project_name,
-                async_mode=True,
+                async_mode=_async,
             )
         except Exception as exc:
             raise BusinessException(

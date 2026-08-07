@@ -12,6 +12,7 @@ import type {
   Envelope,
   KnowledgeSearchHit,
   MemoryHit,
+  MemoryListVO,
   PromptCreateInput,
   PromptTemplateItem,
   UnitTestVO,
@@ -207,6 +208,10 @@ export const memory = {
       method: "POST",
       body: JSON.stringify({ memory_type: "REFERENCE", ...p }),
     }),
+  list: (params: { memory_type?: string; page?: number; size?: number }) =>
+    call<MemoryListVO>(
+      `/api/memory/long-term?memory_type=${params.memory_type || "ALL"}&page=${params.page || 1}&size=${params.size || 20}`,
+    ),
   search: (query: string, threshold = 0.3, topK = 5) =>
     call<MemoryHit[]>(
       `/api/memory/long-term/search?query=${encodeURIComponent(query)}&threshold=${threshold}&top_k=${topK}`,

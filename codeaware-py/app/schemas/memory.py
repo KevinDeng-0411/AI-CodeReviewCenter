@@ -35,6 +35,22 @@ class MemoryHit(BaseModel):
     similarity: float
 
 
+class MemoryListItem(BaseModel):
+    id: int
+    content: str
+    memory_type: MemoryType
+    conversation_id: str | None = None
+    source: str
+    created_at: str = ""
+
+
+class MemoryListVO(BaseModel):
+    total: int
+    page: int
+    size: int
+    records: list[MemoryListItem]
+
+
 class ExtractedFacts(BaseModel):
     """LLM 从对话中抽取的原子事实契约（json_mode 结构化输出）。"""
 
