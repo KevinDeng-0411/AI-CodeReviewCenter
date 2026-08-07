@@ -113,5 +113,9 @@ class CrossEncoderReranker(RerankerPort):
             logger.warning("rerank failed code=RERANK_INFERENCE_ERROR error=%s", type(exc).__name__)
             return sorted(candidates, key=lambda c: c.score, reverse=True)[:top_k]
 
+        # 按 cross-encoder 相关度降序，并把 score 更新为 rerank 分（前端展示用）
         ranked = sorted(zip(scores, candidates), key=lambda x: x[0], reverse=True)
-        return [c for _, c in ranked[:top_k]]
+        top = ranked[:top_k]
+        for rel_score, c in top:
+            c.score = rel_score
+        return [c for _, c in top]
