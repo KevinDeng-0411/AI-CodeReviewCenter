@@ -207,14 +207,14 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A[用户消息] --> B{智能路由<br/>LLM 判断}
-    B -->|"direct 常识/闲聊"| C[跳过检索<br/>直接回答<br/>标注"未检索知识库"]
-    B -->|"retrieve 技术/资料"| D[混合检索<br/>BM25 + pgvector RRF<br/>粗排 top_20]
+    B -->|direct 常识/闲聊| C[跳过检索<br/>直接回答<br/>标注「未检索知识库」]
+    B -->|retrieve 技术/资料| D[混合检索<br/>BM25 + pgvector RRF<br/>粗排 top_20]
     D --> E[Reranker 精排<br/>cross-encoder 打分]
     E --> F{评估<br/>match_type 检测}
     F -->|满意| G[注入 top_5 → prompt<br/>→ LLM 生成]
-    F -->|"不满意 且 retries<2"| H[改写查询<br/>防打转 + seen_queries 兜底]
+    F -->|不满意 且 retries<2| H[改写查询<br/>防打转 + seen_queries 兜底]
     H --> D
-    F -->|"达上限 或 query 重复"| I[返回"未找到"<br/>+ context.warning]
+    F -->|达上限 或 query 重复| I[返回"未找到"<br/>+ context.warning]
 ```
 
 ### 4. System Context / Boundary
@@ -373,7 +373,7 @@ Running bare `pytest` is forbidden for the backend — a safe runner creates dis
 | JWT auth + per-user conversation isolation | project management (X-Project-ID) |
 | shared knowledge base & memory | per-user KB permissions |
 | 8-event typed SSE | WebSocket |
-| BM25 + pgvector RRF hybrid retrieval | two-stage reranker |
+| BM25 + pgvector RRF **粗排** + ONNX cross-encoder **精排** | LLM-as-reranker / torch CrossEncoder |
 | element-aware chunking + scanned-PDF rejection | OCR |
 | fail-closed disposable test stack | bare pytest |
 | single-worker local-first | multi-worker / K8s |
@@ -381,6 +381,22 @@ Running bare `pytest` is forbidden for the backend — a safe runner creates dis
 | Kafka event streaming (audit/metrics) | Grafana / Loki dashboard |
 | Flower task monitoring | — |
 | deterministic Chat state machine | Agent tool loop |
+| answer cache (sync endpoint only) | answer cache on streaming endpoint |
+
+## Design vs Implementation Notes
+
+设计阶段与最终实现存在差异的点，记录取舍原因：
+
+| 设计点 | 设计意图 | 实际实现 | 原因 |
+|---|---|---|---|
+| **答案缓存** | 同步+流式都缓存 | **仅同步端点** | 流式需保留引用/思考展示，缓存回放会丢失；同步全阻塞收益最大（31s→0.02s）。详见 [sync-vs-stream-endpoints.md](docs/optimization/sync-vs-stream-endpoints.md) |
+| **Reranker** | 暂缓（torch 依赖） | **ONNX Runtime 落地** | 60 条 golden 暴露 cross_doc MRR=0.750 短板；ONNX 无 torch 依赖，MRR +0.058 |
+| **负例降级** | 无关查询返回"未找到" | **保持硬答 + 前端提示** | 前端已有"未检索知识库"标注，降级收益小、改动大，未做 |
+| **Ollama 部署** | Docker 容器 | **macOS 原生（Metal GPU）** | Docker 无法直通 GPU 到容器；原生 Metal 加速 45x |
+| **Flower 部署** | 独立容器 | **与 Celery Worker 合并容器** | 同一镜像一个 entrypoint 起两进程，简化编排 |
+| **Kafka 镜像** | bitnami/kafka | **confluentinc/cp-kafka** | bitnami 镜像拉取限流，本地已有 confluent 镜像 |
+
+> 原则：**有实测收益或解决依赖约束的设计变更才落地**；其余保持原设计，边界明确记录。
 
 ---
 
