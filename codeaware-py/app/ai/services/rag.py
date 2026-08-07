@@ -112,7 +112,8 @@ class RagService:
             and rerank_query is not None
             and settings.reranker_enabled
         )
-        pool_k = top_k * 4 if use_rerank else top_k * 2
+        # 粗排候选池：rerank 开启时用 reranker_top_n（可配置，默认 20），否则 top_k*2
+        pool_k = settings.reranker_top_n if use_rerank else top_k * 2
         seen: set[int] = set()
         all_results: list[ScoredChunk] = []
         for query in queries:

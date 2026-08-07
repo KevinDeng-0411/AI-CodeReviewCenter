@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     # Reranker（检索后语义精排，ADR-0009 重新评估引入）：Ollama bge-reranker-v2-m3
     reranker_enabled: bool = True  # 出问题改 False 一键关闭，回退纯 RRF
     reranker_model: str = "bge-reranker-v2-m3"
-    reranker_top_n: int = 20  # rerank 前候选池大小（检索 top_k*4）
+    reranker_top_n: int = 20  # 粗排候选池大小（多路召回 chunk 数，可调 20-30）
 
     # 认证（团队化升级阶段 A：JWT access token，实验室内部使用）
     jwt_secret_key: str = ""  # 启动时校验非空（fail-closed）；测试由 fixture 注入
