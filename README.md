@@ -185,20 +185,20 @@ sequenceDiagram
     participant LLM as DeepSeek
     participant DB as PG/Redis
 
-    U->>F: 输入问题
+    U->>F: Input question
     F->>B: POST /chat/send/stream
     B->>TC: prepare_turn(message)
-    TC->>DB: 存 USER 消息（commit）
+    TC->>DB: persist USER message (commit)
     TC-->>F: chat.started
     TC->>CB: build_context(message)
-    CB->>RR: 混合检索 top_20<br/>RRF + cross-encoder 精排
+    CB->>RR: hybrid retrieval top_20<br/>RRF + cross-encoder re-rank
     RR->>DB: BM25 + pgvector
-    RR-->>CB: 精排后 top_5
+    RR-->>CB: top_5 after re-rank
     CB-->>TC: prompt + refs
     TC-->>F: context.references
     TC->>LLM: astream(prompt)
     LLM-->>F: reasoning.delta / token.delta
-    TC->>DB: 存 ASSISTANT（commit）
+    TC->>DB: persist ASSISTANT (commit)
     TC-->>F: chat.completed
 ```
 
@@ -206,15 +206,15 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[用户消息] --> B{智能路由<br/>LLM 判断}
-    B -->|direct 常识/闲聊| C[跳过检索<br/>直接回答<br/>标注「未检索知识库」]
-    B -->|retrieve 技术/资料| D[混合检索<br/>BM25 + pgvector RRF<br/>粗排 top_20]
-    D --> E[Reranker 精排<br/>cross-encoder 打分]
-    E --> F{评估<br/>match_type 检测}
-    F -->|满意| G[注入 top_5 → prompt<br/>→ LLM 生成]
-    F -->|不满意 且 retries<2| H[改写查询<br/>防打转 + seen_queries 兜底]
+    A[User message] --> B{Smart routing<br/>LLM decision}
+    B -->|direct: common-sense / chitchat| C[skip retrieval<br/>answer directly<br/>mark 「no KB retrieved」]
+    B -->|retrieve: technical / docs| D[hybrid retrieval<br/>BM25 + pgvector RRF<br/>coarse top_20]
+    D --> E[Reranker re-rank<br/>cross-encoder scoring]
+    E --> F{Evaluation<br/>match_type detection}
+    F -->|satisfied| G[inject top_5 → prompt<br/>→ LLM generation]
+    F -->|unsatisfied & retries<2| H[rewrite query<br/>anti-loop + seen_queries fallback]
     H --> D
-    F -->|达上限 或 query 重复| I[返回「未找到」<br/>+ context.warning]
+    F -->|limit reached or duplicate query| I[return 「not found」<br/>+ context.warning]
 ```
 
 ### 4. System Context / Boundary
@@ -222,25 +222,25 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph Team["Software Engineering Lab"]
-        Dev["开发者<br/>上传文档 / 提问"]
-        Newbie["新人<br/>知识问答"]
+        Dev["Developer<br/>upload docs / ask questions"]
+        Newbie["New hire<br/>knowledge Q&A"]
     end
 
     subgraph System["CodeAware"]
-        App["Chat/RAG 平台<br/>知识库 + 记忆 + 异步"]
+        App["Chat/RAG platform<br/>KB + memory + async"]
     end
 
     subgraph External["External"]
-        DS["DeepSeek API<br/>LLM 生成"]
+        DS["DeepSeek API<br/>LLM generation"]
         Ollama["Ollama (local)<br/>bge-m3 embedding"]
         Docker["Docker<br/>PG / Redis / Kafka"]
     end
 
-    Dev -->|"上传/提问"| App
-    Newbie -->|"检索/问答"| App
-    App -->|"LLM 调用"| DS
+    Dev -->|"upload / ask"| App
+    Newbie -->|"retrieve / Q&A"| App
+    App -->|"LLM calls"| DS
     App -->|"embedding"| Ollama
-    App -->|"数据/事件"| Docker
+    App -->|"data / events"| Docker
 ```
 
 **Core principles**:
@@ -260,7 +260,7 @@ For a new conversation, `conversation_id` is created by the server and returned 
 curl -N http://localhost:8000/api/chat/send/stream \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <token>' \
-  -d '{"conversation_id":null,"message":"解释 RAG 完整链路"}'
+  -d '{"conversation_id":null,"message":"Explain the complete RAG pipeline"}'
 ```
 
 The response is a stream of versioned events, not raw tokens or `[DONE]`:
@@ -276,11 +276,11 @@ data: {"protocol_version":1,...,"knowledge_refs":[...],"memory_refs":[...],"sequ
 
 id: 3
 event: reasoning.delta
-data: {"protocol_version":1,...,"sequence":3,"delta":"首先分析..."}
+data: {"protocol_version":1,...,"sequence":3,"delta":"First, analyze..."}
 
 id: 4
 event: token.delta
-data: {"protocol_version":1,...,"sequence":4,"delta":"RAG 完整链路包括..."}
+data: {"protocol_version":1,...,"sequence":4,"delta":"The full RAG pipeline includes..."}
 
 event: chat.completed
 data: {"protocol_version":1,...,"sequence":N}
@@ -355,7 +355,7 @@ Running bare `pytest` is forbidden for the backend — a safe runner creates dis
 |---|---|---|
 | LLM adapter | ChatDeepSeek (extracts reasoning) | ChatOpenAI (drops 3rd-party fields) |
 | Lexical search | ParadeDB BM25 (default tokenizer) + jieba | pg_trgm (C3 noise hurt RRF) |
-| PDF parsing | pdfminer.six (font-size heading detection) | unstructured.partition.pdf (pulls in torch) |
+| PDF parsing | pdfminer.six (font-size heading detection) | unstructured.partition.pdf (pulls in torch); pdfplumber (table extraction, deferred — no table-heavy docs yet) |
 | Reranker | ONNX bge-reranker-v2-m3 (ADR-0009 re-evaluated) | torch CrossEncoder (heavy dependency) |
 | Intent classification | not built (90% knowledge questions) | classifier risks missed retrieval |
 | LangGraph | retrieval-layer routing + self-correction (ADR-0015) | full Agent tool loop (no demand) |
@@ -373,8 +373,9 @@ Running bare `pytest` is forbidden for the backend — a safe runner creates dis
 | JWT auth + per-user conversation isolation | project management (X-Project-ID) |
 | shared knowledge base & memory | per-user KB permissions |
 | 8-event typed SSE | WebSocket |
-| BM25 + pgvector RRF **粗排** + ONNX cross-encoder **精排** | LLM-as-reranker / torch CrossEncoder |
+| BM25 + pgvector RRF **coarse rank** + ONNX cross-encoder **re-rank** | LLM-as-reranker / torch CrossEncoder |
 | element-aware chunking + scanned-PDF rejection | OCR |
+| PDF tables flattened into plain text (no row/column structure) | pdfplumber `extract_tables()` → Markdown table serialization (deferred until table-heavy docs exist) |
 | fail-closed disposable test stack | bare pytest |
 | single-worker local-first | multi-worker / K8s |
 | Celery async task queue | Agent tool loop |
@@ -385,18 +386,18 @@ Running bare `pytest` is forbidden for the backend — a safe runner creates dis
 
 ## Design vs Implementation Notes
 
-设计阶段与最终实现存在差异的点，记录取舍原因：
+Points where the design diverged from the final implementation, with the trade-off reasons:
 
-| 设计点 | 设计意图 | 实际实现 | 原因 |
+| Design Point | Intended Design | Actual Implementation | Reason |
 |---|---|---|---|
-| **答案缓存** | 同步+流式都缓存 | **仅同步端点** | 流式需保留引用/思考展示，缓存回放会丢失；同步全阻塞收益最大（31s→0.02s）。详见 [sync-vs-stream-endpoints.md](docs/optimization/sync-vs-stream-endpoints.md) |
-| **Reranker** | 暂缓（torch 依赖） | **ONNX Runtime 落地** | 60 条 golden 暴露 cross_doc MRR=0.750 短板；ONNX 无 torch 依赖，MRR +0.058 |
-| **负例降级** | 无关查询返回"未找到" | **保持硬答 + 前端提示** | 前端已有"未检索知识库"标注，降级收益小、改动大，未做 |
-| **Ollama 部署** | Docker 容器 | **macOS 原生（Metal GPU）** | Docker 无法直通 GPU 到容器；原生 Metal 加速 45x |
-| **Flower 部署** | 独立容器 | **与 Celery Worker 合并容器** | 同一镜像一个 entrypoint 起两进程，简化编排 |
-| **Kafka 镜像** | bitnami/kafka | **confluentinc/cp-kafka** | bitnami 镜像拉取限流，本地已有 confluent 镜像 |
+| **Answer cache** | Cache both sync & streaming | **Sync endpoint only** | Streaming must preserve citation/reasoning display, which cache replay would lose; sync fully blocks, so the win is largest (31s→0.02s). See [sync-vs-stream-endpoints.md](docs/optimization/sync-vs-stream-endpoints.md) |
+| **Reranker** | Deferred (torch dependency) | **ONNX Runtime shipped** | 60 golden cases exposed the cross_doc MRR=0.750 shortfall; ONNX has no torch dependency, MRR +0.058 |
+| **Negative-case fallback** | Unrelated queries return "not found" | **Keep hard answer + frontend hint** | Frontend already has a "no KB retrieved" marker; the fallback's benefit is small and the change is large, so it was not done |
+| **Ollama deployment** | Docker container | **macOS native (Metal GPU)** | Docker cannot pass the GPU through to a container; native Metal is 45x faster |
+| **Flower deployment** | Standalone container | **Merged into the Celery Worker container** | Same image, one entrypoint starts both processes, simplifies orchestration |
+| **Kafka image** | bitnami/kafka | **confluentinc/cp-kafka** | bitnami image pull was rate-limited; the confluent image was already present locally |
 
-> 原则：**有实测收益或解决依赖约束的设计变更才落地**；其余保持原设计，边界明确记录。
+> Principle: **only design changes with measured benefit or that resolve a dependency constraint get shipped**; the rest keep the original design, with the boundary recorded explicitly.
 
 ---
 

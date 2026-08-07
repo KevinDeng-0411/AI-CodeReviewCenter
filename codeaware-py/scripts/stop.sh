@@ -37,7 +37,8 @@ if [ -f /tmp/codeaware-frontend.pid ]; then
     fi
     rm -f /tmp/codeaware-frontend.pid
 else
-    pkill -f "vite.*5173" 2>/dev/null && say "前端已停止" || warn "前端未运行"
+    # vite 命令行不含端口号（node .../node_modules/.bin/vite），按进程路径匹配
+    pkill -f "node_modules/.bin/vite" 2>/dev/null && say "前端已停止" || warn "前端未运行"
 fi
 
 say "完成。docker 服务（PG/Redis/Ollama）未关闭，下次启动更快。"
