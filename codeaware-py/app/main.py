@@ -28,8 +28,11 @@ from app.api.v1.tasks import router as tasks_router
 from app.api.v1.unit_test import router as unit_test_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
+from app.core.logging import setup_logging
 from app.core.response import Result
 from app.core.version import APP_VERSION
+
+setup_logging()
 
 app = FastAPI(
     title=settings.app_name,
@@ -51,6 +54,12 @@ async def request_tracing_middleware(request: Request, call_next):
         request_id, request.method, request.url.path,
         response.status_code, elapsed_ms,
     )
+    if elapsed_ms > 1000:
+        logger.warning(
+            "slow req=%s method=%s path=%s status=%d elapsed=%.0fms",
+            request_id, request.method, request.url.path,
+            response.status_code, elapsed_ms,
+        )
     response.headers["X-Request-ID"] = request_id
     return response
 
