@@ -9,171 +9,196 @@
   "rows": [
     {
       "top_k": 3,
-      "fused_recall_at_5": 0.9857142857142858,
-      "fused_mrr_at_10": 0.9380952380952382,
+      "fused_recall_at_5": 0.9666666666666667,
+      "fused_mrr_at_10": 0.9166666666666666,
       "avg_actual_after_dedup": 3.0,
       "est_prompt_tokens": 900,
       "by_category": {
         "chinese_exact": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 0.8125
+          "mrr@10_mean": 0.875
         },
         "english_natural": {
-          "n": 7,
+          "n": 10,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 1.0
+          "mrr@10_mean": 0.9333333333333333
         },
         "rare_identifier": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
         },
         "semantic_paraphrase": {
-          "n": 7,
-          "recall@5_mean": 0.9285714285714286,
-          "mrr@10_mean": 0.9047619047619048
+          "n": 15,
+          "recall@5_mean": 0.9,
+          "mrr@10_mean": 0.8555555555555556
         },
         "negative": {
-          "n": 5,
+          "n": 8,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
+        },
+        "cross_doc": {
+          "n": 3,
+          "recall@5_mean": 0.8333333333333334,
+          "mrr@10_mean": 0.7777777777777778
         }
       }
     },
     {
       "top_k": 5,
-      "fused_recall_at_5": 0.9857142857142858,
-      "fused_mrr_at_10": 0.9380952380952382,
+      "fused_recall_at_5": 0.975,
+      "fused_mrr_at_10": 0.8958333333333334,
       "avg_actual_after_dedup": 5.0,
       "est_prompt_tokens": 1500,
       "by_category": {
         "chinese_exact": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 0.8125
+          "mrr@10_mean": 0.7777777777777778
         },
         "english_natural": {
-          "n": 7,
+          "n": 10,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 1.0
+          "mrr@10_mean": 0.9333333333333333
         },
         "rare_identifier": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
         },
         "semantic_paraphrase": {
-          "n": 7,
-          "recall@5_mean": 0.9285714285714286,
-          "mrr@10_mean": 0.9047619047619048
+          "n": 15,
+          "recall@5_mean": 0.9,
+          "mrr@10_mean": 0.8555555555555556
         },
         "negative": {
-          "n": 5,
+          "n": 8,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
+        },
+        "cross_doc": {
+          "n": 3,
+          "recall@5_mean": 1.0,
+          "mrr@10_mean": 0.75
         }
       }
     },
     {
       "top_k": 8,
-      "fused_recall_at_5": 0.9857142857142858,
-      "fused_mrr_at_10": 0.9380952380952382,
+      "fused_recall_at_5": 0.975,
+      "fused_mrr_at_10": 0.88125,
       "avg_actual_after_dedup": 8.0,
       "est_prompt_tokens": 2400,
       "by_category": {
         "chinese_exact": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 0.8125
+          "mrr@10_mean": 0.7777777777777778
         },
         "english_natural": {
-          "n": 7,
+          "n": 10,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 1.0
+          "mrr@10_mean": 0.9333333333333333
         },
         "rare_identifier": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
         },
         "semantic_paraphrase": {
-          "n": 7,
-          "recall@5_mean": 0.9285714285714286,
-          "mrr@10_mean": 0.9047619047619048
+          "n": 15,
+          "recall@5_mean": 0.9,
+          "mrr@10_mean": 0.8305555555555556
         },
         "negative": {
-          "n": 5,
+          "n": 8,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
+        },
+        "cross_doc": {
+          "n": 3,
+          "recall@5_mean": 1.0,
+          "mrr@10_mean": 0.5833333333333334
         }
       }
     },
     {
       "top_k": 10,
-      "fused_recall_at_5": 0.9857142857142858,
-      "fused_mrr_at_10": 0.9095238095238095,
+      "fused_recall_at_5": 0.975,
+      "fused_mrr_at_10": 0.8979166666666667,
       "avg_actual_after_dedup": 10.0,
       "est_prompt_tokens": 3000,
       "by_category": {
         "chinese_exact": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 0.6875
+          "mrr@10_mean": 0.8194444444444445
         },
         "english_natural": {
-          "n": 7,
+          "n": 10,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 1.0
+          "mrr@10_mean": 0.9333333333333333
         },
         "rare_identifier": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
         },
         "semantic_paraphrase": {
-          "n": 7,
-          "recall@5_mean": 0.9285714285714286,
-          "mrr@10_mean": 0.9047619047619048
+          "n": 15,
+          "recall@5_mean": 0.9,
+          "mrr@10_mean": 0.8638888888888889
         },
         "negative": {
-          "n": 5,
+          "n": 8,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
+        },
+        "cross_doc": {
+          "n": 3,
+          "recall@5_mean": 1.0,
+          "mrr@10_mean": 0.5833333333333334
         }
       }
     },
     {
       "top_k": 15,
-      "fused_recall_at_5": 0.9857142857142858,
-      "fused_mrr_at_10": 0.9523809523809524,
+      "fused_recall_at_5": 0.975,
+      "fused_mrr_at_10": 0.9006944444444444,
       "avg_actual_after_dedup": 15.0,
       "est_prompt_tokens": 4500,
       "by_category": {
         "chinese_exact": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 0.875
+          "mrr@10_mean": 0.7916666666666666
         },
         "english_natural": {
-          "n": 7,
+          "n": 10,
           "recall@5_mean": 1.0,
-          "mrr@10_mean": 1.0
+          "mrr@10_mean": 0.9333333333333333
         },
         "rare_identifier": {
-          "n": 8,
+          "n": 12,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
         },
         "semantic_paraphrase": {
-          "n": 7,
-          "recall@5_mean": 0.9285714285714286,
-          "mrr@10_mean": 0.9047619047619048
+          "n": 15,
+          "recall@5_mean": 0.9,
+          "mrr@10_mean": 0.8972222222222223
         },
         "negative": {
-          "n": 5,
+          "n": 8,
           "recall@5_mean": 1.0,
           "mrr@10_mean": 1.0
+        },
+        "cross_doc": {
+          "n": 3,
+          "recall@5_mean": 1.0,
+          "mrr@10_mean": 0.5833333333333334
         }
       }
     }

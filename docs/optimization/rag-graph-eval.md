@@ -1,6 +1,6 @@
 # LangGraph 检索增强评估（ADR-0015）
 
-> 状态：✅ 已完成（2026-08-05，35 条 golden）
+> 状态：✅ 已完成（2026-08-07，60 条 golden 重跑）
 > 脚本：`codeaware-py/tests/eval/test_rag_graph_eval.py`（live_eval）
 > 原始数据：`codeaware-py/tests/eval/artifacts/rag_graph_eval.json`
 
@@ -19,34 +19,34 @@
 
 ## 评估设计
 
-- **路由准确率**：35 条 golden，Router 预测 route 对比 `route_expected`（非 negative → retrieve；negative 中技术问题如 Python GIL/K8s → retrieve，常识 → direct）
-- **重试统计**：对 expected=retrieve 的 30 条跑 graph，记录 retries/docs_count
+- **路由准确率**：60 条 golden，Router 预测 route 对比 `route_expected`（非 negative → retrieve；negative 中技术问题如 Python GIL/K8s → retrieve，常识 → direct）
+- **重试统计**：对 expected=retrieve 的 54 条跑 graph，记录 retries/docs_count
 - 真实 DeepSeek（router judge）+ Ollama bge-m3 + BM25 索引
 
 ## 结果
 
-### 路由准确率：1.000（35/35）✅（修复后）
+### 路由准确率：1.000（60/60）✅
 
-修复后仅路由 35 条真实 DeepSeek 判断：**全部正确**。
+60 条真实 DeepSeek 判断：**全部正确**（含 6 条常识负例正确路由 direct）。
 
 | 类别 | 数量 | 结果 |
 |---|---|---|
-| 技术/项目问题 → retrieve | 30 | 30 正确 |
+| 技术/项目问题 → retrieve | 52 | 52 正确 |
 | negative 技术问题（Python GIL/K8s）→ retrieve | 2 | 2 正确 |
-| negative 常识 → direct | 3 | 3 正确 |
+| negative 常识 → direct | 6 | 6 正确 |
 
 > 旧报告 0.914（32/35）系 Router 故障时"永远降级 retrieve"的产物，见顶部修复说明。修复前 3 条 direct
 > 被误判为 retrieve 并非路由决策，而是 API 400 后的兜底值。
 
-### 重试统计：修复后触发率 0.0 ✅
+### 重试统计：触发率 1.9%（60 条）
 
-| 指标 | 旧阈值（分数差，已废弃） | 修复后（match_type，重跑） |
-|---|---|---|
-| 重试触发率 | **0.906**（29/32） | **0.0**（0/32） |
-| 平均重试次数 | 1.812 | 0.0 |
-| 重试后 docs | 全部 = 5（命中） | 全部 = 5（首检即满意） |
+| 指标 | 值 |
+|---|---|
+| 重试触发率 | **0.019**（1/54） |
+| 平均重试次数 | 0.019 |
+| 重试后 docs | 全部 = 5（首检即满意） |
 
-修复后 32 条检索全部 `retries=0`、`docs_count=5`——命中查询评估满意、不触发重试，正是 match_type 检测的设计预期（仅弱检索/未捞到才重试）。
+54 条检索中 53 条 `retries=0`、`docs_count=5`（首检即满意，不触发重试）；1 条触发重试后收敛。符合 match_type 检测的设计预期（仅弱检索/未捞到才重试）。
 
 **根因（两层）**：
 1. **旧 evaluator 分数差阈值 `max - 2nd < 0.01` 对 RRF 无效**。RRF 分数是 `1/(k+rank)` 累加，相邻排名差恒定 ~`1/61 - 1/62` ≈ 0.0003——任何查询（含 both 命中）的 top 相邻 chunk 差都 < 0.01，永远触发重试。

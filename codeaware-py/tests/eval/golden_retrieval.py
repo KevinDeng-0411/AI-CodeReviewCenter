@@ -92,10 +92,10 @@ FIXTURE_DOCS: list[FixtureDoc] = [
 ]
 
 
-# ---------- Golden 查询用例（35 条）----------
+# ---------- Golden 查询用例（60 条）----------
 
 GOLDEN_CASES: list[GoldenCase] = [
-    # --- 中文精确术语 (8) ---
+    # --- 中文精确术语 (12) ---
     GoldenCase("缓存击穿如何解决", [1], "chinese_exact"),
     GoldenCase("缓存穿透方案", [2], "chinese_exact"),
     GoldenCase("缓存雪崩", [3], "chinese_exact"),
@@ -104,8 +104,12 @@ GOLDEN_CASES: list[GoldenCase] = [
     GoldenCase("摘要生成", [10], "chinese_exact"),
     GoldenCase("记忆抽取", [11], "chinese_exact"),
     GoldenCase("版本化模板", [9], "chinese_exact"),
+    GoldenCase("互斥锁", [1], "chinese_exact"),
+    GoldenCase("逻辑过期", [1], "chinese_exact"),
+    GoldenCase("缓存空值", [2], "chinese_exact"),
+    GoldenCase("多级缓存", [3], "chinese_exact"),
 
-    # --- 英文自然语言 (7) ---
+    # --- 英文自然语言 (10) ---
     GoldenCase("how to do hybrid retrieval", [4], "english_natural"),
     GoldenCase("FastAPI async architecture", [6], "english_natural"),
     GoldenCase("SQLAlchemy models", [7], "english_natural"),
@@ -113,8 +117,11 @@ GOLDEN_CASES: list[GoldenCase] = [
     GoldenCase("typed SSE protocol", [12], "english_natural"),
     GoldenCase("safe test runner", [13], "english_natural"),
     GoldenCase("project snapshot for AIReadMe", [14], "english_natural"),
+    GoldenCase("how to prevent cache stampede", [1], "english_natural"),
+    GoldenCase("RRF fusion in hybrid search", [4], "english_natural"),
+    GoldenCase("HNSW index for vectors", [5], "english_natural"),
 
-    # --- 稀有标识符 (8) ---
+    # --- 稀有标识符 (12) ---
     GoldenCase("HybridRetriever", [4], "rare_identifier"),
     GoldenCase("summary_message_count", [10], "rare_identifier"),
     GoldenCase("conversation_id", [7, 12], "rare_identifier"),
@@ -123,8 +130,12 @@ GOLDEN_CASES: list[GoldenCase] = [
     GoldenCase("save_and_activate", [9], "rare_identifier"),
     GoldenCase("extract_facts_text", [11], "rare_identifier"),
     GoldenCase("knowledge_chunks", [4, 15], "rare_identifier"),
+    GoldenCase("redis_setnx", [1], "rare_identifier"),
+    GoldenCase("cache_ttl_jitter", [3], "rare_identifier"),
+    GoldenCase("chat.completed", [12], "rare_identifier"),
+    GoldenCase("LOCAL_PROJECT_ROOTS", [14], "rare_identifier"),
 
-    # --- 语义改写同义词 (7, 主要靠向量) ---
+    # --- 语义改写同义词 (15, 主要靠向量) ---
     GoldenCase("热点Key失效怎么办", [1], "semantic_paraphrase"),
     GoldenCase("布隆过滤器拦截", [2], "semantic_paraphrase"),
     GoldenCase("过期时间随机化", [3], "semantic_paraphrase"),
@@ -132,13 +143,29 @@ GOLDEN_CASES: list[GoldenCase] = [
     GoldenCase("流式逐token推送", [12], "semantic_paraphrase"),
     GoldenCase("一次性测试环境隔离", [13], "semantic_paraphrase"),
     GoldenCase("文档分块检索", [4, 15], "semantic_paraphrase"),
+    GoldenCase("热点数据失效怎么防数据库被打爆", [1], "semantic_paraphrase"),
+    GoldenCase("查询根本不存在的数据有什么办法", [2], "semantic_paraphrase"),
+    GoldenCase("一批缓存同时到期怎么办", [3], "semantic_paraphrase"),
+    GoldenCase("语义检索和关键词检索如何合并结果", [4], "semantic_paraphrase"),
+    GoldenCase("向量的存储格式是什么", [5], "semantic_paraphrase"),
+    GoldenCase("全异步架构怎么实现", [6], "semantic_paraphrase"),
+    GoldenCase("数据库表结构怎么组织的", [7], "semantic_paraphrase"),
+    GoldenCase("怎么固定模型输出格式", [8], "semantic_paraphrase"),
 
-    # --- 负例 (5, 应无结果或低相关) ---
+    # --- 负例 (8, 应无结果或低相关) ---
     GoldenCase("今天天气怎么样", [], "negative"),
     GoldenCase("如何做红烧肉", [], "negative"),
     GoldenCase("Python GIL 问题", [], "negative"),
     GoldenCase("Kubernetes pod 调度", [], "negative"),
     GoldenCase("股票投资策略", [], "negative"),
+    GoldenCase("推荐一部好看的电影", [], "negative"),
+    GoldenCase("如何做糖醋排骨", [], "negative"),
+    GoldenCase("哪家奶茶店最好喝", [], "negative"),
+
+    # --- 跨文档关联 (3, 需组合两篇文档信息) ---
+    GoldenCase("缓存穿透和缓存击穿的区别", [1, 2], "cross_doc"),
+    GoldenCase("向量检索和关键词检索怎么结合", [4, 5], "cross_doc"),
+    GoldenCase("短期记忆和长期记忆的区别", [10, 11], "cross_doc"),
 ]
 
 

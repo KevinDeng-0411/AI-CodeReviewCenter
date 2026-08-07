@@ -1,65 +1,75 @@
 {
   "pg_trgm": {
     "summary": {
-      "recall_at_5_mean": 0.5428571428571428,
-      "mrr_at_10_mean": 0.5285714285714286
+      "recall_at_5_mean": 0.45,
+      "mrr_at_10_mean": 0.44166666666666665
     },
     "by_category": {
       "chinese_exact": {
-        "n": 8,
+        "n": 12,
         "recall@5_mean": 0.0,
         "mrr@10_mean": 0.0
       },
       "english_natural": {
-        "n": 7,
-        "recall@5_mean": 0.8571428571428571,
-        "mrr@10_mean": 0.8571428571428571
+        "n": 10,
+        "recall@5_mean": 0.7,
+        "mrr@10_mean": 0.7
       },
       "rare_identifier": {
-        "n": 8,
+        "n": 12,
         "recall@5_mean": 1.0,
-        "mrr@10_mean": 0.9375
+        "mrr@10_mean": 0.9583333333333334
       },
       "semantic_paraphrase": {
-        "n": 7,
+        "n": 15,
         "recall@5_mean": 0.0,
         "mrr@10_mean": 0.0
       },
       "negative": {
-        "n": 5,
+        "n": 8,
         "recall@5_mean": 1.0,
         "mrr@10_mean": 1.0
+      },
+      "cross_doc": {
+        "n": 3,
+        "recall@5_mean": 0.0,
+        "mrr@10_mean": 0.0
       }
     }
   },
   "vector": {
     "summary": {
-      "recall_at_5_mean": 0.9571428571428572,
-      "mrr_at_10_mean": 0.9202380952380953
+      "recall_at_5_mean": 0.975,
+      "mrr_at_10_mean": 0.9118055555555556
     },
     "by_category": {
       "chinese_exact": {
-        "n": 8,
+        "n": 12,
         "recall@5_mean": 1.0,
-        "mrr@10_mean": 0.84375
+        "mrr@10_mean": 0.8541666666666666
       },
       "english_natural": {
-        "n": 7,
+        "n": 10,
         "recall@5_mean": 1.0,
-        "mrr@10_mean": 1.0
+        "mrr@10_mean": 0.9333333333333333
       },
       "rare_identifier": {
-        "n": 8,
+        "n": 12,
         "recall@5_mean": 1.0,
         "mrr@10_mean": 1.0
       },
       "semantic_paraphrase": {
-        "n": 7,
-        "recall@5_mean": 0.7857142857142857,
-        "mrr@10_mean": 0.7797619047619048
+        "n": 15,
+        "recall@5_mean": 0.9,
+        "mrr@10_mean": 0.8083333333333333
       },
       "negative": {
-        "n": 5,
+        "n": 8,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      },
+      "cross_doc": {
+        "n": 3,
         "recall@5_mean": 1.0,
         "mrr@10_mean": 1.0
       }
@@ -67,40 +77,45 @@
   },
   "fused": {
     "summary": {
-      "recall_at_5_mean": 0.9571428571428572,
-      "mrr_at_10_mean": 0.905952380952381
+      "recall_at_5_mean": 0.975,
+      "mrr_at_10_mean": 0.9118055555555556
     },
     "by_category": {
       "chinese_exact": {
-        "n": 8,
+        "n": 12,
         "recall@5_mean": 1.0,
-        "mrr@10_mean": 0.84375
+        "mrr@10_mean": 0.8541666666666666
       },
       "english_natural": {
-        "n": 7,
+        "n": 10,
         "recall@5_mean": 1.0,
-        "mrr@10_mean": 0.9285714285714286
+        "mrr@10_mean": 0.9333333333333333
       },
       "rare_identifier": {
-        "n": 8,
+        "n": 12,
         "recall@5_mean": 1.0,
         "mrr@10_mean": 1.0
       },
       "semantic_paraphrase": {
-        "n": 7,
-        "recall@5_mean": 0.7857142857142857,
-        "mrr@10_mean": 0.7797619047619048
+        "n": 15,
+        "recall@5_mean": 0.9,
+        "mrr@10_mean": 0.8083333333333333
       },
       "negative": {
-        "n": 5,
+        "n": 8,
+        "recall@5_mean": 1.0,
+        "mrr@10_mean": 1.0
+      },
+      "cross_doc": {
+        "n": 3,
         "recall@5_mean": 1.0,
         "mrr@10_mean": 1.0
       }
     }
   },
   "timing": {
-    "pg_trgm": 0.035,
-    "vector": 6.026,
-    "fused": 6.581
+    "pg_trgm": 0.091,
+    "vector": 9.147,
+    "fused": 8.879
   }
 }

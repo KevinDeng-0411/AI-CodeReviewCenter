@@ -251,13 +251,13 @@ data: {"protocol_version":1,...,"sequence":N}
 | Alembic head | 0011 |
 | 完成阶段 | C1-C6 + 团队化 A/B/C + 文档管理 + 异步任务队列 + Kafka 事件流 |
 
-**检索评估摘要**（真实 bge-m3，35 条 golden）：
+**检索评估摘要**（真实 bge-m3，60 条 golden）：
 
 - 全阶段演进追踪（C3→C4→jieba→LangGraph→RAGAS）：[retrieval-evolution.md](docs/optimization/retrieval-evolution.md)
-- 混合检索 R@5 = 0.986（[top_k 敏感性](docs/optimization/topk-sensitivity.md)）
+- 混合检索 R@5 = 0.975（[top_k 敏感性](docs/optimization/topk-sensitivity.md)）
 - jieba 中文 BM25：中文精确 R@5 0.25 → **1.000**（[ADR-0011](docs/decisions/adr/0011-jieba-chinese-bm25-segmentation.md)）
-- LangGraph 路由准确率 **35/35 = 1.000**，重试触发率 0.0（命中不重试）（[评估报告](docs/optimization/rag-graph-eval.md)）
-- 生成质量 RAGAS：Faithfulness 0.939 / Answer Relevancy 0.812（[评估报告](docs/optimization/ragas-eval.md)）
+- LangGraph 路由准确率 **60/60 = 1.000**，重试触发率 0.019（[评估报告](docs/optimization/rag-graph-eval.md)）
+- 生成质量 RAGAS：Faithfulness 0.931 / Answer Relevancy 0.793（[评估报告](docs/optimization/ragas-eval.md)）
 
 完整评测数据（C3/C4 词法升级、按类别、敏感性分析）见 [docs/optimization/](docs/optimization/README.md)。
 

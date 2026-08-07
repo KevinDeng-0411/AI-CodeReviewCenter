@@ -44,4 +44,4 @@ jieba 中文 BM25（R@5 +0.34） > top_k 敏感性（待测） > reranker（门�
 
 - 检索基线：`codeaware-py/tests/eval/artifacts/baseline_c{3,4}_*.json`
 - 敏感分析：`codeaware-py/tests/eval/artifacts/topk_ablation.json`
-- 35 条 golden cases（15 篇 fixture 文档），真实 bge-m3 embedding
+- 60 条 golden cases（15 篇 fixture 文档），真实 bge-m3 embedding

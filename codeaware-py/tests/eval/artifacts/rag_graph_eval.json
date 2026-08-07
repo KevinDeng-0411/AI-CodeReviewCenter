@@ -1,14 +1,14 @@
 {
   "route_accuracy": {
     "mean": 1.0,
-    "correct": 35,
-    "total": 35
+    "correct": 60,
+    "total": 60
   },
   "retry_stats": {
-    "n": 32,
-    "retry_triggered": 0,
-    "retry_rate": 0.0,
-    "avg_retries": 0.0,
+    "n": 54,
+    "retry_triggered": 1,
+    "retry_rate": 0.019,
+    "avg_retries": 0.019,
     "direct_predictions": 0
   },
   "route_rows": [
@@ -69,6 +69,34 @@
       "correct": true
     },
     {
+      "query": "互斥锁",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "逻辑过期",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "缓存空值",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "多级缓存",
+      "category": "chinese_exact",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
       "query": "how to do hybrid retrieval",
       "category": "english_natural",
       "expected": "retrieve",
@@ -112,6 +140,27 @@
     },
     {
       "query": "project snapshot for AIReadMe",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "how to prevent cache stampede",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "RRF fusion in hybrid search",
+      "category": "english_natural",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "HNSW index for vectors",
       "category": "english_natural",
       "expected": "retrieve",
       "predicted": "retrieve",
@@ -174,6 +223,34 @@
       "correct": true
     },
     {
+      "query": "redis_setnx",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "cache_ttl_jitter",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "chat.completed",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "LOCAL_PROJECT_ROOTS",
+      "category": "rare_identifier",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
       "query": "热点Key失效怎么办",
       "category": "semantic_paraphrase",
       "expected": "retrieve",
@@ -223,6 +300,62 @@
       "correct": true
     },
     {
+      "query": "热点数据失效怎么防数据库被打爆",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "查询根本不存在的数据有什么办法",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "一批缓存同时到期怎么办",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "语义检索和关键词检索如何合并结果",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "向量的存储格式是什么",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "全异步架构怎么实现",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "数据库表结构怎么组织的",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "怎么固定模型输出格式",
+      "category": "semantic_paraphrase",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
       "query": "今天天气怎么样",
       "category": "negative",
       "expected": "direct",
@@ -255,6 +388,48 @@
       "category": "negative",
       "expected": "direct",
       "predicted": "direct",
+      "correct": true
+    },
+    {
+      "query": "推荐一部好看的电影",
+      "category": "negative",
+      "expected": "direct",
+      "predicted": "direct",
+      "correct": true
+    },
+    {
+      "query": "如何做糖醋排骨",
+      "category": "negative",
+      "expected": "direct",
+      "predicted": "direct",
+      "correct": true
+    },
+    {
+      "query": "哪家奶茶店最好喝",
+      "category": "negative",
+      "expected": "direct",
+      "predicted": "direct",
+      "correct": true
+    },
+    {
+      "query": "缓存穿透和缓存击穿的区别",
+      "category": "cross_doc",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "向量检索和关键词检索怎么结合",
+      "category": "cross_doc",
+      "expected": "retrieve",
+      "predicted": "retrieve",
+      "correct": true
+    },
+    {
+      "query": "短期记忆和长期记忆的区别",
+      "category": "cross_doc",
+      "expected": "retrieve",
+      "predicted": "retrieve",
       "correct": true
     }
   ],
@@ -316,6 +491,34 @@
       "route": "retrieve"
     },
     {
+      "query": "互斥锁",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "逻辑过期",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "缓存空值",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "多级缓存",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
       "query": "how to do hybrid retrieval",
       "retries": 0,
       "direct": false,
@@ -324,7 +527,7 @@
     },
     {
       "query": "FastAPI async architecture",
-      "retries": 0,
+      "retries": 1,
       "direct": false,
       "docs_count": 5,
       "route": "retrieve"
@@ -359,6 +562,27 @@
     },
     {
       "query": "project snapshot for AIReadMe",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "how to prevent cache stampede",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "RRF fusion in hybrid search",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "HNSW index for vectors",
       "retries": 0,
       "direct": false,
       "docs_count": 5,
@@ -421,6 +645,34 @@
       "route": "retrieve"
     },
     {
+      "query": "redis_setnx",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "cache_ttl_jitter",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "chat.completed",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "LOCAL_PROJECT_ROOTS",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
       "query": "热点Key失效怎么办",
       "retries": 0,
       "direct": false,
@@ -470,6 +722,62 @@
       "route": "retrieve"
     },
     {
+      "query": "热点数据失效怎么防数据库被打爆",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "查询根本不存在的数据有什么办法",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "一批缓存同时到期怎么办",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "语义检索和关键词检索如何合并结果",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "向量的存储格式是什么",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "全异步架构怎么实现",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "数据库表结构怎么组织的",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "怎么固定模型输出格式",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
       "query": "Python GIL 问题",
       "retries": 0,
       "direct": false,
@@ -478,6 +786,27 @@
     },
     {
       "query": "Kubernetes pod 调度",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "缓存穿透和缓存击穿的区别",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "向量检索和关键词检索怎么结合",
+      "retries": 0,
+      "direct": false,
+      "docs_count": 5,
+      "route": "retrieve"
+    },
+    {
+      "query": "短期记忆和长期记忆的区别",
       "retries": 0,
       "direct": false,
       "docs_count": 5,
