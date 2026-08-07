@@ -233,6 +233,7 @@ data: {"protocol_version":1,...,"sequence":N}
 | Vector index | pgvector HNSW cosine | inline vectors, same-transaction commit |
 | Lexical search | ParadeDB pg_search BM25 | default tokenizer; pg_trgm fallback |
 | Retrieval enhancement | LangGraph StateGraph (ADR-0015) | smart routing + self-correction (match_type detection) |
+| Reranker | ONNX bge-reranker-v2-m3 | post-RRF cross-encoder re-rank (MRR +0.058) |
 | Task queue | Celery + Redis | async document parsing, memory extraction, Flower monitoring |
 | Event streaming | Kafka (Confluent) | audit trail, retrieval metrics, error events |
 | Cache | Redis 7 | disposable, PG fallback |
@@ -256,7 +257,7 @@ data: {"protocol_version":1,...,"sequence":N}
 **Retrieval evaluation summary** (real bge-m3, 60 golden cases):
 
 - Full evolution tracking (C3→C4→jieba→LangGraph→RAGAS): [retrieval-evolution.md](docs/optimization/retrieval-evolution.md)
-- Hybrid retrieval R@5 = 0.975 ([top_k sensitivity](docs/optimization/topk-sensitivity.md))
+- Hybrid retrieval R@5 = 0.975, MRR = 0.941 (with reranker) ([top_k sensitivity](docs/optimization/topk-sensitivity.md))
 - jieba Chinese BM25: exact Chinese R@5 0.25 → **1.000** ([ADR-0011](docs/decisions/adr/0011-jieba-chinese-bm25-segmentation.md))
 - LangGraph routing accuracy **60/60 = 1.000**, retry rate 0.019 ([eval report](docs/optimization/rag-graph-eval.md))
 - Generation quality RAGAS: Faithfulness 0.931 / Answer Relevancy 0.793 ([eval report](docs/optimization/ragas-eval.md))

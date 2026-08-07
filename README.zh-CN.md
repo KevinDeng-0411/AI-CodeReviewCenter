@@ -233,6 +233,7 @@ data: {"protocol_version":1,...,"sequence":N}
 | 向量索引 | pgvector HNSW cosine | 内联向量, 同事务 commit |
 | 词法检索 | ParadeDB pg_search BM25 | default tokenizer; pg_trgm 回退 |
 | 检索增强 | LangGraph StateGraph（ADR-0015） | 智能路由 + 自我纠错（match_type 检测） |
+| Reranker | ONNX bge-reranker-v2-m3 | RRF 后 cross-encoder 精排（MRR +0.058） |
 | 缓存 | Redis 7 | 可丢弃, PG fallback |
 | 前端 | React 19 + Vite + TypeScript | 8 模块 SPA（无 router） |
 | 包管理 | uv + Alembic | 依赖锁定 + 迁移回退 |
@@ -254,7 +255,7 @@ data: {"protocol_version":1,...,"sequence":N}
 **检索评估摘要**（真实 bge-m3，60 条 golden）：
 
 - 全阶段演进追踪（C3→C4→jieba→LangGraph→RAGAS）：[retrieval-evolution.md](docs/optimization/retrieval-evolution.md)
-- 混合检索 R@5 = 0.975（[top_k 敏感性](docs/optimization/topk-sensitivity.md)）
+- 混合检索 R@5 = 0.975, MRR = 0.941（含 reranker）（[top_k 敏感性](docs/optimization/topk-sensitivity.md)）
 - jieba 中文 BM25：中文精确 R@5 0.25 → **1.000**（[ADR-0011](docs/decisions/adr/0011-jieba-chinese-bm25-segmentation.md)）
 - LangGraph 路由准确率 **60/60 = 1.000**，重试触发率 0.019（[评估报告](docs/optimization/rag-graph-eval.md)）
 - 生成质量 RAGAS：Faithfulness 0.931 / Answer Relevancy 0.793（[评估报告](docs/optimization/ragas-eval.md)）

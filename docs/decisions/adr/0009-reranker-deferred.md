@@ -1,7 +1,7 @@
 # ADR-0009: Reranker 二阶段重排——评估后暂缓
 
-- **状态**: Deferred（已评估，当前不实施；满足重启条件再复议）
-- **日期**: 2026-08-04
+- **状态**: 已实施（2026-08-07 重新评估，ONNX Runtime 落地）
+- **日期**: 2026-08-04（评估）；2026-08-07（重新评估并实施）
 - **关联术语**: Reranker, Cross-Encoder, RRF, MRR
 - **上游**: [ADR-0008](0008-document-parsing-element-aware-serialization.md)（C5）、C4 BM25（fused MRR@10=0.934）
 
@@ -109,3 +109,32 @@ rerank 比 RRF 强在：RRF 是无模型排名融合（只看各腿 rank），re
 - **二阶段检索范式**：粗排（召回，bi-encoder/词法）+ 精排（rerank，cross-encoder）是
   检索系统的标准架构；本项目评估的即“是否在 RRF 粗排后加 cross-encoder 精排”。
 
+
+---
+
+## 重新评估（2026-08-07）：已实施
+
+60 条 golden 扩充后暴露真实短板：cross_doc MRR=0.750、semantic_paraphrase MRR=0.856。
+同时，ONNX Runtime 提供了**无 torch 的 cross-encoder 推理方案**——ADR-0009 当初否决的
+唯一理由（torch 依赖）被绕开。
+
+### 新决策
+
+| 项 | 决策 |
+|---|---|
+| 方案 | ONNX Runtime + bge-reranker-v2-m3（onnxruntime + tokenizers，无 torch/Ollama） |
+| 接入点 | RagService.search_prepared：扩候选池 top_k*4 → rerank → top_k |
+| 默认 | `reranker_enabled=True`，一键回退纯 RRF |
+| 模型 | `models/bge-reranker-v2-m3/`（gitignore 不入库，需单独下载） |
+
+### 实测（52 非负例 golden，同一 fixture）
+
+| 指标 | RRF only | RRF + rerank | Δ |
+|---|---|---|---|
+| 总体 MRR | 0.883 | 0.941 | +0.058 |
+| cross_doc MRR | 0.750 | 1.000 | +0.250 |
+| chinese_exact MRR | 0.792 | 0.933 | +0.142 |
+| semantic_paraphrase MRR | 0.856 | 0.883 | +0.028 |
+
+**结论**：reranker 精准修复了 60 条评估暴露的两个短板（cross_doc、semantic_paraphrase），
+且无 torch 依赖。原始 ADR-0009 的否决理由（torch）已被 ONNX Runtime 消除，重启条件满足。

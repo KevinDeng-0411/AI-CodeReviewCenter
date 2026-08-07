@@ -252,6 +252,10 @@ ADR-0015 引入 LangGraph StateGraph 编排检索层：
 | C4 + jieba | BM25 + jieba | **0.975** | **0.896** | **1.000** | **0.900** |
 | + LangGraph 路由 | 同上 | 1.000（路由准确率） | — | — | — |
 | + Ollama Metal GPU | 同上 | 同上 | 同上 | 同上 | 同上 |
+| + Reranker | BM25+jieba+rerank | **0.981** | **0.941** | **1.000** | **0.883** |
+
+> Reranker 行数据：52 非负例 golden，RRF 扩候选 top_k*4 → ONNX bge-reranker-v2-m3 精排 → top_k。
+> MRR 0.883→0.941（+0.058），cross_doc 0.750→1.000（+0.250）。详见 [ADR-0009 重新评估](../decisions/adr/0009-reranker-deferred.md)。
 
 ### 延迟（2026-08-06 更新）
 
