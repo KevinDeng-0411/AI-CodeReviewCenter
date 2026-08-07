@@ -42,15 +42,20 @@ export default function Layout({
   children: ReactNode;
 }) {
   const [up, setUp] = useState<boolean | null>(null);
+  const [checks, setChecks] = useState<Record<string, string> | null>(null);
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
   useEffect(() => {
     let alive = true;
     const poll = async () => {
       try {
-        const r = await fetch("/health");
+        const r = await fetch("/health/ready");
         const b = await r.json();
-        if (alive) setUp(b.code === 1);
+        if (alive) {
+          const ready = b.code === 1 && b.data?.status === "ready";
+          setUp(ready);
+          setChecks(b.data?.checks ?? null);
+        }
       } catch {
         if (alive) setUp(false);
       }
@@ -117,8 +122,21 @@ export default function Layout({
           <Activity
             className={`w-3.5 h-3.5 ${up ? "text-teal" : up === false ? "text-oxblood-soft" : "text-paper/40"}`}
           />
-          <span className="font-mono text-2xs tracking-techy text-paper/50 flex-1">
-            {up ? "API · ONLINE" : up === false ? "API · OFFLINE" : "API · …"}
+          <span
+            className="font-mono text-2xs tracking-techy text-paper/50 flex-1"
+            title={
+              checks
+                ? Object.entries(checks)
+                    .map(([k, v]) => `${k}=${v}`)
+                    .join("  ")
+                : undefined
+            }
+          >
+            {up
+              ? "API · ONLINE"
+              : up === false
+                ? "API · DEGRADED"
+                : "API · …"}
           </span>
           {user && (
             <div className="flex items-center gap-2">
