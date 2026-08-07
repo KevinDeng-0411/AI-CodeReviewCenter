@@ -4,11 +4,14 @@ P0：/health 健康检查 + 全局异常注册。后续阶段挂载 api/v1 路�
 P5+：CORS（前端开发）+ 静态托管 frontend/dist（生产单进程）。
 """
 
+import logging
 import os
 import re
+import time
+import uuid
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -33,6 +36,23 @@ app = FastAPI(
     description="CodeAware - AI 驱动的研发效能平台 (Python 重构)",
     version=APP_VERSION,
 )
+
+logger = logging.getLogger(__name__)
+
+# 请求追踪中间件：每请求生成 X-Request-ID，记录方法/路径/状态/耗时
+@app.middleware("http")
+async def request_tracing_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "req=%s method=%s path=%s status=%d elapsed=%.0fms",
+        request_id, request.method, request.url.path,
+        response.status_code, elapsed_ms,
+    )
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 # CORS：开发时 Vite 5173 跨域访问 8000；生产同源不需要（由静态托管提供）
 app.add_middleware(

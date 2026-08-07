@@ -1,5 +1,8 @@
 """Chat API - /api/chat（核心域，C1-A typed SSE + TurnCoordinator）。"""
 
+import hashlib
+import logging
+
 import anyio
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -15,6 +18,7 @@ from app.ai.services.turn_coordinator import (
 )
 from app.api.v1.deps import get_chat_service, get_current_user, get_db, get_turn_coordinator
 from app.core.response import Result
+from app.db.redis import redis_client
 from app.models import Conversation, Message, User
 from app.schemas.chat import (
     ChatMessageVO,
@@ -25,6 +29,14 @@ from app.schemas.chat import (
 from app.schemas.chat_events import EVENT_TYPES
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
+logger = logging.getLogger(__name__)
+
+_ANSWER_CACHE_TTL = 300  # 5 分钟
+
+
+def _answer_cache_key(message: str) -> str:
+    """精准匹配缓存 key：MD5(strip(message))。"""
+    return f"answer:{hashlib.md5(message.strip().encode()).hexdigest()}"
 
 # 事件类 -> SSE event 名
 _EVENT_NAME = {cls: name for name, cls in EVENT_TYPES.items()}
@@ -183,10 +195,30 @@ async def send(req: ChatRequest, coordinator: TurnCoordinator = Depends(get_turn
         return _error(409, "CHAT_TURN_IN_PROGRESS")
     except ChatTurnStartFailed:
         return _error(500, "CHAT_START_FAILED")
+
+    # 答案缓存：精准匹配，命中则跳过生成
+    cache_key = _answer_cache_key(req.message)
+    try:
+        cached = await redis_client.get(cache_key)
+    except Exception:
+        cached = None
+    if cached:
+        logger.info("answer cache hit key=%s conversation_id=%s", cache_key[:16], prepared.conversation_id)
+        return Result.ok(ChatResponseVO(
+            conversation_id=prepared.conversation_id,
+            reply=cached,
+            warnings=[],
+        ))
+
     try:
         result = await coordinator.run_sync(prepared, req.message)
     except ChatTurnFailed as e:
         return _error(500, e.event.error.code)
+    # 缓存回复
+    try:
+        await redis_client.setex(cache_key, _ANSWER_CACHE_TTL, result.reply)
+    except Exception:
+        pass
     return Result.ok(ChatResponseVO(
         conversation_id=result.conversation_id,
         reply=result.reply,

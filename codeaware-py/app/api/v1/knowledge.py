@@ -17,6 +17,7 @@ from app.api.v1.deps import get_chat_model, get_db, get_lexical_recall, get_vect
 from app.core.config import settings
 from app.core.exceptions import BusinessException
 from app.core.response import Result
+from app.db.redis import redis_client
 from app.schemas.knowledge import (
     ChunkVO,
     DocumentDetailVO,
@@ -30,6 +31,15 @@ from app.schemas.knowledge import (
 
 router = APIRouter(prefix="/api/knowledge", tags=["Knowledge"], dependencies=[Depends(get_current_user)])
 logger = logging.getLogger(__name__)
+
+
+async def _invalidate_answer_cache() -> None:
+    """文档变更时清空答案缓存（精准匹配缓存可能过时）。"""
+    try:
+        async for key in redis_client.scan_iter("answer:*"):
+            await redis_client.delete(key)
+    except Exception:
+        pass
 
 FILE_EMPTY = "KNOWLEDGE_FILE_EMPTY"
 FILE_TYPE_UNSUPPORTED = "KNOWLEDGE_FILE_TYPE_UNSUPPORTED"
@@ -78,6 +88,7 @@ async def upload(
     except Exception as exc:
         raise BusinessException("KNOWLEDGE_EMBEDDING_FAILED", status_code=502) from exc
     emit_document_event("CREATED", doc.id, doc.title, source_type=req.source_type)
+    await _invalidate_answer_cache()
     return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title, task_id=getattr(doc, "_task_id", None)))
 
 
@@ -207,6 +218,7 @@ async def delete(
     rag = _rag_service(db, llm, vr, lr)
     await rag.delete_document(doc_id)
     emit_document_event("DELETED", doc_id, "", user_id=None)
+    await _invalidate_answer_cache()
     return Result.ok()
 
 
@@ -284,6 +296,7 @@ async def upload_file(
                 status_code=502,
             ) from exc
         emit_document_event("CREATED", doc.id, doc.title, source_type="DOC", project_name=project_name)
+        await _invalidate_answer_cache()
         return Result.ok(KnowledgeDocumentVO(id=doc.id, title=doc.title, task_id=getattr(doc, "_task_id", None)))
     finally:
         await file.close()

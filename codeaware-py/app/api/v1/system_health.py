@@ -33,6 +33,17 @@ async def _check_ollama() -> None:
         response.raise_for_status()
 
 
+async def _check_deepseek() -> None:
+    if not settings.llm_api_key:
+        raise RuntimeError("LLM_API_KEY not configured")
+    async with httpx.AsyncClient(timeout=_READINESS_TIMEOUT_SECONDS) as client:
+        response = await client.get(
+            f"{settings.llm_base_url.rstrip('/')}/models",
+            headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+        )
+        response.raise_for_status()
+
+
 async def _bounded(check) -> str:
     try:
         async with asyncio.timeout(_READINESS_TIMEOUT_SECONDS):
@@ -51,12 +62,13 @@ async def liveness() -> Result:
 @router.get("/ready")
 async def readiness():
     """Strict PG/Redis/Ollama readiness without exposing dependency errors."""
-    postgres, redis, ollama = await asyncio.gather(
+    postgres, redis, ollama, deepseek = await asyncio.gather(
         _bounded(_check_postgres),
         _bounded(_check_redis),
         _bounded(_check_ollama),
+        _bounded(_check_deepseek),
     )
-    checks = {"postgres": postgres, "redis": redis, "ollama": ollama}
+    checks = {"postgres": postgres, "redis": redis, "ollama": ollama, "deepseek": deepseek}
     ready = all(value == "up" for value in checks.values())
     payload = Result(
         code=1 if ready else 0,
