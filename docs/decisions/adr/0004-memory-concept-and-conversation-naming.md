@@ -27,4 +27,4 @@
 
 ## 遗留
 
-- ADR-0003 子决策仍未定:LLM 摘要 Redis-only,miss 时持久化到 PG 还是重算?留待收口。
+- ~~ADR-0003 子决策:LLM 摘要 Redis-only,miss 时持久化到 PG 还是重算?~~ **已解决**——摘要存 PG `conversations.summary` 列(真相)+ Redis `summary:{cid}`(缓存),见 [ADR-0003](0003-message-store-pg-source-of-truth.md) 决策点 4。

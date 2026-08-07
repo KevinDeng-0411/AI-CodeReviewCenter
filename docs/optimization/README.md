@@ -21,7 +21,7 @@
 | jieba 中文分词 | ✅ 已实施 | [ADR-0011](../decisions/adr/0011-jieba-chinese-bm25-segmentation.md) | 中文 BM25 R@5 0.25→1.000 |
 | **top_k 敏感性分析** | ✅ 已完成 | [topk-sensitivity.md](topk-sensitivity.md) / [ADR-0012](../decisions/adr/0012-topk-sensitivity-keep-5.md) | 保持 k=5，数据驱动 |
 | 文档管理（软删+列表+更新） | ✅ 已实施 | [ADR-0013](../decisions/adr/0013-document-management-soft-delete.md) | 软删行+物理删分块 |
-| Reranker 二阶段精排 | ⏸ 评估后暂缓 | [ADR-0009](../decisions/adr/0009-reranker-deferred.md) | 门禁 MRR+0.01，torch 依赖 |
+| Reranker 二阶段精排 | ✅ 已落地（ONNX） | [ADR-0009 re-evaluated](../decisions/adr/0009-reranker-deferred.md) | ONNX 绕开 torch，MRR 0.883→0.941 |
 | 意图识别 | ❌ 评估后不做 | 面试指南 §6.15 | 90% 知识问题，加分类引入漏检 |
 
 ## 决策优先级原则
@@ -29,17 +29,17 @@
 优化看**实测收益**，不看"看起来更高级"。优先级排序（ADR-0011/面试指南决策8）：
 
 ```text
-jieba 中文 BM25（R@5 +0.34） > top_k 敏感性（待测） > reranker（门禁仅 +0.01） > 意图识别（负收益）
+jieba 中文 BM25（R@5 +0.34） > Reranker ONNX 落地（MRR +0.058） > top_k 敏感性（保持 5） > 意图识别（负收益）
 ```
 
-- **jieba 让中文 BM25 从残废变可用**（BM25-only R@5 0.25→1.000）——投入小、收益大
-- **reranker 门禁 MRR+0.01**（torch 依赖 + 0.5s 延迟）——收益未实测，暂缓
+- **jieba 让中文 BM25 从残废变可用**（BM25-only R@5 0.25→1.000）——投入小、收益大，最先做
+- **reranker 先暂缓后落地**：早期门禁 MRR+0.01 且 torch 依赖 → 60 golden 暴露 cross_doc 短板 + ONNX 绕开 torch → 落地 MRR 0.883→0.941（+0.058）
 - **意图识别**把知识问题误判成闲聊的风险 > 闲聊省下的延迟——不做
 
 ## 面试交叉引用
 
-- 面试指南：[§6.12 reranker 暂缓](../interview/面试准备指南.md)、[§6.14 jieba](../interview/面试准备指南.md)、[§6.15 意图识别](../interview/面试准备指南.md)、[§6.16 top_k](../interview/面试准备指南.md)、[§6.17 文档管理](../interview/面试准备指南.md)、决策 7/8
-- 面试速通版：Q3 检索追问（reranker + 意图识别一句带过）
+- 面试指南：[§6.12 reranker（评估→暂缓→ONNX 落地）](../interview/面试准备指南.md)、[§6.14 jieba](../interview/面试准备指南.md)、[§6.15 意图识别](../interview/面试准备指南.md)、[§6.16 top_k](../interview/面试准备指南.md)、[§6.17 文档管理](../interview/面试准备指南.md)、决策 7/8
+- 面试速通版：Q3 检索追问（reranker 落地 + 意图识别一句带过）
 
 ## 评测数据
 

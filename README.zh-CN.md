@@ -353,7 +353,7 @@ data: {"protocol_version":1,...,"sequence":N}
 |---|---|---|
 | LLM adapter | ChatDeepSeek（提取 reasoning） | ChatOpenAI（丢弃第三方字段） |
 | 词法检索 | ParadeDB BM25 (default tokenizer) + jieba 中文分词 | pg_trgm（C3 噪声拖累 RRF） |
-| PDF 解析 | pdfminer.six（字号标题检测） | unstructured.partition.pdf（拖 torch） |
+| PDF 解析 | pdfminer.six（字号标题检测） | unstructured.partition.pdf（拖 torch）；pdfplumber（表格提取，暂缓——暂无表格密集型文档） |
 | Reranker | ONNX bge-reranker-v2-m3（ADR-0009 重新评估落地） | torch CrossEncoder（依赖过重） |
 | 意图识别 | 不做（90% 知识问题） | 加分类引入漏检风险 |
 | LangGraph | 检索层智能路由 + 自我纠错（ADR-0015） | 完整 Agent 工具循环（无需求触发） |
@@ -373,6 +373,7 @@ data: {"protocol_version":1,...,"sequence":N}
 | 8 事件 typed SSE | WebSocket |
 | BM25 + pgvector RRF **粗排** + ONNX cross-encoder **精排** | LLM-as-reranker / torch CrossEncoder |
 | 元素感知分块 + 扫描 PDF 拒绝 | OCR |
+| PDF 表格压平为纯文本流（无行列结构） | pdfplumber `extract_tables()` → Markdown 表格序列化（待表格密集型文档后引入） |
 | fail-closed disposable 测试栈 | 裸 pytest |
 | 单 worker local-first | 多 worker / K8s |
 | Celery 异步任务队列 | Agent 工具循环 |

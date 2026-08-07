@@ -305,7 +305,7 @@ ADR-0015 引入 LangGraph StateGraph 编排检索层：
 | 词法检索引擎 | pg_trgm / BM25 / pg_trgm 回退 | **ParadeDB BM25 + jieba** | pg_trgm 中文几乎不可用（R@5=0.000），BM25+jieba 中文 R@5=1.000 |
 | 中文分词 | 不处理 / jieba / 其他 | **jieba** | 投入最小，收益最大（中文 BM25 R@5 0.25→1.000） |
 | top_k | 3/5/8/10/15 | **5** | R@5 在 k=3 已饱和，但 3 条无安全边际；5 是质量+成本+冗余的平衡 |
-| Reranker | 加 / 不加 | **暂缓**（ADR-0009） | MRR 0.934 已高，门禁收益仅 +0.01，torch 拖依赖 |
+| Reranker | 加 / 不加 | **落地**（ADR-0009 re-evaluated） | 先暂缓（torch 拖依赖），后 ONNX 绕开 torch 落地，MRR 0.883→0.941（+0.058） |
 | 意图识别 | 加 / 不加 | **不做** | 90% 查询是知识问题，加分类引入漏检风险 |
 | 检索增强 | LangGraph / 固定流程 | **LangGraph StateGraph**（ADR-0015） | 智能路由省延迟（direct 省 ~5.9s），自我纠错防弱检索 |
 | 评估方式 | ragas 库 / 自实现 | **自实现** | 不堆依赖，逻辑完全可控 |
@@ -317,7 +317,7 @@ ADR-0015 引入 LangGraph StateGraph 编排检索层：
 | 文档 | 内容 |
 |---|---|
 | [ADR-0008](../decisions/adr/0008-document-parsing-element-aware-serialization.md) | 元素感知分块 |
-| [ADR-0009](../decisions/adr/0009-reranker-deferred.md) | Reranker 暂缓决策 |
+| [ADR-0009](../decisions/adr/0009-reranker-deferred.md) | Reranker 二阶段重排（先暂缓、后 ONNX 落地） |
 | [ADR-0011](../decisions/adr/0011-jieba-chinese-bm25-segmentation.md) | jieba 中文分词 |
 | [ADR-0012](../decisions/adr/0012-topk-sensitivity-keep-5.md) | top_k 敏感性分析 |
 | [ADR-0015](../decisions/adr/0015-langgraph-retrieval-enhancement.md) | LangGraph 检索增强 |

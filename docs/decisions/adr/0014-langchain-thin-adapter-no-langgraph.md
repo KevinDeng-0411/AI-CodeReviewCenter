@@ -1,6 +1,6 @@
 # ADR-0014: LangChain 保持薄 adapter、不引入 LangGraph
 
-**状态**: 已实施（决策记录）——**2026-08-05 决策变更见文末**
+**状态**: 已变更——原"不引入 LangGraph"决策已由 [ADR-0015](0015-langgraph-retrieval-enhancement.md) 覆盖（检索增强已引入 LangGraph）；"完整 Agent 工具循环不引入"结论不变。**变更细节见文末**
 **日期**: 2026-08-05
 **决策者**: Kevin
 

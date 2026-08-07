@@ -16,6 +16,8 @@
 3. **次要/通用上下文 = Code Review / Unit Test / AIReadMe**:复用基建的薄工具上下文(load prompt + LLM + log operation)。刻意保持薄,不过度设计。
 4. **本次迁移范围**:交付 Chat 功能基线(短期记忆+长期记忆+RAG 混合检索+SSE,迁移文档 P3-2/3-3/3-4)+ 薄工具(CR/UT/AIReadMe)。**LangGraph 状态图编排等工程深度加深为预留项,本次迁移不实现**。
 
+> **2026-08-05 更新**:上述"预留项"已部分落地——LangGraph 通过 [ADR-0015](0015-langgraph-retrieval-enhancement.md) 引入用于**检索层增强**(智能路由 + 自我纠错),属"贴近 Agent"的模型决策形态;完整 Agent 工具循环结论不变(见 [ADR-0014](0014-langchain-thin-adapter-no-langgraph.md) 决策变更)。
+
 ## 上下文图
 
 ```

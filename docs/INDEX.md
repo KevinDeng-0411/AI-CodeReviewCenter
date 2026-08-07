@@ -29,7 +29,7 @@
 | Agent Tool / Citation / SSE 事件 | - | - | [精简 S4](roadmap/chat-to-agent/personal/S4-只读工具Agent.md) · [公共契约](roadmap/chat-to-agent/00-执行约定与公共契约.md) |
 | Agent Run / Artifact / Approval（条件型） | - | - | [可选升级触发条件](roadmap/chat-to-agent/personal/可选升级触发条件.md) · [平台参考契约](roadmap/chat-to-agent/00-执行约定与公共契约.md) |
 | 阶段闭环 / 演示 / 验收证据 | - | - | [统一规则](roadmap/证据清单与解锁规则.md) · [当前模板](roadmap/current-release/验收证据模板.md) · [Agent 模板](roadmap/chat-to-agent/验收证据模板.md) |
-| 数据模型（8 表） | 0001 / 0002 / 0004 / 0005 / 0006 | §7.2.2 | - |
+| 数据模型（9 表） | 0001 / 0002 / 0004 / 0005 / 0006 | §7.2.2 | - |
 | 向量召回基建 VectorRecallService | [0001](decisions/adr/0001-memory-vs-knowledge-two-tables-shared-recall.md) | §7.3 | - |
 | 短期记忆（滑窗+摘要+PG fallback） | [0003](decisions/adr/0003-message-store-pg-source-of-truth.md) · [0004](decisions/adr/0004-memory-concept-and-conversation-naming.md) | §7.6 | - |
 | 长期记忆（内联向量召回） | [0001](decisions/adr/0001-memory-vs-knowledge-two-tables-shared-recall.md) · [0004](decisions/adr/0004-memory-concept-and-conversation-naming.md) | §7.7 | - |
@@ -98,5 +98,10 @@
 | [0006](decisions/adr/0006-records-audit-log-merge.md) | Record=审计日志 + CR/UT 合并 ai_operation_records |
 | [0007](decisions/adr/0007-core-domain-and-bounded-contexts.md) | 核心域=Chat，基建支撑子域，工具次要上下文 |
 | [0008](decisions/adr/0008-document-parsing-element-aware-serialization.md) | 文档解析元素感知序列化（C5）：Title->`#`、PDF pdfminer 字号标题、扫描版拒绝 |
-| [0009](decisions/adr/0009-reranker-deferred.md) | Reranker 二阶段重排--评估后暂缓（MRR 目标/cross-encoder/torch 约束/门禁+重启条件） |
+| [0009](decisions/adr/0009-reranker-deferred.md) | Reranker 二阶段重排--先暂缓（torch 约束），后 ONNX Runtime 重新评估落地（MRR 0.883→0.941） |
 | [0010](decisions/adr/0010-chat-references-and-reasoning.md) | Chat 引用与思考过程增强（context.references + reasoning.delta SSE 事件，切 ChatDeepSeek） |
+| [0011](decisions/adr/0011-jieba-chinese-bm25-segmentation.md) | jieba 中文分词：chunk_content_segmented 列 + CJK 先分词，中文 R@5 0.25→1.000 |
+| [0012](decisions/adr/0012-topk-sensitivity-keep-5.md) | top_k 敏感性分析：60 golden 扫描 3-15，R@5 饱和、MRR 无单调，保持 5 |
+| [0013](decisions/adr/0013-document-management-soft-delete.md) | 文档管理：软删行 + 物理删分块 + 列表 + replace 更新 |
+| [0014](decisions/adr/0014-langchain-thin-adapter-no-langgraph.md) | LangChain 薄 adapter：仅 config.py 一处 import，完整 Agent 不引入 |
+| [0015](decisions/adr/0015-langgraph-retrieval-enhancement.md) | LangGraph 检索增强：智能路由 + 自我纠错（路由准确率 60/60，决策变更见 ADR-0014） |

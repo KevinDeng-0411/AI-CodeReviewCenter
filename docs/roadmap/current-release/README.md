@@ -42,7 +42,7 @@ C5/C6（current-release 增强分支）不阻塞 Agent 路线--Agent 从 C4 分�
 
 ## 3. 当前不做事项
 
-- 不安装或接入 LangGraph。
+- 不引入完整 Agent（LangGraph 已用于检索层智能路由+自我纠错，见 ADR-0015；此处指 Agent 工具循环）。
 - 不加入模型自主选工具。
 - 不创建 AgentRun/ToolCall/Artifact/Approval 表。
 - 不执行模型生成的 shell 或 patch。
