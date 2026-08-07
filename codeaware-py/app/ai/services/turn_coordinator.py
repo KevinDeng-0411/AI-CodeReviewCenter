@@ -23,6 +23,8 @@ from app.ai.prompt.template_manager import PromptTemplateManager
 from app.ai.rag.hybrid_retriever import HybridRetriever
 from app.ai.rag.query_rewriter import QueryRewriter
 from app.ai.rag.semantic_chunker import SemanticChunker
+from app.ai.services.context_builder import ContextBuilder
+from app.ai.services.post_turn_processor import PostTurnProcessor
 from app.ai.services.rag import RagService
 from app.core.config import settings
 from app.core.enums import PromptType
@@ -96,6 +98,8 @@ class TurnCoordinator:
         self.chunker = chunker
         self.query_rewriter = query_rewriter
         self.lexical_recall = lexical_recall
+        self.context_builder = ContextBuilder(chat_model, redis_client, vector_recall, lexical_recall, query_rewriter, chunker)
+        self.post_turn_processor = PostTurnProcessor(chat_model, redis_client, vector_recall)
         self._owned_guards: set[str] = set()
 
     def _managers(self, session):
@@ -442,224 +446,6 @@ class TurnCoordinator:
             st = ShortTermMemoryManager(self.redis, s, self.chat_model)
             await st.refill_message_cache(cid, messages)
 
-    async def _load_messages(self, cid: str) -> tuple[list[MessageEntry], bool]:
-        """Redis-first + PG fallback；所有 Redis await 均位于无活跃事务的 session。"""
-        cache_failed = False
-        try:
-            async with AsyncSessionLocal() as s:
-                st = ShortTermMemoryManager(self.redis, s, self.chat_model)
-                messages = await st.read_cached_messages(cid)
-        except Exception:
-            messages = []
-            cache_failed = True
-        if messages:
-            return messages, cache_failed
-
-        async with AsyncSessionLocal() as s:
-            st = ShortTermMemoryManager(self.redis, s, self.chat_model)
-            messages = await st.read_recent_messages(cid)
-        if not messages:
-            return [], cache_failed
-
-        try:
-            async with AsyncSessionLocal() as s:
-                st = ShortTermMemoryManager(self.redis, s, self.chat_model)
-                await st.refill_message_cache(cid, messages)
-        except Exception:
-            cache_failed = True
-        return messages, cache_failed
-
-    async def _load_summary(self, cid: str) -> tuple[str | None, bool]:
-        """Redis-first + PG fallback；PG 读 session 关闭后才回填 Redis。"""
-        cache_failed = False
-        try:
-            async with AsyncSessionLocal() as s:
-                st = ShortTermMemoryManager(self.redis, s, self.chat_model)
-                summary = await st.read_cached_summary(cid)
-        except Exception:
-            summary = None
-            cache_failed = True
-        if summary:
-            return summary, cache_failed
-
-        async with AsyncSessionLocal() as s:
-            st = ShortTermMemoryManager(self.redis, s, self.chat_model)
-            summary = await st.read_summary_from_pg(cid)
-        if not summary:
-            return None, cache_failed
-
-        try:
-            async with AsyncSessionLocal() as s:
-                st = ShortTermMemoryManager(self.redis, s, self.chat_model)
-                await st.refresh_summary_cache(cid, summary)
-        except Exception:
-            cache_failed = True
-        return summary, cache_failed
-
-    async def _build_context(
-        self, cid, message
-    ) -> tuple[str | None, list[tuple[str, str, str]], dict]:
-        """构建 Chat context，返回 (prompt, warnings, refs)。
-
-        refs = {"knowledge_refs": [...], "memory_refs": [...]}，供 C6 context.references
-        事件下发（本轮实际注入 prompt 的参考来源）。
-        """
-        """分离外部调用与短 DB session，返回 (prompt, context_warnings)。"""
-        warnings: list[tuple[str, str, str]] = []
-        try:
-            msgs, cache_refill_failed = await self._load_messages(cid)
-            if cache_refill_failed:
-                warnings.append(
-                    self._context_warning(
-                        cid,
-                        "message_cache",
-                        "REDIS_UNAVAILABLE",
-                        "消息缓存回填失败，已使用 PostgreSQL 真相",
-                    )
-                )
-
-            if msgs and msgs[-1].role == "USER" and msgs[-1].content == message:
-                msgs = msgs[:-1]  # 排除本轮 USER
-
-            summary, summary_cache_failed = await self._load_summary(cid)
-            if summary_cache_failed:
-                warnings.append(
-                    self._context_warning(
-                        cid,
-                        "summary_cache",
-                        "REDIS_UNAVAILABLE",
-                        "摘要缓存读取失败，已使用 PostgreSQL 真相",
-                    )
-                )
-            history_parts = []
-            if summary:
-                history_parts.append(f"## 历史对话摘要\n{summary}")
-            if msgs:
-                history_parts.append(
-                    "## 最近对话\n" + "\n".join(f"{m.role}: {m.content}" for m in msgs)
-                )
-            history = "\n\n".join(history_parts)
-
-            long_ctx = ""
-            memory_refs: list[dict] = []
-            try:
-                memory_vector = await self.vector_recall.embed(message)
-                async with AsyncSessionLocal() as s:
-                    recalled = await self.vector_recall.recall_by_vector(
-                        s,
-                        LongTermMemory,
-                        message,
-                        memory_vector,
-                        threshold=0.0,
-                        top_k=5,
-                    )
-                if recalled:
-                    long_ctx = "\n".join(
-                        f"- {memory[0].content} (相似度:{memory[1]:.2f})"
-                        for memory in recalled
-                    )
-                    memory_refs = [
-                        {
-                            "content": memory[0].content,
-                            "memory_type": memory[0].memory_type,
-                            "similarity": round(float(memory[1]), 4),
-                        }
-                        for memory in recalled
-                    ]
-            except Exception:
-                warnings.append(
-                    self._context_warning(
-                        cid,
-                        "memory_recall",
-                        "MEMORY_RECALL_FAILED",
-                        "长期记忆召回降级",
-                    )
-                )
-
-            rag_ctx = ""
-            knowledge_refs: list[dict] = []
-            try:
-                from app.core.config import settings
-
-                if settings.rag_runtime == "graph":
-                    # LangGraph 检索增强：智能路由 + 自我纠错（ADR-0015）
-                    from app.ai.rag.rag_graph import RagGraph
-
-                    graph = RagGraph(
-                        chat_model=self.chat_model,
-                        vector_recall=self.vector_recall,
-                        lexical_recall=self.lexical_recall,
-                        query_rewriter=self.query_rewriter,
-                        chunker=self.chunker,
-                        session_factory=AsyncSessionLocal,
-                    )
-                    result = await graph.run(message)
-                    rag_ctx = result.context
-                    knowledge_refs = result.refs
-                    for component, code, msg in result.warnings:
-                        warnings.append(
-                            self._context_warning(cid, component, code, msg)
-                        )
-                    # direct 路径：跳过检索，不加 RAG 上下文
-                    if result.direct:
-                        rag_ctx = ""
-                else:
-                    # service 路径（回退）：prepare_search + search_prepared
-                    async with AsyncSessionLocal() as s:
-                        _, _, rag, _ = self._managers(s)
-                        prepared_queries = await rag.prepare_search(message)
-                    async with AsyncSessionLocal() as s:
-                        _, _, rag, _ = self._managers(s)
-                        docs = await rag.search_prepared(prepared_queries, top_k=5)
-                        rag_ctx = rag.format_context(docs)
-                        if docs:
-                            doc_ids = {r.chunk.document_id for r in docs}
-                            titles = dict(
-                                (await s.execute(
-                                    select(Document.id, Document.title)
-                                    .where(Document.id.in_(doc_ids))
-                                )).all()
-                            )
-                            knowledge_refs = [
-                                {
-                                    "document_id": r.chunk.document_id,
-                                    "title": titles.get(r.chunk.document_id, "未知文档"),
-                                    "snippet": r.chunk.chunk_content[:100],
-                                    "match_type": r.match_type,
-                                    "score": round(float(r.score), 4),
-                                }
-                                for r in docs
-                            ]
-            except Exception:
-                warnings.append(
-                    self._context_warning(
-                        cid,
-                        "rag_retrieval",
-                        "RAG_FAILED",
-                        "知识库检索降级",
-                    )
-                )
-
-            params = {
-                "long_term_memory": long_ctx or "（无）",
-                "rag_context": rag_ctx or "（无）",
-                "conversation_history": history or "（新对话）",
-                "user_message": message,
-            }
-            async with AsyncSessionLocal() as s:
-                pm = PromptTemplateManager(s)
-                template = await pm.get_active(PromptType.CHAT)
-                if template is None:
-                    return None, warnings, {"knowledge_refs": [], "memory_refs": []}
-                prompt = pm.render_system_prompt(template, params)
-        except Exception:
-            return None, [], {"knowledge_refs": [], "memory_refs": []}
-        return (
-            prompt,
-            warnings,
-            {"knowledge_refs": knowledge_refs, "memory_refs": memory_refs},
-        )
-
     async def _txn_assistant(self, cid, text) -> int | None:
         """Transaction B。返回 message_id；None 表示 persist 失败。"""
         try:
@@ -671,187 +457,43 @@ class TurnCoordinator:
         except Exception:
             return None
 
+    async def _load_messages(self, cid: str):
+        """Delegate to ContextBuilder. @deprecated: use self.context_builder.load_messages()"""
+        return await self.context_builder.load_messages(cid)
+
+    async def _load_summary(self, cid: str):
+        """Delegate to ContextBuilder. @deprecated: use self.context_builder.load_summary()"""
+        return await self.context_builder.load_summary(cid)
+
+    async def _build_context(self, cid, message):
+        """Delegate to ContextBuilder. @deprecated: use self.context_builder.build()"""
+        return await self.context_builder.build(cid, message, self._context_warning)
+
+    async def _post_turn_summary(self, cid, warnings):
+        """Delegate to PostTurnProcessor. @deprecated: use self.post_turn_processor.run_summary()"""
+        await self.post_turn_processor.run_summary(cid, warnings, self._post_warning)
+
+    async def _post_turn_extraction(self, cid, warnings):
+        """Delegate to PostTurnProcessor. @deprecated: use self.post_turn_processor.run_extraction()"""
+        await self.post_turn_processor.run_extraction(cid, warnings, self._post_warning)
+
     async def _post_turn(self, cid: str, assistant_text: str) -> list[dict]:
-        """post-turn: ASSISTANT 缓存刷新 + 摘要 + 记忆抽取。返回 warning 列表。"""
+        """Transaction C：post-commit 后处理（摘要 + 记忆抽取 + 缓存刷新）。"""
         warnings: list[dict] = []
         try:
-            await self._refresh_message_cache_after_commit(cid)
-        except Exception:
-            warnings.append(
-                self._post_warning(
-                    cid,
-                    "message_cache",
-                    "REDIS_UNAVAILABLE",
-                    "回复缓存刷新失败，已保留 PostgreSQL 真相",
-                )
-            )
-        await self._post_turn_summary(cid, warnings)
-        await self._post_turn_extraction(cid, warnings)
-        return warnings
-
-    async def _post_turn_summary(self, cid, warnings: list[dict]) -> None:
-        """按 PG 水位线生成增量摘要；任何降级均不阻止 turn 完成。"""
-        try:
-            async with AsyncSessionLocal() as s:
-                st = ShortTermMemoryManager(self.redis, s, self.chat_model)
-                work = await st.read_summary_work(
-                    cid,
-                    threshold=settings.mem_summary_threshold,
-                    interval=settings.mem_summary_interval,
-                    batch_size=settings.mem_summary_batch_size,
-                )
-        except Exception:
-            warnings.append(
-                self._post_warning(
-                    cid,
-                    "summary",
-                    "SUMMARY_FAILED",
-                    "摘要生成降级",
-                )
-            )
-            return
-
-        if work is None:
-            return
-        summary_prompt = ShortTermMemoryManager.build_summary_prompt(
-            work,
-            max_chars=settings.mem_summary_max_chars,
-        )
-        if summary_prompt is None:
-            warnings.append(
-                self._post_warning(
-                    cid,
-                    "summary",
-                    "SUMMARY_FAILED",
-                    "摘要生成降级",
-                )
-            )
-            return
-
-        try:
-            # 上方读取 session 已退出，LLM 调用期间不存在打开的数据库事务。
-            summary_text = await st.generate_summary(summary_prompt.text)
-        except Exception:
-            summary_text = None
-        if not summary_text:
-            warnings.append(
-                self._post_warning(
-                    cid,
-                    "summary",
-                    "SUMMARY_FAILED",
-                    "摘要生成降级",
-                )
-            )
-            return
-
-        target_watermark = (
-            work.expected_watermark + summary_prompt.included_message_count
-        )
-        try:
-            async with AsyncSessionLocal() as s2:
-                st2 = ShortTermMemoryManager(self.redis, s2, self.chat_model)
-                updated = await st2.conditional_write_summary(
-                    cid,
-                    summary_text,
-                    expected_watermark=work.expected_watermark,
-                    target_watermark=target_watermark,
-                )
-                if not updated:
-                    logger.info(
-                        "summary update skipped code=stale_watermark "
-                        "conversation_id=%s expected_watermark=%s",
-                        cid,
-                        work.expected_watermark,
-                    )
-                    return
-                await s2.commit()
-        except Exception:
-            warnings.append(
-                self._post_warning(
-                    cid,
-                    "summary",
-                    "SUMMARY_FAILED",
-                    "摘要持久化降级",
-                )
-            )
-            return
-
-        try:
-            async with AsyncSessionLocal() as cache_session:
-                cache_manager = ShortTermMemoryManager(
-                    self.redis,
-                    cache_session,
-                    self.chat_model,
-                )
-                # PG 已提交；此 session 未执行 SQL，不存在与 Redis I/O 重叠的事务。
-                await cache_manager.refresh_summary_cache(cid, summary_text)
-        except Exception:
-            warnings.append(
-                self._post_warning(
-                    cid,
-                    "summary_cache",
-                    "REDIS_UNAVAILABLE",
-                    "摘要缓存刷新失败",
-                )
-            )
-
-    async def _post_turn_extraction(self, cid, warnings: list[dict]) -> None:
-        try:
-            msgs, message_cache_failed = await self._load_messages(cid)
-            if message_cache_failed:
-                warnings.append(
-                    self._post_warning(
-                        cid,
-                        "message_cache",
-                        "REDIS_UNAVAILABLE",
-                        "消息缓存回填失败，已使用 PostgreSQL 真相",
-                    )
-                )
-            if len(msgs) < MEMORY_EXTRACT_THRESHOLD:
-                return
-            from app.ai.tasks.memory_extract import extract_memory_task
-
-            # 测试环境（CODEAWARE_TESTING=1）无 Celery Worker，降级同步执行
-            if os.environ.get("CODEAWARE_TESTING") == "1":
-                logger.info("memory extraction running synchronously (test mode)")
-                from app.ai.memory.long_term import LongTermMemoryManager
-
-                # 读消息 + 抽取事实（LLM 调用，不持 DB 事务）
+            try:
                 async with AsyncSessionLocal() as s:
-                    lt = LongTermMemoryManager(s, self.vector_recall)
-                    has_mem = await lt.has_memories(cid)
-                    if has_mem:
-                        return
-                    messages = await lt.read_recent_messages(cid)
-                    if len(messages) < MEMORY_EXTRACT_THRESHOLD:
-                        return
-                    tuples = [(m[0], m[1]) for m in messages]
-                    facts = await lt.extract_facts_text(tuples, self.chat_model)
-                    if not facts:
-                        return
-                # 所有 embedding 在无事务的 session 中完成
-                async with AsyncSessionLocal() as prepare_session:
-                    preparer = LongTermMemoryManager(prepare_session, self.vector_recall)
-                    prepared = await preparer.prepare_facts(facts)
-                # 写入独立事务
-                async with AsyncSessionLocal() as s2:
-                    lt2 = LongTermMemoryManager(s2, self.vector_recall)
-                    await lt2.save_prepared_facts(cid, prepared)
-                    await s2.commit()
-                return
+                    st = ShortTermMemoryManager(self.redis, s, self.chat_model)
+                    await st.refresh_message_cache(cid, "ASSISTANT", assistant_text)
+            except Exception:
+                warnings.append(self._post_warning(cid, "message_cache", "REDIS_UNAVAILABLE", "消息缓存回填失败，已使用 PostgreSQL 真相"))
 
-            extract_memory_task.delay(cid, MEMORY_EXTRACT_THRESHOLD)
+            await self._post_turn_summary(cid, warnings)
+            await self._post_turn_extraction(cid, warnings)
         except Exception as exc:
-            logger.warning("memory extraction submit failed conversation_id=%s error=%s", cid, exc)
-            warnings.append(
-                self._post_warning(
-                    cid,
-                    "memory_extraction",
-                    "EXTRACTION_FAILED",
-                    "记忆抽取任务提交失败",
-                )
-            )
-
+            logger.warning("post turn failed conversation_id=%s error=%s", cid, exc)
+            warnings.append(self._post_warning(cid, "post_turn", "POST_TURN_FAILED", "回复后处理降级"))
+        return warnings
     async def run_sync(self, prepared: PreparedTurn, message: str) -> TurnResult:
         """同步端点：drain run()，收集 reply + warnings；遇 ChatFailed 抛 ChatTurnFailed。"""
         reply_parts: list[str] = []
