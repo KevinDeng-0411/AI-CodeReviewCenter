@@ -116,63 +116,131 @@ docker compose down                    # stop everything (data persists in volum
 
 ---
 
-## System Architecture
+## Architecture Diagrams
+
+### 1. System Layered Architecture
 
 ```mermaid
 graph TB
-    subgraph Frontend["Frontend :5173"]
-        React["React 19 + Vite"]
-        SSE["SSE Parser<br/>8 events, typed validation"]
+    subgraph Presentation["Presentation Layer"]
+        React["React 19 + Vite<br/>8-module SPA"]
+        SSE["Typed SSE Parser<br/>8 events, protocol v1"]
     end
 
-    subgraph Backend["FastAPI :8000"]
+    subgraph Application["Application Layer (FastAPI)"]
         Router["API Router<br/>32 endpoints"]
-        Auth["Auth<br/>JWT + bcrypt"]
-        TC["TurnCoordinator<br/>⚡ core state machine"]
+        Auth["JWT Auth<br/>bcrypt"]
+        TC["TurnCoordinator<br/>⚡ state machine"]
 
-        subgraph Context["Context building"]
-            STM["ShortTermMemory<br/>PG messages + Redis window + incremental summary"]
-            LTM["LongTermMemory<br/>atomic facts + pgvector 1024-d recall"]
-            RAG["RagService<br/>query rewrite → BM25+pgvector → RRF"]
-            PT["PromptTemplate<br/>versioned + activate/rollback"]
+        subgraph Context["Context Building"]
+            STM["ShortTermMemory<br/>PG messages + Redis window"]
+            LTM["LongTermMemory<br/>atomic facts + pgvector"]
+            RAG["RagService<br/>rewrite → hybrid → rerank"]
+            RR["CrossEncoderReranker<br/>ONNX bge-reranker-v2-m3"]
+            PT["PromptTemplate<br/>versioned"]
         end
     end
 
-    subgraph Tasks["Async Task Queue"]
-        Celery["Celery Worker<br/>document.parse<br/>memory.extract"]
+    subgraph Orchestration["Orchestration Layer"]
+        LG["LangGraph<br/>router + self-correction"]
+        Celery["Celery Worker<br/>parse + extract"]
         Flower["Flower<br/>:5555"]
     end
 
-    subgraph Events["Event Streaming"]
-        Kafka["Kafka<br/>audit.document<br/>metrics.retrieval<br/>ops.error"]
-        Consumer["Kafka Consumer<br/>audit log archive"]
-    end
-
-    subgraph Data["Data layer"]
+    subgraph Infrastructure["Infrastructure Layer"]
         PG["PostgreSQL 16<br/>pgvector + pg_search BM25"]
-        Redis["Redis 7<br/>msgs:{cid} / summary:{cid}<br/>Celery Broker"]
-        Ollama["Ollama<br/>bge-m3 1024-d<br/>Metal GPU"]
+        Redis["Redis 7<br/>cache + Celery broker"]
+        Kafka["Kafka<br/>audit + metrics"]
+        Ollama["Ollama<br/>bge-m3 1024-d Metal GPU"]
+        DS["DeepSeek v4-flash"]
     end
 
     React -->|"typed SSE (8 events)"| Router
     Router --> Auth
     Auth --> TC
     TC --> Context
+    RAG --> LG
+    RAG --> RR
+    TC -->|"submit async task"| Celery
+    Flower --> Celery
     STM --> PG
     STM --> Redis
     LTM --> PG
-    LTM --> Ollama
-    RAG --> PG
+    RR --> Ollama
     RAG --> Ollama
-    PT --> PG
-    TC -->|"ChatDeepSeek<br/>astream"| DS["DeepSeek v4-flash<br/>API"]
-    TC -->|"submit task"| Celery
-    Celery --> Redis
-    Celery -->|"embedding"| Ollama
-    Celery -->|"write chunks"| PG
-    Flower --> Celery
-    TC -->|"emit event"| Kafka
-    Kafka --> Consumer
+    TC -->|"ChatDeepSeek astream"| DS
+    TC -->|"emit events"| Kafka
+```
+
+### 2. Core Interaction Sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant TC as TurnCoordinator
+    participant CB as ContextBuilder
+    participant RR as Reranker
+    participant LLM as DeepSeek
+    participant DB as PG/Redis
+
+    U->>F: 输入问题
+    F->>B: POST /chat/send/stream
+    B->>TC: prepare_turn(message)
+    TC->>DB: 存 USER 消息（commit）
+    TC-->>F: chat.started
+    TC->>CB: build_context(message)
+    CB->>RR: 混合检索 top_20<br/>RRF + cross-encoder 精排
+    RR->>DB: BM25 + pgvector
+    RR-->>CB: 精排后 top_5
+    CB-->>TC: prompt + refs
+    TC-->>F: context.references
+    TC->>LLM: astream(prompt)
+    LLM-->>F: reasoning.delta / token.delta
+    TC->>DB: 存 ASSISTANT（commit）
+    TC-->>F: chat.completed
+```
+
+### 3. Smart Routing & Evaluation Decision Flow
+
+```mermaid
+flowchart TD
+    A[用户消息] --> B{智能路由<br/>LLM 判断}
+    B -->|"direct 常识/闲聊"| C[跳过检索<br/>直接回答<br/>标注"未检索知识库"]
+    B -->|"retrieve 技术/资料"| D[混合检索<br/>BM25 + pgvector RRF<br/>粗排 top_20]
+    D --> E[Reranker 精排<br/>cross-encoder 打分]
+    E --> F{评估<br/>match_type 检测}
+    F -->|满意| G[注入 top_5 → prompt<br/>→ LLM 生成]
+    F -->|"不满意 且 retries<2"| H[改写查询<br/>防打转 + seen_queries 兜底]
+    H --> D
+    F -->|"达上限 或 query 重复"| I[返回"未找到"<br/>+ context.warning]
+```
+
+### 4. System Context / Boundary
+
+```mermaid
+flowchart LR
+    subgraph Team["Software Engineering Lab"]
+        Dev["开发者<br/>上传文档 / 提问"]
+        Newbie["新人<br/>知识问答"]
+    end
+
+    subgraph System["CodeAware"]
+        App["Chat/RAG 平台<br/>知识库 + 记忆 + 异步"]
+    end
+
+    subgraph External["External"]
+        DS["DeepSeek API<br/>LLM 生成"]
+        Ollama["Ollama (local)<br/>bge-m3 embedding"]
+        Docker["Docker<br/>PG / Redis / Kafka"]
+    end
+
+    Dev -->|"上传/提问"| App
+    Newbie -->|"检索/问答"| App
+    App -->|"LLM 调用"| DS
+    App -->|"embedding"| Ollama
+    App -->|"数据/事件"| Docker
 ```
 
 **Core principles**:
@@ -181,11 +249,9 @@ graph TB
 - **No DB transaction is held while waiting on the model** — the connection pool is never blocked for long
 - **Typed SSE with explicit semantics** — 8 event types with protocol version and strictly increasing sequence; the sync endpoint drains the same event stream — a single state machine
 - **Dual runtime with rollback** — LangGraph retrieval enhancement (`RAG_RUNTIME=graph`) can be reverted to the original path (`service`) with one env change
+- **Rerank is a reversible enhancement** — `reranker_enabled=False` reverts to pure RRF
 
 Detailed design (Chat full-chain sequence, 9-table ER, RAG pipeline): see [docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md).
-
----
-
 ## Typed SSE Example (8-event protocol)
 
 For a new conversation, `conversation_id` is created by the server and returned in `chat.started`:
@@ -290,7 +356,7 @@ Running bare `pytest` is forbidden for the backend — a safe runner creates dis
 | LLM adapter | ChatDeepSeek (extracts reasoning) | ChatOpenAI (drops 3rd-party fields) |
 | Lexical search | ParadeDB BM25 (default tokenizer) + jieba | pg_trgm (C3 noise hurt RRF) |
 | PDF parsing | pdfminer.six (font-size heading detection) | unstructured.partition.pdf (pulls in torch) |
-| Reranker | deferred (ADR-0009) | blind addition (MRR 0.934 already high) |
+| Reranker | ONNX bge-reranker-v2-m3 (ADR-0009 re-evaluated) | torch CrossEncoder (heavy dependency) |
 | Intent classification | not built (90% knowledge questions) | classifier risks missed retrieval |
 | LangGraph | retrieval-layer routing + self-correction (ADR-0015) | full Agent tool loop (no demand) |
 | Refresh token | none (7-day access) | lab doesn't need rotation |

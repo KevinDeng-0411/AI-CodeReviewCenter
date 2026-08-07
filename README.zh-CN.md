@@ -116,76 +116,142 @@ docker compose down                    # 全停（数据在 volume 中保留）
 
 ---
 
-## 系统架构
+## 架构图
+
+### 1. 系统分层架构图
 
 ```mermaid
 graph TB
-    subgraph Frontend["前端 :5173"]
-        React["React 19 + Vite"]
-        SSE["SSE Parser<br/>8 事件 类型校验"]
+    subgraph Presentation["展现层"]
+        React["React 19 + Vite<br/>8 模块 SPA"]
+        SSE["Typed SSE 解析<br/>8 事件, 协议 v1"]
     end
 
-    subgraph Backend["FastAPI :8000"]
-        Router["API Router<br/>32 endpoints"]
-        Auth["Auth<br/>JWT + bcrypt"]
-        TC["TurnCoordinator<br/>⚡ 核心状态机"]
+    subgraph Application["应用层 (FastAPI)"]
+        Router["API Router<br/>32 端点"]
+        Auth["JWT 认证<br/>bcrypt"]
+        TC["TurnCoordinator<br/>⚡ 状态机"]
 
         subgraph Context["上下文构建"]
-            STM["ShortTermMemory<br/>PG 消息 + Redis 窗口 + 增量摘要"]
-            LTM["LongTermMemory<br/>原子事实 + pgvector 1024-d 召回"]
-            RAG["RagService<br/>查询改写 → BM25+pgvector → RRF"]
-            PT["PromptTemplate<br/>版本化 + 激活/回滚"]
+            STM["短期记忆<br/>PG 消息 + Redis 窗口"]
+            LTM["长期记忆<br/>原子事实 + pgvector"]
+            RAG["RagService<br/>改写 → 混合 → 精排"]
+            RR["CrossEncoderReranker<br/>ONNX bge-reranker-v2-m3"]
+            PT["PromptTemplate<br/>版本化"]
         end
     end
 
-    subgraph Tasks["异步任务队列"]
-        Celery["Celery Worker<br/>document.parse<br/>memory.extract"]
-        Flower["Flower 监控<br/>:5555"]
+    subgraph Orchestration["编排层"]
+        LG["LangGraph<br/>路由 + 自我纠错"]
+        Celery["Celery Worker<br/>解析 + 抽取"]
+        Flower["Flower<br/>:5555"]
     end
 
-    subgraph Events["事件流"]
-        Kafka["Kafka<br/>audit.document<br/>metrics.retrieval<br/>ops.error"]
-        Consumer["Kafka Consumer<br/>审计日志归档"]
-    end
-
-    subgraph Data["数据层"]
+    subgraph Infrastructure["基础设施层"]
         PG["PostgreSQL 16<br/>pgvector + pg_search BM25"]
-        Redis["Redis 7<br/>msgs:{cid} / summary:{cid}<br/>Celery Broker"]
-        Ollama["Ollama<br/>bge-m3 1024-d<br/>Metal GPU"]
+        Redis["Redis 7<br/>缓存 + Celery broker"]
+        Kafka["Kafka<br/>审计 + 指标"]
+        Ollama["Ollama<br/>bge-m3 1024-d Metal GPU"]
+        DS["DeepSeek v4-flash"]
     end
 
-    React -->|"typed SSE (8 events)"| Router
+    React -->|"typed SSE (8 事件)"| Router
     Router --> Auth
     Auth --> TC
     TC --> Context
+    RAG --> LG
+    RAG --> RR
+    TC -->|"提交异步任务"| Celery
+    Flower --> Celery
     STM --> PG
     STM --> Redis
     LTM --> PG
-    LTM --> Ollama
-    RAG --> PG
+    RR --> Ollama
     RAG --> Ollama
-    PT --> PG
-    TC -->|"ChatDeepSeek<br/>astream"| DS["DeepSeek v4-flash<br/>API"]
-    TC -->|"提交任务"| Celery
-    Celery --> Redis
-    Celery -->|"embedding"| Ollama
-    Celery -->|"写分块"| PG
-    Flower --> Celery
+    TC -->|"ChatDeepSeek astream"| DS
     TC -->|"发送事件"| Kafka
-    Kafka --> Consumer
+```
+
+### 2. 核心交互时序图
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant F as 前端
+    participant B as 后端
+    participant TC as TurnCoordinator
+    participant CB as ContextBuilder
+    participant RR as Reranker
+    participant LLM as DeepSeek
+    participant DB as PG/Redis
+
+    U->>F: 输入问题
+    F->>B: POST /chat/send/stream
+    B->>TC: prepare_turn(message)
+    TC->>DB: 存 USER 消息（commit）
+    TC-->>F: chat.started
+    TC->>CB: build_context(message)
+    CB->>RR: 混合检索 top_20<br/>RRF + cross-encoder 精排
+    RR->>DB: BM25 + pgvector
+    RR-->>CB: 精排后 top_5
+    CB-->>TC: prompt + refs
+    TC-->>F: context.references
+    TC->>LLM: astream(prompt)
+    LLM-->>F: reasoning.delta / token.delta
+    TC->>DB: 存 ASSISTANT（commit）
+    TC-->>F: chat.completed
+```
+
+### 3. 智能路由与评估决策流图
+
+```mermaid
+flowchart TD
+    A[用户消息] --> B{智能路由<br/>LLM 判断}
+    B -->|"direct 常识/闲聊"| C[跳过检索<br/>直接回答<br/>标注"未检索知识库"]
+    B -->|"retrieve 技术/资料"| D[混合检索<br/>BM25 + pgvector RRF<br/>粗排 top_20]
+    D --> E[Reranker 精排<br/>cross-encoder 打分]
+    E --> F{评估<br/>match_type 检测}
+    F -->|满意| G[注入 top_5 → prompt<br/>→ LLM 生成]
+    F -->|"不满意 且 retries<2"| H[改写查询<br/>防打转 + seen_queries 兜底]
+    H --> D
+    F -->|"达上限 或 query 重复"| I[返回"未找到"<br/>+ context.warning]
+```
+
+### 4. 系统上下文/边界图
+
+```mermaid
+flowchart LR
+    subgraph Team["软件工程实验室"]
+        Dev["开发者<br/>上传文档 / 提问"]
+        Newbie["新人<br/>知识问答"]
+    end
+
+    subgraph System["CodeAware"]
+        App["Chat/RAG 平台<br/>知识库 + 记忆 + 异步"]
+    end
+
+    subgraph External["外部依赖"]
+        DS["DeepSeek API<br/>LLM 生成"]
+        Ollama["Ollama (本地)<br/>bge-m3 embedding"]
+        Docker["Docker<br/>PG / Redis / Kafka"]
+    end
+
+    Dev -->|"上传/提问"| App
+    Newbie -->|"检索/问答"| App
+    App -->|"LLM 调用"| DS
+    App -->|"embedding"| Ollama
+    App -->|"数据/事件"| Docker
 ```
 
 **核心原则**：
 
 - **PG 是真相源，Redis 只做可丢弃缓存**——Redis 挂掉自动回查 PG，功能不降级
 - **模型等待期间不持有数据库事务**——连接池不被长时间占用
-- **typed SSE 显式语义**——生成/降级/完成 8 种事件带版本号和严格递增序号，同步接口 drain 同一事件流，状态机只有一份
+- **typed SSE 显式语义**——8 种事件带版本号和严格递增序号，同步接口 drain 同一事件流，状态机只有一份
 - **双运行时可回退**——LangGraph 检索增强（`RAG_RUNTIME=graph`）异常可一键回退原路径（`service`）
+- **Rerank 是可回退增强**——`reranker_enabled=False` 一键回退纯 RRF
 
 详细设计：Chat 全链路时序、数据模型（9 表 ER）、RAG 流水线见 [docs/roadmap/current-release/README.md](docs/roadmap/current-release/README.md)。
-
----
-
 ## typed SSE 示例（8 事件协议）
 
 新会话的 `conversation_id` 由服务端创建并在 `chat.started` 中返回：
@@ -288,7 +354,7 @@ data: {"protocol_version":1,...,"sequence":N}
 | LLM adapter | ChatDeepSeek（提取 reasoning） | ChatOpenAI（丢弃第三方字段） |
 | 词法检索 | ParadeDB BM25 (default tokenizer) + jieba 中文分词 | pg_trgm（C3 噪声拖累 RRF） |
 | PDF 解析 | pdfminer.six（字号标题检测） | unstructured.partition.pdf（拖 torch） |
-| Reranker | 评估后暂缓 (ADR-0009) | 盲目加（MRR 0.934 已高） |
+| Reranker | ONNX bge-reranker-v2-m3（ADR-0009 重新评估落地） | torch CrossEncoder（依赖过重） |
 | 意图识别 | 不做（90% 知识问题） | 加分类引入漏检风险 |
 | LangGraph | 检索层智能路由 + 自我纠错（ADR-0015） | 完整 Agent 工具循环（无需求触发） |
 | 任务队列 | Celery + Redis | 异步文档解析/记忆抽取, Flower 监控 |
