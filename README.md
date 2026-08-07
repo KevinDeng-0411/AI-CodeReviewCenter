@@ -214,7 +214,7 @@ flowchart TD
     F -->|满意| G[注入 top_5 → prompt<br/>→ LLM 生成]
     F -->|不满意 且 retries<2| H[改写查询<br/>防打转 + seen_queries 兜底]
     H --> D
-    F -->|达上限 或 query 重复| I[返回"未找到"<br/>+ context.warning]
+    F -->|达上限 或 query 重复| I[返回「未找到」<br/>+ context.warning]
 ```
 
 ### 4. System Context / Boundary
